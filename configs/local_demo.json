@@ -1,4 +1,13 @@
 {
   "run_type": "demo",
-  "device": "cpu"
+  "logging": true,
+  "device": "cpu",
+  "data_config":
+  {
+
+  },
+  "model_config":
+  {
+
+  }
 }
