@@ -4,7 +4,7 @@
   "device": "cpu",
   "data_config":
   {
-
+    "dataset": "CORA"
   },
   "model_config":
   {

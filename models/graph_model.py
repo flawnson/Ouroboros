@@ -21,7 +21,7 @@ class AbstractGNNModel(torch.nn.Module, ABC):
         Returns:
             torch.tensor
         """
-        super(GenericGNNModel, self).__init__()
+        super(AbstractGNNModel, self).__init__()
         self.config = config
         self.layers = torch.nn.ModuleList([self.factory(info) for info in layer_dict])
         self.pool = pooling if pooling else [None] * len(self.layers)
