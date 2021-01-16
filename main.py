@@ -10,6 +10,7 @@ from utils.quine import Auxiliary, Vanilla
 from utils.classical import Classical
 from utils.ouroboros import Ouroboros
 from data.graph_preprocessing import AbstractGraphDataset, PrimaryLabelset
+from data.linear_preprocessing import HousingDataset
 
 if __name__ == "__main__":
     ### Configuring ###

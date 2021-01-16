@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class Ouroboros(object, ABC):
+class Ouroboros(ABC):
     @abstractmethod
     def __init__(self):
         pass

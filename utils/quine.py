@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class Quine(object, ABC):
+class Quine(ABC):
     @abstractmethod
     def __init__(self):
         pass
