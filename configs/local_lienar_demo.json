@@ -1,0 +1,14 @@
+{
+  "run_type": "demo",
+  "logging": true,
+  "device": "cpu",
+  "data_config":
+  {
+    "dataset": "house",
+    "data_path": "data/datafiles/housing_prices/train.csv"
+  },
+  "model_config":
+  {
+
+  }
+}

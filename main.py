@@ -5,8 +5,10 @@ import dgl
 import os
 
 from models.graph_model import GNNModel
+from models.mlp_model import MLPModel
 from utils.quine import Auxiliary, Vanilla
 from utils.classical import Classical
+from utils.ouroboros import Ouroboros
 from data.graph_preprocessing import AbstractGraphDataset, PrimaryLabelset
 
 if __name__ == "__main__":
@@ -24,13 +26,29 @@ if __name__ == "__main__":
     dataset: AbstractGraphDataset = None
     if config["data_config"]["dataset"] == "primary_labelset":
         dataset = PrimaryLabelset(config).dataset.to(device)
+    elif config["data_config"]["dataset"].casefold() == "house":
+        dataset = HousingDataset(config).dataset.to(device)
     elif config["data_config"]["dataset"].casefold() == "cora":
+        dataset = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
+    elif config["data_config"]["dataset"].casefold() == "mnist":
         dataset = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
 
     ### Model preparation ###
-    model = GNNModel(config, dataset, device).to(device)
+    # Model selection
+    if config["model_config"]["model_type"] == "linear":
+        model = MLPModel(config, dataset, device).to(device)
+    if config["model_config"]["model_type"] == "graph":
+        model = GNNModel(config, dataset, device).to(device)
+    if config["model_config"]["model_type"] == "vision":
+        pass
+    if config["model_config"]["model_type"] == "language":
+        pass
+    else:
+        raise NotImplementedError(f"{config['model_config']['model_augmentation']} not a model augmentation")
+
+    # Model augmentation (for none, use classical, all augmentations are model agnostic)
     if config["model_config"]["model_augmentation"] == "classical":
         aug_model = Classical(config["model_config"], model).to(device)
     if config["model_config"]["model_augmentation"] == "ouroboros":
