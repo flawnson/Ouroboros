@@ -29,6 +29,7 @@ class Auxiliary(Quine):
         self.aux_model = self.get_aux()
 
     def get_aux(self):
+        exit()
 
         return model
 

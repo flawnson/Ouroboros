@@ -40,27 +40,27 @@ if __name__ == "__main__":
     # Model selection
     if config["model_config"]["model_type"] == "linear":
         model = MLPModel(config, dataset, device).to(device)
-    if config["model_config"]["model_type"] == "graph":
+    elif config["model_config"]["model_type"] == "graph":
         model = GNNModel(config, dataset, device).to(device)
-    if config["model_config"]["model_type"] == "vision":
+    elif config["model_config"]["model_type"] == "vision":
         pass
-    if config["model_config"]["model_type"] == "language":
+    elif config["model_config"]["model_type"] == "language":
         pass
     else:
-        raise NotImplementedError(f"{config['model_config']['model_type']} not a model type")
+        raise NotImplementedError(f"{config['model_config']['model_type']} is not a model type")
     logger.info(f"Successfully built the {config['model_config']['model_type']} model type")
 
     # Model augmentation (for none, use classical, all augmentations are model agnostic)
     if config["model_config"]["model_augmentation"] == "classical":
         aug_model = Classical(config["model_config"], model).to(device)
-    if config["model_config"]["model_augmentation"] == "ouroboros":
+    elif config["model_config"]["model_augmentation"] == "ouroboros":
         aug_model = Ouroboros(config["model_config"], model).to(device)
-    if config["model_config"]["model_augmentation"] == "auxiliary":
+    elif config["model_config"]["model_augmentation"] == "auxiliary":
         aug_model = Auxiliary(config["model_config"], model).to(device)
-    if config["model_config"]["model_augmentation"] == "vanilla":
+    elif config["model_config"]["model_augmentation"] == "vanilla":
         aug_model = Vanilla(config["model_config"], model).to(device)
     else:
-        raise NotImplementedError(f"{config['model_config']['model_augmentation']} not a model augmentation")
+        raise NotImplementedError(f"{config['model_config']['model_augmentation']} is not a model augmentation")
     logger.info(f"Successfully built the {config['model_config']['model_augmentation']} augmentation")
 
     ### Pipeline ###

@@ -49,9 +49,10 @@ class MLPModel(AbstractMLPModel, ABC):
     # TODO: implement and test pooling
     def __init__(self, config: dict, data: torch.tensor, device: torch.device, pooling: str = None, **kwargs):
         self.data = data
-        self.layer_sizes = [data.ndata["x"].size(1)] + config["layer_sizes"] + [len(np.unique(data.ndata["y"].numpy()))]
+        self.config = config["model_config"]
+        self.layer_sizes = [[self.config["input_size"]] + self.config["layer_sizes"] + [self.config["output_size"]]]
         super(MLPModel, self).__init__(
-            config=config,
+            config=self.config,
             layer_dict=[dict(name=nn.Linear.__name__,
                              in_channels=in_size,
                              out_channels=out_size)

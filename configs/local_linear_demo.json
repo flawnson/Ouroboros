@@ -4,12 +4,15 @@
   "device": "cpu",
   "data_config":
   {
-    "dataset": "house",
+    "dataset": "mnist",
+    "data_dir": "data/datafiles/mnist",
     "data_path": "data/datafiles/housing_prices/train.csv"
   },
   "model_config":
   {
-    "model_type": "linear"
-
+    "model_type": "linear",
+    "input_size": 28,
+    "layer_sizes": [256, 256, 64],
+    "output_size": 10
   }
 }

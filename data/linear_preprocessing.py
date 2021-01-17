@@ -25,18 +25,11 @@ class HousingDataset(Dataset):
         return None
 
 
-def get_aux_data(configs: Dict) -> List:
-    logger.info(f"Downloading MNIST data to {configs['data_dir']}")
-    transform = tv.transforms.Compose([
-        tv.transforms.ToTensor()
-    ])
-    train_loader = torch.utils.data.DataLoader(tv.datasets.MNIST(os.path.join(configs['data_dir']),
-                                                                 train=True,
-                                                                 download=True,
-                                                                 transform=transform))
-    test_loader = torch.utils.data.DataLoader(tv.datasets.MNIST(os.path.join(configs['data_dir']),
-                                                                train=False,
-                                                                download=True,
-                                                                transform=transform))
-
-    return [train_loader, test_loader]
+def get_aux_data(config: Dict) -> List[DataLoader]:
+    config = config["data_config"]
+    logger.info(f"Downloading MNIST data to {config['data_dir']}")
+    transform = tv.transforms.Compose([tv.transforms.ToTensor()])
+    return [torch.utils.data.DataLoader(tv.datasets.MNIST(os.path.join(config['data_dir']),
+                                                          train=x,
+                                                          download=True,
+                                                          transform=transform)) for x in [True, False]]
