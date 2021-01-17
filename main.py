@@ -4,17 +4,17 @@ import json
 import dgl
 import os
 
+from logzero import logger
 from models.graph_model import GNNModel
 from models.mlp_model import MLPModel
 from utils.quine import Auxiliary, Vanilla
 from utils.classical import Classical
 from utils.ouroboros import Ouroboros
 from data.graph_preprocessing import AbstractGraphDataset, PrimaryLabelset
-from data.linear_preprocessing import HousingDataset
+from data.linear_preprocessing import HousingDataset, get_aux_data
 
 if __name__ == "__main__":
     ### Configuring ###
-    path = os.path.join('data', 'biogrid')
     parser = argparse.ArgumentParser(description="Config file parser")
     parser.add_argument("-c", "--config", help="json config file", type=str)
     parser.add_argument("-s", "--scheme", help="json scheme file", type=str)
@@ -31,9 +31,10 @@ if __name__ == "__main__":
     elif config["data_config"]["dataset"].casefold() == "cora":
         dataset = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        pass
+        dataset = get_aux_data(config)  # Two dataloaders in a list, for training and testing
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
+    logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
 
     ### Model preparation ###
     # Model selection
@@ -46,7 +47,8 @@ if __name__ == "__main__":
     if config["model_config"]["model_type"] == "language":
         pass
     else:
-        raise NotImplementedError(f"{config['model_config']['model_augmentation']} not a model augmentation")
+        raise NotImplementedError(f"{config['model_config']['model_type']} not a model type")
+    logger.info(f"Successfully built the {config['model_config']['model_type']} model type")
 
     # Model augmentation (for none, use classical, all augmentations are model agnostic)
     if config["model_config"]["model_augmentation"] == "classical":
@@ -59,5 +61,6 @@ if __name__ == "__main__":
         aug_model = Vanilla(config["model_config"], model).to(device)
     else:
         raise NotImplementedError(f"{config['model_config']['model_augmentation']} not a model augmentation")
+    logger.info(f"Successfully built the {config['model_config']['model_augmentation']} augmentation")
 
     ### Pipeline ###

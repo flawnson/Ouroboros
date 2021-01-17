@@ -9,6 +9,7 @@
   },
   "model_config":
   {
+    "model_type": "linear"
 
   }
 }
