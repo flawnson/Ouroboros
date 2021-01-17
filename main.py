@@ -24,7 +24,6 @@ if __name__ == "__main__":
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
 
     ### Data preprocessing ###
-    dataset: AbstractGraphDataset = None
     if config["data_config"]["dataset"] == "primary_labelset":
         dataset = PrimaryLabelset(config).dataset.to(device)
     elif config["data_config"]["dataset"].casefold() == "house":
@@ -32,7 +31,7 @@ if __name__ == "__main__":
     elif config["data_config"]["dataset"].casefold() == "cora":
         dataset = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        dataset = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
+        pass
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
 

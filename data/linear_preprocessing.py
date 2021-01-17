@@ -8,7 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 class HousingDataset(Dataset):
     def __init__(self, config):
         super(HousingDataset).__init__()
-        self.config = config
+        self.config = config["data_config"]
         self.dataset = self.get_data()
 
     def __len__(self):
@@ -19,5 +19,8 @@ class HousingDataset(Dataset):
 
     def get_data(self):
         pd.read_csv(self.config["data_path"])
+        #TODO: Normalize numerical data
+        #TODO: One hot encode categorical data
+        #TODO: Allow feature selection in config
 
-        return 0
+        return torch.tensor([1, 2])
