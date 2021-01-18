@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from abc import ABC
+from torch.nn import Linear
 
 
 class AbstractMLPModel(torch.nn.Module, ABC):
@@ -50,12 +51,15 @@ class MLPModel(AbstractMLPModel, ABC):
     def __init__(self, config: dict, data: torch.tensor, device: torch.device, pooling: str = None, **kwargs):
         self.data = data
         self.config = config["model_config"]
-        self.layer_sizes = [[self.config["input_size"]] + self.config["layer_sizes"] + [self.config["output_size"]]]
+        self.layer_sizes = [self.config["aux_input_size"] + self.config["weight_input_size"]] +\
+                            self.config["layer_sizes"] + \
+                           [self.config["aux_output_size"] + self.config["weight_output_size"]]
         super(MLPModel, self).__init__(
             config=self.config,
             layer_dict=[dict(name=nn.Linear.__name__,
-                             in_channels=in_size,
-                             out_channels=out_size)
+                             in_features=in_size,
+                             out_features=out_size,
+                             bias=True)  # Dictionary keys must be exactly as written in the documentation for the layer
                         for in_size, out_size in zip(self.layer_sizes, self.layer_sizes[1:])],
             pooling=[eval(pooling)(kwargs).to(device) for size in self.layer_sizes[1:]] if pooling else None,
             device=device)
