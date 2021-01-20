@@ -1,15 +1,18 @@
 import torch
 import numpy as np
 
+from copy import deepcopy
+from logzero import logger
 from abc import ABC, abstractmethod
 from sklearn import random_projection
 
 
 class Quine(ABC):
     @abstractmethod
-    def __init__(self, config, model):
+    def __init__(self, config, model, device):
         self.config = config
         self.model = model
+        self.device = device
         self.num_params = self.num_params()
 
     def num_params(self):
@@ -37,10 +40,11 @@ class Quine(ABC):
 
 
 class Vanilla(Quine):
-    def __init__(self, config, model):
-        super(Vanilla, self).__init__(config, model)
+    def __init__(self, config, model, device):
+        super(Vanilla, self).__init__(config, model, device)
         self.config = config
         self.model = model
+        self.device = device
         self.van_model = self.get_van()
 
     def projection(self):
@@ -55,16 +59,53 @@ class Vanilla(Quine):
         self.model.layers.insert(0, rand_proj_layer)
 
     def get_van(self):
-
-        return model
+        return self.model
 
 
 class Auxiliary(Vanilla):
-    def __init__(self, config, model):
-        super(Auxiliary, self).__init__(config, model)
+    def __init__(self, config, model, device):
+        super(Auxiliary, self).__init__(config, model, device)
         self.config = config
         self.model = model
+        self.device = device
+        self.van_model = self.get_van()
         self.aux_model = self.get_aux()
+
+    @staticmethod
+    def indexer(model):
+        coordinates = []
+        counter = 0
+        for i, params in enumerate(model.param_list):
+            try:
+                for n, param in enumerate(params):
+                    try:
+                        for d, p in enumerate(param):
+                            coordinates.append([i, n, d])
+                    except TypeError:
+                        coordinates.append([0, 0, 0])  # Sacrificing the first param
+                        counter += 1
+            except TypeError:
+                coordinates.append([0, 0, 0])  # Sacrificing the first param
+                counter += 1
+
+        logger.info(f"Regeneration failed for {counter} parameters")
+
+        return coordinates
+
+    def regenerate(self):
+        # Taken from the training pipeline
+        # TODO: Regenerate takes way too long on cpu; refactor to make faster
+        params_data = torch.eye(self.van_model.num_params, device=self.device)
+        index_list = list(range(self.van_model.num_params))
+        coordinates = self.indexer(self.van_model)
+        for param_idx, coo in zip(index_list, coordinates):
+            with torch.no_grad():
+                idx_vector = torch.squeeze(params_data[param_idx])  # Pulling out the nested tensor
+                predicted_param, predicted_aux = self.van_model(idx_vector, None)
+                new_params = deepcopy(self.van_model.param_list)
+                new_params[coo[0]][coo[1]][coo[2]] = predicted_param
+                self.van_model.param_list = new_params
+        logger.info(f"Successfully regenerated weights")
 
     def get_aux(self):
         self.van_model
