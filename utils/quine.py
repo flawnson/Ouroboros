@@ -15,6 +15,14 @@ class Quine(ABC):
         self.device = device
         self.num_params = self.num_params()
 
+    def projection(self):
+        X = np.random.rand(1, self.num_params)
+        transformer = random_projection.GaussianRandomProjection(n_components=self.config["n_hidden"])
+        transformer.fit(X)
+        rand_proj_matrix = transformer.components_
+
+        return rand_proj_matrix
+
     def num_params(self):
         # Create the parameter counting function
         # TODO: Check if function as as expected
@@ -45,21 +53,17 @@ class Vanilla(Quine):
         self.config = config
         self.model = model
         self.device = device
-        self.van_model = self.get_van()
 
-    def projection(self):
-        X = np.random.rand(1, self.num_params)
-        transformer = random_projection.GaussianRandomProjection(n_components=self.config["n_hidden"])
-        transformer.fit(X)
-        rand_proj_matrix = transformer.components_
+    def van_branch(self):
         rand_proj_layer = torch.nn.Linear(self.num_params, self.config["n_hidden"], bias=False)
-        rand_proj_layer.weight.data = torch.tensor(rand_proj_matrix, dtype=torch.float32)
+        rand_proj_layer = torch.nn.Linear(self.num_params, self.config["n_hidden"] // 2, bias=False) #modify so there are half as many hidden units
+        rand_proj_layer.weight.data = torch.tensor(self.projection(), dtype=torch.float32)
         for p in rand_proj_layer.parameters():
             p.requires_grad_(False)
         self.model.layers.insert(0, rand_proj_layer)
 
     def get_van(self):
-        return self.model
+        self.van_branch()
 
 
 class Auxiliary(Vanilla):
@@ -107,8 +111,31 @@ class Auxiliary(Vanilla):
                 self.van_model.param_list = new_params
         logger.info(f"Successfully regenerated weights")
 
-    def get_aux(self):
-        self.van_model
-        exit()
+    def aux_branch(self):
+        pass
 
-        return model
+    def forward(self, x, y=None):
+        #x = one hot coordinate
+        #y = auxiliary input
+        new_output = self.input1(x)
+        if y is not None:
+            y = y.reshape(-1) #Flatten MNIST input
+            output2 = self.input2(y)
+            new_output = torch.cat((new_output, output2))
+        else:
+            new_output = torch.cat((new_output, torch.rand(self.n_input)))
+
+
+        # run_logging.info("Input 1: ", output1)
+        # run_logging.info("Input 2: ", output2)
+
+        #concatenate and feed both into main Network
+        output3 = self.net(new_output)
+
+        weight = self.wp_net(output3) #weight prediction network
+        aux_output = self.dp_net(output3) #auxiliary prediction network
+
+        return weight, aux_output
+
+    def get_aux(self):
+        self.aux_branch()

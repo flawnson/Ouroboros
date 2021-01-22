@@ -1,4 +1,6 @@
 import argparse
+import logging
+import logzero
 import torch
 import json
 import dgl
@@ -22,6 +24,7 @@ if __name__ == "__main__":
 
     config: dict = json.load(open(args.config))
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
+    logzero.loglevel(eval(config["logging"]))
 
     ### Data preprocessing ###
     if config["data_config"]["dataset"] == "primary_labelset":

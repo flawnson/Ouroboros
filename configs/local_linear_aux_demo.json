@@ -1,6 +1,6 @@
 {
   "run_type": "demo",
-  "logging": true,
+  "logging": "logging.INFO",
   "device": "cpu",
   "data_config":
   {
@@ -19,6 +19,7 @@
   },
   "model_aug_config":
   {
-    "model_augmentation": "auxiliary"
+    "model_augmentation": "auxiliary",
+    "n_hidden": 40
   }
 }
