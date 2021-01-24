@@ -53,17 +53,19 @@ class Vanilla(Quine):
         self.config = config
         self.model = model
         self.device = device
+        self.van_input = self.van_input()
 
-    def van_branch(self):
-        rand_proj_layer = torch.nn.Linear(self.num_params, self.config["n_hidden"], bias=False)
-        rand_proj_layer = torch.nn.Linear(self.num_params, self.config["n_hidden"] // 2, bias=False) #modify so there are half as many hidden units
+    def van_input(self):
+        rand_proj_layer = torch.nn.Linear(self.num_params, self.config["n_hidden"] // self.config["n_inputs"],
+                                          bias=False)  # Modify so there are half as many hidden units
         rand_proj_layer.weight.data = torch.tensor(self.projection(), dtype=torch.float32)
         for p in rand_proj_layer.parameters():
             p.requires_grad_(False)
-        self.model.layers.insert(0, rand_proj_layer)
+        return torch.nn.Sequential(rand_proj_layer)
 
     def get_van(self):
-        self.van_branch()
+        pass
+        # self.van_input()
 
 
 class Auxiliary(Vanilla):
@@ -72,6 +74,8 @@ class Auxiliary(Vanilla):
         self.config = config
         self.model = model
         self.device = device
+        self.van_input = torch.nn.ModuleList()
+        self.aux_input = torch.nn.ModuleList()
         self.van_model = self.get_van()
         self.aux_model = self.get_aux()
 
@@ -111,19 +115,24 @@ class Auxiliary(Vanilla):
                 self.van_model.param_list = new_params
         logger.info(f"Successfully regenerated weights")
 
-    def aux_branch(self):
-        pass
+    def aux_input(self):
+        rand_proj_layer = torch.nn.Linear(self.dataset.size(), self.config["n_hidden"] // self.config["n_inputs"],
+                                          bias=False)  # Modify so there are half as many hidden units
+        rand_proj_layer.weight.data = torch.tensor(self.projection(), dtype=torch.float32)
+        for p in rand_proj_layer.parameters():
+            p.requires_grad_(False)
+        return torch.nn.Sequential(rand_proj_layer)
 
     def forward(self, x, y=None):
         #x = one hot coordinate
         #y = auxiliary input
-        new_output = self.input1(x)
+        new_output = self.van_input(x)
         if y is not None:
             y = y.reshape(-1) #Flatten MNIST input
-            output2 = self.input2(y)
+            output2 = self.aux_input(y)
             new_output = torch.cat((new_output, output2))
         else:
-            new_output = torch.cat((new_output, torch.rand(self.n_input)))
+            new_output = torch.cat((new_output, torch.rand(20)))
 
 
         # run_logging.info("Input 1: ", output1)
@@ -138,4 +147,5 @@ class Auxiliary(Vanilla):
         return weight, aux_output
 
     def get_aux(self):
-        self.aux_branch()
+        pass
+        # self.aux_input()

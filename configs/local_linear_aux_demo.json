@@ -20,6 +20,7 @@
   "model_aug_config":
   {
     "model_augmentation": "auxiliary",
+    "n_inputs": 2,
     "n_hidden": 40
   }
 }

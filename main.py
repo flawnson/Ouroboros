@@ -59,11 +59,11 @@ if __name__ == "__main__":
     elif config["model_aug_config"]["model_augmentation"] == "ouroboros":
         aug_model = Ouroboros(config["model_aug_config"], model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"] == "auxiliary":
-        aug_model = Auxiliary(config["model_aug_config"], model, device).to(device)
+        aug_model = Auxiliary(config["model_aug_config"], model, device)
     elif config["model_aug_config"]["model_augmentation"] == "vanilla":
         aug_model = Vanilla(config["model_aug_config"], model, device).to(device)
     else:
-        raise NotImplementedError(f"{config['model_config']['model_augmentation']} is not a model augmentation")
-    logger.info(f"Successfully built the {config['model_config']['model_augmentation']} augmentation")
+        raise NotImplementedError(f"{config['model_aug_config']['model_augmentation']} is not a model augmentation")
+    logger.info(f"Successfully built the {config['model_aug_config']['model_augmentation']} augmentation")
 
     ### Pipeline ###
