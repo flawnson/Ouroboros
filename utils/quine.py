@@ -10,6 +10,7 @@ from sklearn import random_projection
 class Quine(ABC):
     @abstractmethod
     def __init__(self, config, model, device):
+        super(Quine, self).__init__()
         self.config = config
         self.model = model
         self.device = device
@@ -23,10 +24,10 @@ class Quine(ABC):
 
         return rand_proj_matrix
 
-    def num_params(self):
+    def num_params(self, params=[]):  # To account for the input and output parameters not part of the main model
         # Create the parameter counting function
         # TODO: Check if function as as expected
-        num_params_arr = np.array([np.prod(p.shape) for p in self.model.parameters()])
+        num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + params])
         cum_params_arr = np.cumsum(num_params_arr)
         num_params = int(cum_params_arr[-1])
 
@@ -47,13 +48,14 @@ class Quine(ABC):
         return param.view(-1)[normalized_idx]
 
 
-class Vanilla(Quine):
+class Vanilla(Quine, torch.nn.Module):
     def __init__(self, config, model, device):
         super(Vanilla, self).__init__(config, model, device)
         self.config = config
         self.model = model
         self.device = device
         self.van_input = self.van_input()
+        self.van_output = self.van_output()
 
     def van_input(self):
         rand_proj_layer = torch.nn.Linear(self.num_params, self.config["n_hidden"] // self.config["n_inputs"],
@@ -63,19 +65,35 @@ class Vanilla(Quine):
             p.requires_grad_(False)
         return torch.nn.Sequential(rand_proj_layer)
 
+    def van_output(self):
+        # TODO: Make cleaner
+        weight_predictor_layers = []
+        current_layer = torch.nn.Linear(self.config["n_hidden"], 1, bias=True)
+        weight_predictor_layers.append(current_layer)
+        self.param_list.append(current_layer.weight)
+        self.param_names.append("wp_layer{}_weight".format(0))
+        self.param_list.append(current_layer.bias)
+        self.param_names.append("wp_layer{}_bias".format(0))
+        return torch.nn.Sequential(*weight_predictor_layers)
+
+    def forward(self):
+
     def get_van(self):
         pass
         # self.van_input()
 
 
-class Auxiliary(Vanilla):
+class Auxiliary(Vanilla, torch.nn.Module):
     def __init__(self, config, model, device):
         super(Auxiliary, self).__init__(config, model, device)
+        super(torch.nn.Module)
         self.config = config
         self.model = model
         self.device = device
-        self.van_input = torch.nn.ModuleList()
-        self.aux_input = torch.nn.ModuleList()
+        self.van_input = self.van_input()
+        self.aux_input = self.aux_input()
+        self.van_output = self.van_output()
+        self.aux_output = self.aux_output()
         self.van_model = self.get_van()
         self.aux_model = self.get_aux()
 
@@ -123,6 +141,19 @@ class Auxiliary(Vanilla):
             p.requires_grad_(False)
         return torch.nn.Sequential(rand_proj_layer)
 
+    def aux_output(self):
+        # TODO: Make cleaner
+        digit_predictor_layers = []
+        current_layer = torch.nn.Linear(self.config["n_hidden"], 10, bias=True)
+        logsoftmax = torch.nn.LogSoftmax(dim=0) #should have no learnable weights
+        digit_predictor_layers.append(current_layer)
+        digit_predictor_layers.append(logsoftmax)
+        self.param_list.append(current_layer.weight)
+        self.param_names.append("dp_layer{}_weight".format(0))
+        self.param_list.append(current_layer.bias)
+        self.param_names.append("dp_layer{}_bias".format(0))
+        return torch.nn.Sequential(*digit_predictor_layers)
+
     def forward(self, x, y=None):
         #x = one hot coordinate
         #y = auxiliary input
@@ -134,15 +165,14 @@ class Auxiliary(Vanilla):
         else:
             new_output = torch.cat((new_output, torch.rand(20)))
 
-
         # run_logging.info("Input 1: ", output1)
         # run_logging.info("Input 2: ", output2)
 
         #concatenate and feed both into main Network
-        output3 = self.net(new_output)
+        output3 = self.model(new_output)
 
-        weight = self.wp_net(output3) #weight prediction network
-        aux_output = self.dp_net(output3) #auxiliary prediction network
+        weight = self.van_output()(output3)  # Weight prediction network
+        aux_output = self.aux_output()(output3)  # Auxiliary prediction network
 
         return weight, aux_output
 

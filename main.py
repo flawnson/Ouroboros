@@ -59,7 +59,7 @@ if __name__ == "__main__":
     elif config["model_aug_config"]["model_augmentation"] == "ouroboros":
         aug_model = Ouroboros(config["model_aug_config"], model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"] == "auxiliary":
-        aug_model = Auxiliary(config["model_aug_config"], model, device)
+        aug_model = Auxiliary(config["model_aug_config"], model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"] == "vanilla":
         aug_model = Vanilla(config["model_aug_config"], model, device).to(device)
     else:
