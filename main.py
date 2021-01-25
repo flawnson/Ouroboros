@@ -68,3 +68,9 @@ if __name__ == "__main__":
     logger.info(f"Successfully built the {config['model_aug_config']['model_augmentation']} augmentation")
 
     ### Pipeline ###
+    if config["run_type"] == "demo":
+        Trainer()
+    if config["run_type"] == "tune":
+        Tuner()
+    if config["run_type"] == "benchmark":
+        Benchmarker()
