@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 
+from typing import *
 from copy import deepcopy
 from logzero import logger
 from abc import ABC, abstractmethod

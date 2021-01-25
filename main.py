@@ -6,6 +6,7 @@ import json
 import dgl
 import os
 
+from typing import *
 from logzero import logger
 from models.graph_model import GNNModel
 from models.mlp_model import MLPModel
