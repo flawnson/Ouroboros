@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class HousingDataset(Dataset):
-    def __init__(self, config):
+    def __init__(self, config: Dict):
         super(HousingDataset).__init__()
         self.config = config["data_config"]
         self.dataset = self.get_data()
@@ -26,10 +26,9 @@ class HousingDataset(Dataset):
 
 
 def get_aux_data(config: Dict) -> List[DataLoader]:
-    config = config["data_config"]
-    logger.info(f"Downloading MNIST data to {config['data_dir']}")
+    logger.info(f"Downloading MNIST data to {config['data_config']['data_dir']}")
     transform = tv.transforms.Compose([tv.transforms.ToTensor()])
-    return [torch.utils.data.DataLoader(tv.datasets.MNIST(os.path.join(config['data_dir']),
+    return [torch.utils.data.DataLoader(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']),
                                                           train=x,
                                                           download=True,
                                                           transform=transform)) for x in [True, False]]

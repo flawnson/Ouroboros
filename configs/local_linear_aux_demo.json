@@ -22,5 +22,9 @@
     "model_augmentation": "auxiliary",
     "n_inputs": 2,
     "n_hidden": 40
+  },
+  "optim_config":
+  {
+    "scheduler": "cawr"
   }
 }

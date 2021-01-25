@@ -14,7 +14,7 @@ class Quine(ABC):
     @abstractmethod
     def __init__(self, config, model, device):
         super(Quine, self).__init__()
-        self.config = config
+        self.config_aug_config = config["model_aug_config"]
         self.model = model
         self.device = device
         self.param_list = []
@@ -60,7 +60,7 @@ class Quine(ABC):
 class Vanilla(Quine, torch.nn.Module):
     def __init__(self, config, model, device):
         super(Vanilla, self).__init__(config, model, device)
-        self.config = config
+        self.config_aug_config = config["model_aug_config"]
         self.model = model
         self.device = device
         self.van_input = self.van_input()
@@ -100,7 +100,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
     def __init__(self, config, model, dataset, device):
         super(Auxiliary, self).__init__(config, model, device)
         super(torch.nn.Module)
-        self.config = config
+        self.config_aug_config = config["model_aug_config"]
         self.model = model
         self.dataset = dataset
         self.device = device

@@ -8,13 +8,15 @@ from logzero import logger
 class Trainer(object):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
     def __init__(self, config, model, dataset, device):
-        self.config = config
+        self.run_config = config["run_config"]
         self.model = model
+        self.optimizer = Optimizer(self.train_config, self.params).optim_obj
+        self.scheduler = LRScheduler(self.train_config, self.optimizer).schedule_obj
         self.dataset = dataset
         self.device = device
 
     def train(self):
-        pass
+        self.model.train()
 
     def test(self):
         pass
@@ -23,7 +25,7 @@ class Trainer(object):
         pass
 
     def run(self):
-        for epoch in self.config["num_epochs"]:
+        for epoch in self.run_config["num_epochs"]:
             self.train()
             self.test()
             self.write()

@@ -15,6 +15,7 @@ from utils.classical import Classical
 from utils.ouroboros import Ouroboros
 from data.graph_preprocessing import AbstractGraphDataset, PrimaryLabelset
 from data.linear_preprocessing import HousingDataset, get_aux_data
+from ops.train import Trainer
 
 if __name__ == "__main__":
     ### Configuring ###
@@ -56,20 +57,20 @@ if __name__ == "__main__":
 
     # Model augmentation (for none, use classical, all augmentations are model agnostic)
     if config["model_aug_config"]["model_augmentation"] == "classical":
-        aug_model = Classical(config["model_aug_config"], model, device).to(device)
+        aug_model = Classical(config, model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"] == "ouroboros":
-        aug_model = Ouroboros(config["model_aug_config"], model, device).to(device)
+        aug_model = Ouroboros(config, model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"] == "auxiliary":
-        aug_model = Auxiliary(config["model_aug_config"], model, dataset, device).to(device)
+        aug_model = Auxiliary(config, model, dataset, device).to(device)
     elif config["model_aug_config"]["model_augmentation"] == "vanilla":
-        aug_model = Vanilla(config["model_aug_config"], model, device).to(device)
+        aug_model = Vanilla(config, model, device).to(device)
     else:
         raise NotImplementedError(f"{config['model_aug_config']['model_augmentation']} is not a model augmentation")
     logger.info(f"Successfully built the {config['model_aug_config']['model_augmentation']} augmentation")
 
     ### Pipeline ###
     if config["run_type"] == "demo":
-        Trainer()
+        Trainer(config, aug_model, dataset, device).run()
     if config["run_type"] == "tune":
         Tuner()
     if config["run_type"] == "benchmark":
