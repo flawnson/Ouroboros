@@ -6,6 +6,8 @@ from logzero import logger
 from abc import ABC, abstractmethod
 from sklearn import random_projection
 
+from utils.utilities import get_example_size
+
 
 class Quine(ABC):
     @abstractmethod
@@ -14,6 +16,8 @@ class Quine(ABC):
         self.config = config
         self.model = model
         self.device = device
+        self.param_list = []
+        self.param_names = []
         self.num_params = self.num_params()
 
     def projection(self):
@@ -26,8 +30,8 @@ class Quine(ABC):
 
     def num_params(self, params=[]):  # To account for the input and output parameters not part of the main model
         # Create the parameter counting function
-        # TODO: Check if function as as expected
-        num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + params])
+        # TODO: Check if function as expected
+        num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + self.param_list])
         cum_params_arr = np.cumsum(num_params_arr)
         num_params = int(cum_params_arr[-1])
 
@@ -46,6 +50,10 @@ class Quine(ABC):
             else:
                 subtract = n_params
         return param.view(-1)[normalized_idx]
+
+    @abstractmethod
+    def forward(self):
+        pass
 
 
 class Vanilla(Quine, torch.nn.Module):
@@ -76,7 +84,11 @@ class Vanilla(Quine, torch.nn.Module):
         self.param_names.append("wp_layer{}_bias".format(0))
         return torch.nn.Sequential(*weight_predictor_layers)
 
-    def forward(self):
+    def forward(self, x):
+        x = self.van_input(x)
+        x = self.model(x)
+        x = self.van_output(x)
+        return x
 
     def get_van(self):
         pass
@@ -84,11 +96,12 @@ class Vanilla(Quine, torch.nn.Module):
 
 
 class Auxiliary(Vanilla, torch.nn.Module):
-    def __init__(self, config, model, device):
+    def __init__(self, config, model, dataset, device):
         super(Auxiliary, self).__init__(config, model, device)
         super(torch.nn.Module)
         self.config = config
         self.model = model
+        self.dataset = dataset
         self.device = device
         self.van_input = self.van_input()
         self.aux_input = self.aux_input()
@@ -134,7 +147,8 @@ class Auxiliary(Vanilla, torch.nn.Module):
         logger.info(f"Successfully regenerated weights")
 
     def aux_input(self):
-        rand_proj_layer = torch.nn.Linear(self.dataset.size(), self.config["n_hidden"] // self.config["n_inputs"],
+        rand_proj_layer = torch.nn.Linear(get_example_size(self.dataset),
+                                          self.config["n_hidden"] // self.config["n_inputs"],
                                           bias=False)  # Modify so there are half as many hidden units
         rand_proj_layer.weight.data = torch.tensor(self.projection(), dtype=torch.float32)
         for p in rand_proj_layer.parameters():
@@ -171,8 +185,8 @@ class Auxiliary(Vanilla, torch.nn.Module):
         #concatenate and feed both into main Network
         output3 = self.model(new_output)
 
-        weight = self.van_output()(output3)  # Weight prediction network
-        aux_output = self.aux_output()(output3)  # Auxiliary prediction network
+        weight = self.van_output(output3)  # Weight prediction network
+        aux_output = self.aux_output(output3)  # Auxiliary prediction network
 
         return weight, aux_output
 
