@@ -55,7 +55,7 @@ class MLPModel(AbstractMLPModel, ABC):
                             self.model_config["layer_sizes"] + \
                            [self.model_config["aux_output_size"] + self.model_config["weight_output_size"]]
         super(MLPModel, self).__init__(
-            config=self.config,
+            config=self.model_config,
             layer_dict=[dict(name=nn.Linear.__name__,
                              in_features=in_size,
                              out_features=out_size,

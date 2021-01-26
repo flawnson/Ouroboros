@@ -25,6 +25,15 @@
   },
   "optim_config":
   {
-    "scheduler": "cawr"
+    "optimizer": "adam",
+    "optim_kwargs": {},
+    "scheduler": "cawr",
+    "scheduler_kwargs": {
+      "T_0": 10
+    }
+  },
+  "run_config":
+  {
+    "num_epochs": 1000
   }
 }

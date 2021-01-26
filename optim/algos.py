@@ -6,28 +6,28 @@ from torch.optim import Optimizer
 
 
 class OptimizerObj(Optimizer):
-    def __init__(self, params, config: Dict):
+    def __init__(self, config: Dict, params: torch.nn.ParameterList):
         super(OptimizerObj, self).__init__(params, config)
         self.optim_config = config["optim_config"]
         self.param_groups = None
         self.params = params
 
-        if self.optim_config["optim"].casefold() == "adam":
+        if self.optim_config["optimizer"].casefold() == "adam":
             self.optim_obj = torch.optim.Adam(params, **self.optim_config["optim_kwargs"])
-        elif self.optim_config["optim"].casefold() == "sgd":
+        elif self.optim_config["optimizer"].casefold() == "sgd":
             self.optim_obj = torch.optim.SGD(params, **self.optim_config["optim_kwargs"])
-        elif self.optim_config["optim"].casefold() == "adagrad":
+        elif self.optim_config["optimizer"].casefold() == "adagrad":
             self.optim_obj = torch.optim.Adagrad(params, **self.optim_config["optim_kwargs"])
-        elif self.optim_config["optim"].casefold() == "rmsprop":
+        elif self.optim_config["optimizer"].casefold() == "rmsprop":
             self.optim_obj = torch.optim.RMSprop(params, **self.optim_config["optim_kwargs"])
-        elif self.optim_config["optim"].casefold() == "adadelta":
+        elif self.optim_config["optimizer"].casefold() == "adadelta":
             self.optim_obj = torch.optim.Adadelta(params, **self.optim_config["optim_kwargs"])
         else:
             logger.info(f"Optimizer {self.optim_config['optim']} not understood")
             raise NotImplementedError(f"Optimizer {self.optim_config['optim']} not implemented")
 
 
-class LRScheduler():
+class LRScheduler(object):
     def __init__(self, config: Dict, optim_obj: Optimizer):
         # super(LRScheduler, self).__init__(optim_obj)
         self.optim_config = config["optim_config"]
