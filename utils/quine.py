@@ -63,8 +63,6 @@ class Vanilla(Quine, torch.nn.Module):
         self.model_aug_config = config["model_aug_config"]
         self.model = model
         self.device = device
-        self.van_input = self.van_input()
-        self.van_output = self.van_output()
 
     def van_input(self):
         rand_proj_layer = torch.nn.Linear(self.num_params, self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],

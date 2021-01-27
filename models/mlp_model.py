@@ -12,8 +12,7 @@ class AbstractMLPModel(torch.nn.Module, ABC):
         """ Class for training and testing loops
         Args:
             config: Model config file (Python dictionary from JSON)
-            linear_model: Either None or Linear model stored as torch Module object (only implemented for GCN model)
-            layer_dict: Dicionary containing layer information including sizes, cacheing, etc.
+            layer_dict: Dictionary containing layer information including sizes, caching, etc.
             pooling: Either None or torch pooling objects used between layers in forward propagation
             device: torch device object defined in main.py
         Returns:
@@ -39,7 +38,7 @@ class AbstractMLPModel(torch.nn.Module, ABC):
             z = x
             x = pooling(data_obj, x) if pooling else x
             x = F.relu(x)
-            x = F.dropout(x, p=0.5, training=self.training)
+            x = F.dropout(x, p=self.config["dropout"], training=self.training)
         x = z
         return x
 

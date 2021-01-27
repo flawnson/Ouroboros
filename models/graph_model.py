@@ -41,7 +41,7 @@ class AbstractGNNModel(torch.nn.Module, ABC):
             z = x
             x = pooling(graph_obj, x) if pooling else x
             x = F.relu(x)
-            x = F.dropout(x, p=0.5, training=self.training)
+            x = F.dropout(x, p=self.config["dropout"], training=self.training)
         x = z
         return x
 

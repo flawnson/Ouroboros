@@ -22,6 +22,10 @@ class Trainer(object):
     def train(self, data):
         self.model.train()
         self.optimizer.zero_grad()
+        idx_vector = torch.squeeze(params_data[param_idx])  # Pulling out the nested tensor
+        # param_idx should already be a tensor on the device when we initialized it using torch.eye
+        param = self.model.get_param(param_idx)
+        predicted_param, predicted_aux = self.model(idx_vector, data[0])
         self.model(data)
 
     def test(self):
