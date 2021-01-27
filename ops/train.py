@@ -14,15 +14,16 @@ class Trainer(object):
         self.run_config = config["run_config"]
         self.model = model
         self.params = torch.nn.ParameterList(self.model.parameters())
+        self.params_data = torch.eye(self.model.num_params, device=device)
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.dataset = dataset
         self.device = device
 
-    def train(self, data):
+    def train(self, data, param_idx):
         self.model.train()
         self.optimizer.zero_grad()
-        idx_vector = torch.squeeze(params_data[param_idx])  # Pulling out the nested tensor
+        idx_vector = torch.squeeze(self.params_data[param_idx])  # Pulling out the nested tensor
         # param_idx should already be a tensor on the device when we initialized it using torch.eye
         param = self.model.get_param(param_idx)
         predicted_param, predicted_aux = self.model(idx_vector, data[0])
@@ -40,8 +41,8 @@ class Trainer(object):
             logger.info(f"Epoch: {epoch}")
             if isinstance(self.dataset[0], torch.utils.data.DataLoader):
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[0]):
-                    self.train(data.to(self.device))
-                    idx_vector = torch.squeeze(params_data[param_idx])  # Pulling out the nested tensor
+                    self.train(data.to(self.device), param_idx)
+                    idx_vector = torch.squeeze(self.params_data[param_idx])  # Pulling out the nested tensor
             self.test()
             self.write(epoch)
 

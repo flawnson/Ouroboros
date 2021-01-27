@@ -5,6 +5,7 @@
   "data_config":
   {
     "dataset": "mnist",
+    "concat": true,
     "data_dir": "data/datafiles/mnist",
     "data_path": "data/datafiles/housing_prices/train.csv"
   },

@@ -15,6 +15,7 @@ from utils.classical import Classical
 from utils.ouroboros import Ouroboros
 from data.graph_preprocessing import AbstractGraphDataset, PrimaryLabelset
 from data.linear_preprocessing import HousingDataset, get_aux_data
+from data.concat_preprocessing import ConcatDataset
 from ops.train import Trainer
 
 if __name__ == "__main__":
@@ -28,7 +29,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
     logzero.loglevel(eval(config["logging"]))
 
-    ### Data preprocessing ###
+    ### Aux Data preprocessing ###
     if config["data_config"]["dataset"] == "primary_labelset":
         dataset = PrimaryLabelset(config).dataset.to(device)
     elif config["data_config"]["dataset"].casefold() == "house":
@@ -55,7 +56,7 @@ if __name__ == "__main__":
         raise NotImplementedError(f"{config['model_config']['model_type']} is not a model type")
     logger.info(f"Successfully built the {config['model_config']['model_type']} model type")
 
-    # Model augmentation (for none, use classical, all augmentations are model agnostic)
+    ### Model augmentation ### (for none, use classical, all augmentations are model agnostic)
     if config["model_aug_config"]["model_augmentation"] == "classical":
         aug_model = Classical(config, model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"] == "ouroboros":
@@ -67,6 +68,19 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError(f"{config['model_aug_config']['model_augmentation']} is not a model augmentation")
     logger.info(f"Successfully built the {config['model_aug_config']['model_augmentation']} augmentation")
+
+    ### Model data preprocessing ###
+    if config["data_config"]["dataset"] == "primary_labelset":
+        pass
+    elif config["data_config"]["dataset"].casefold() == "house":
+        pass
+    elif config["data_config"]["dataset"].casefold() == "cora":
+        pass
+    elif config["data_config"]["dataset"].casefold() == "mnist":
+        aug_dataset = ConcatDataset(dataset)  # Two dataloaders in a list, for training and testing
+    else:
+        raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
+    logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
 
     ### Pipeline ###
     if config["run_type"] == "demo":
