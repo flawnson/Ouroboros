@@ -1,19 +1,16 @@
 import argparse
-import logging
 import logzero
 import torch
 import json
 import dgl
-import os
 
-from typing import *
 from logzero import logger
-from models.graph_model import GNNModel
-from models.mlp_model import MLPModel
-from utils.quine import Auxiliary, Vanilla
-from utils.classical import Classical
-from utils.ouroboros import Ouroboros
-from data.graph_preprocessing import AbstractGraphDataset, PrimaryLabelset
+from models.standard.graph_model import GNNModel
+from models.standard.mlp_model import MLPModel
+from models.augmented.quine import Auxiliary, Vanilla
+from models.augmented.classical import Classical
+from models.augmented.ouroboros import Ouroboros
+from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset, get_aux_data
 from data.concat_preprocessing import ConcatDataset
 from ops.train import Trainer
