@@ -1,8 +1,7 @@
 import torch
-import random
 
 
-class ConcatDataset(torch.utils.data.Dataset):
+class CombineDataset(torch.utils.data.Dataset):
     def __init__(self, config, *datasets, aug_model, device):
         self.config = config
         self.datasets = datasets

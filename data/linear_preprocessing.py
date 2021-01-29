@@ -6,7 +6,7 @@ import torchvision as tv
 
 from logzero import logger
 from typing import Dict, List
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, ConcatDataset
 
 
 class HousingDataset(Dataset):
@@ -25,10 +25,10 @@ class HousingDataset(Dataset):
         return None
 
 
-def get_aux_data(config: Dict) -> List:
+def get_aux_data(config: Dict) -> Dataset:
     logger.info(f"Downloading MNIST data to {config['data_config']['data_dir']}")
     transform = tv.transforms.Compose([tv.transforms.ToTensor()])
-    return [tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']),
+    return ConcatDataset([tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']),
                               train=x,
                               download=True,
-                              transform=transform) for x in [True, False]]
+                              transform=transform) for x in [True, False]])
