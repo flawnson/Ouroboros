@@ -31,13 +31,13 @@ if __name__ == "__main__":
 
     ### Aux Data preprocessing ###
     if config["data_config"]["dataset"] == "primary_labelset":
-        dataset = PrimaryLabelset(config).dataset.to(device)
+        datasets = PrimaryLabelset(config).dataset.to(device)
     elif config["data_config"]["dataset"].casefold() == "house":
-        dataset = HousingDataset(config).dataset.to(device)
+        datasets = HousingDataset(config).dataset.to(device)
     elif config["data_config"]["dataset"].casefold() == "cora":
-        dataset = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
+        datasets = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        dataset = get_aux_data(config)  # Two dataloaders in a list, for training and testing
+        datasets = get_aux_data(config)  # Two dataloaders in a list, for training and testing
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
     logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     elif config["model_aug_config"]["model_augmentation"] == "ouroboros":
         aug_model = Ouroboros(config, model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"] == "auxiliary":
-        aug_model = Auxiliary(config, model, dataset, device).to(device)
+        aug_model = Auxiliary(config, model, datasets, device).to(device)
     elif config["model_aug_config"]["model_augmentation"] == "vanilla":
         aug_model = Vanilla(config, model, device).to(device)
     else:
@@ -77,14 +77,14 @@ if __name__ == "__main__":
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        aug_dataset = ConcatDataset(dataset)  # Two dataloaders in a list, for training and testing
+        aug_datasets = [DataLoader(ConcatDataset(config, dataset, aug_model, device)) for dataset in datasets]  # Two dataloaders in a list, for training and testing
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
     logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
 
     ### Pipeline ###
     if config["run_type"] == "demo":
-        Trainer(config, aug_model, dataset, device).run()
+        Trainer(config, aug_model, aug_datasets, device).run()
     if config["run_type"] == "tune":
         Tuner()
     if config["run_type"] == "benchmark":
