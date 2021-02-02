@@ -12,7 +12,8 @@
     "splits": {"trainset": 0.7,
                "validset": 0.2,
                "newset": 0.2,
-               "testset": 0.1}
+               "testset": 0.1},
+    "shuffle": true
   },
   "model_config":
   {

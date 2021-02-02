@@ -1,4 +1,5 @@
 import argparse
+import logging
 import logzero
 import torch
 import json
@@ -14,7 +15,7 @@ from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset, get_aux_data
-from data.concat_preprocessing import CombineDataset
+from data.combine_preprocessing import CombineDataset
 from utils.holdout import Holdout
 from ops.train import Trainer
 
@@ -38,7 +39,7 @@ if __name__ == "__main__":
     elif config["data_config"]["dataset"].casefold() == "cora":
         datasets = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        datasets = get_aux_data(config)  # Two dataloaders in a list for training and testing
+        datasets = get_aux_data(config)
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
     logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
@@ -71,7 +72,7 @@ if __name__ == "__main__":
         raise NotImplementedError(f"{config['model_aug_config']['model_augmentation']} is not a model augmentation")
     logger.info(f"Successfully built the {config['model_aug_config']['model_augmentation']} augmentation")
 
-    ### Model data preprocessing ###
+    ### Param data preprocessing ###
     aug_datasets: Union[torch.utils.data.Dataset, List] = None
     if config["data_config"]["dataset"] == "primary_labelset":
         pass
@@ -80,7 +81,9 @@ if __name__ == "__main__":
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        aug_datasets = [DataLoader(CombineDataset(config, dataset, aug_model, device)) for dataset in zip(Holdout(datasets), Holdout(aug_model))]  # Two dataloaders in a list, for training and testing
+        split_obj = Holdout(config, datasets, model, device)
+        aug_datasets = [DataLoader(CombineDataset(dataset, params)) for
+                        dataset, params in zip(split_obj.split(datasets), split_obj.split(aug_model))]
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
     logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
