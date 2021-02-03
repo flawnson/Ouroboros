@@ -16,7 +16,8 @@ from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset, get_aux_data
 from data.combine_preprocessing import CombineDataset
-from utils.holdout import Holdout
+from utils.holdout import DataHoldout, ModelHoldout
+from utils.parameters import ModelParameters
 from ops.train import Trainer
 
 if __name__ == "__main__":
@@ -81,12 +82,27 @@ if __name__ == "__main__":
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        split_obj = Holdout(config, datasets, model, device)
-        aug_datasets = [DataLoader(CombineDataset(dataset, params)) for
-                        dataset, params in zip(split_obj.split(datasets), split_obj.split(aug_model))]
+        param_data = ModelParameters(config, aug_model, device).params
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
-    logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
+    logger.info(f"Successfully generate parameter data and split datasets")
+
+    ### Param data preprocessing ###
+    input_data: Optional = None
+    if config["data_config"]["dataset"] == "primary_labelset":
+        pass
+    elif config["data_config"]["dataset"].casefold() == "house":
+        pass
+    elif config["data_config"]["dataset"].casefold() == "cora":
+        pass
+    elif config["data_config"]["dataset"].casefold() == "mnist":
+        data_split = DataHoldout(config, datasets, model, device)
+        model_split = ModelHoldout(config, datasets, model, device)
+        input_data = [DataLoader(CombineDataset(dataset, params)) for
+                      dataset, params in zip(data_split.split(datasets), model_split.split(param_data))]
+    else:
+        raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
+    logger.info(f"Successfully generate parameter data and split datasets")
 
     ### Pipeline ###
     if config["run_type"] == "demo":
