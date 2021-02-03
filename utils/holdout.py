@@ -69,7 +69,7 @@ class DataHoldout(AbstractHoldout):
     
     @staticmethod
     def type_check(subject):
-        assert isinstance(subject, torch.utils.data.Dataset), f"Subject: {subject.__name__} is not a splittable type"
+        assert isinstance(subject, torch.utils.data.Dataset), f"Subject: {type(subject)} is not a splittable type"
 
     # def split(self, subject):
     #     self.type_check(subject)
@@ -97,13 +97,14 @@ class ModelHoldout(AbstractHoldout):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
         split = StratifiedKFold(n_splits=len(self.data_config["splits"]), shuffle=self.data_config["shuffle"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
-        masks = list(split._iter_test_masks(subject.params, torch.zeros_like(subject.params)))
+        masks = list(split._iter_test_masks(subject.params, torch.zeros_like(torch.tensor(subject.params))))
 
         return dict(zip(self.data_config["splits"].keys(), masks))
 
     @staticmethod
     def type_check(subject):
-        assert isinstance(subject, Quine) & isinstance(subject, Module), f"Subject: {subject.__name__} is not a splittable type"
+        pass
+        # assert isinstance(subject, Quine) & isinstance(subject, Module), f"Subject: {type(subject)} is not a splittable type"
 
     # def split(self, subject):
     #     self.type_check(subject)

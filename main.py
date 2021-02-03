@@ -7,6 +7,7 @@ import dgl
 
 from typing import *
 from logzero import logger
+from torch.utils.data import DataLoader
 
 from models.standard.graph_model import GNNModel
 from models.standard.mlp_model import MLPModel
@@ -74,7 +75,7 @@ if __name__ == "__main__":
     logger.info(f"Successfully built the {config['model_aug_config']['model_augmentation']} augmentation")
 
     ### Param data preprocessing ###
-    aug_datasets: Union[torch.utils.data.Dataset, List] = None
+    param_data: Union[torch.utils.data.Dataset, List] = None
     if config["data_config"]["dataset"] == "primary_labelset":
         pass
     elif config["data_config"]["dataset"].casefold() == "house":
@@ -82,12 +83,12 @@ if __name__ == "__main__":
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        param_data = ModelParameters(config, aug_model, device).params
+        param_data = ModelParameters(config, aug_model, device)
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
-    logger.info(f"Successfully generate parameter data and split datasets")
+    logger.info(f"Successfully generated parameter data")
 
-    ### Param data preprocessing ###
+    ### Splitting dataset and parameters ###
     input_data: Optional = None
     if config["data_config"]["dataset"] == "primary_labelset":
         pass
@@ -101,12 +102,12 @@ if __name__ == "__main__":
         input_data = [DataLoader(CombineDataset(dataset, params)) for
                       dataset, params in zip(data_split.split(datasets), model_split.split(param_data))]
     else:
-        raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
-    logger.info(f"Successfully generate parameter data and split datasets")
+        raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented
+    logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###
     if config["run_type"] == "demo":
-        Trainer(config, aug_model, aug_datasets, device).run()
+        Trainer(config, aug_model, input_data, device).run()
     if config["run_type"] == "tune":
         pass
     if config["run_type"] == "benchmark":

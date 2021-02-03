@@ -39,7 +39,7 @@ class Trainer(object):
     def run(self):
         for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
             logger.info(f"Epoch: {epoch}")
-            if isinstance(self.dataset[0], torch.utils.data.DataLoader):
+            if isinstance(self.dataset, torch.utils.data.DataLoader):
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[0]):
                     self.train(data.to(self.device), param_idx)
                     idx_vector = torch.squeeze(self.params_data[param_idx])  # Pulling out the nested tensor
