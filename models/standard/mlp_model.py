@@ -4,11 +4,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from abc import ABC
+from typing import *
 from torch.nn import Linear
 
 
 class AbstractMLPModel(torch.nn.Module, ABC):
-    def __init__(self, config: dict, layer_dict: list, pooling: torch.nn.functional, device: torch.device):
+    def __init__(self, config: Dict, layer_dict: List, pooling: torch.nn.functional, device: torch.device):
         """ Class for training and testing loops
         Args:
             config: Model config file (Python dictionary from JSON)
@@ -25,7 +26,7 @@ class AbstractMLPModel(torch.nn.Module, ABC):
         self.device = device
 
     @staticmethod
-    def factory(sizes: dict) -> eval:
+    def factory(sizes: Dict) -> eval:
         name = sizes["name"]
         sizes_copy = sizes.copy()
         sizes_copy.pop("name", None)
@@ -47,7 +48,7 @@ class MLPModel(AbstractMLPModel, ABC):
     # Provide pooling arguments as kwargs (only needed for GlobalAttentionPooling and Set2Set (forward parameters should
     # be provided in the forward function of the model)
     # TODO: implement and test pooling
-    def __init__(self, config: dict, data: torch.tensor, device: torch.device, pooling: str = None, **kwargs):
+    def __init__(self, config: Dict, data: torch.tensor, device: torch.device, pooling: str = None, **kwargs):
         self.data = data
         self.model_config = config["model_config"]
         self.layer_sizes = [self.model_config["aux_input_size"] + self.model_config["weight_input_size"]] + \

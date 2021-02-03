@@ -21,7 +21,8 @@ from utils.holdout import DataHoldout, ModelHoldout
 from utils.parameters import ModelParameters
 from ops.train import Trainer
 
-if __name__ == "__main__":
+
+def main():
     ### Configuring ###
     parser = argparse.ArgumentParser(description="Config file parser")
     parser.add_argument("-c", "--config", help="json config file", type=str)
@@ -112,3 +113,7 @@ if __name__ == "__main__":
         pass
     if config["run_type"] == "benchmark":
         pass
+
+
+if __name__ == "__main__":
+    main()
