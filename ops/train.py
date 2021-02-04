@@ -5,12 +5,15 @@ from typing import *
 from tqdm import trange
 from logzero import logger
 
+from torch.utils.data import DataLoader
+
 from optim.algos import OptimizerObj, LRScheduler
+from utils.scores import Scores
 
 
 class Trainer(object):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
-    def __init__(self, config: Dict, model: torch.nn.Module, dataset, device):
+    def __init__(self, config: Dict, model: torch.nn.Module, dataset: Union[DataLoader], device):
         self.run_config = config["run_config"]
         self.model = model
         self.params = torch.nn.ParameterList(self.model.parameters())
@@ -29,20 +32,31 @@ class Trainer(object):
         predicted_param, predicted_aux = self.model(idx_vector, data[0])
         self.model(data)
 
-    def test(self):
+    def test(self, data, param_idx):
         self.model.eval()
-        self.model(self.dataset[1])
+        idx_vector = torch.squeeze(self.params_data[param_idx])  # Pulling out the nested tensor
+        param = self.model.get_param(param_idx)
+        predicted_param, predicted_aux = self.model(idx_vector, data[0])
+        self.model(data)
 
-    def write(self, epoch):
+    def score(self):
+        scores = Score()
+
+    def write(self, epoch: int):
         logger.info(f"Running epoch: #{epoch}")
 
     def run(self):
         for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
             logger.info(f"Epoch: {epoch}")
-            if isinstance(self.dataset, torch.utils.data.DataLoader):
+            if isinstance(self.dataset, DataLoader):
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[0]):
                     self.train(data.to(self.device), param_idx)
-                    idx_vector = torch.squeeze(self.params_data[param_idx])  # Pulling out the nested tensor
-            self.test()
+                    self.score()
+
+            if isinstance(self.dataset, DataLoader):
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[0]):
+                    self.test(data.to(self.device), param_idx)
+                    self.score()
+
             self.write(epoch)
 
