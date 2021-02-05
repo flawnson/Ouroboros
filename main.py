@@ -100,15 +100,16 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "mnist":
         data_split = DataHoldout(config, datasets, model, device)
         model_split = ModelHoldout(config, datasets, model, device)
-        input_data = [DataLoader(CombineDataset(dataset, params)) for
-                      dataset, params in zip(data_split.split(datasets), model_split.split(param_data))]
+        # XXX: NEED TO FIX SPLITTING METHODS (CURRENTLY USING MASKS)
+        split_masks = [DataLoader(CombineDataset(dataset, params)) for
+                      dataset, params in zip(data_split.split(datasets).values(), model_split.split(param_data).values())]
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented
     logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###
     if config["run_type"] == "demo":
-        Trainer(config, aug_model, input_data, device).run()
+        Trainer(config, aug_model, input_data, split_masks, device).run()
     if config["run_type"] == "tune":
         pass
     if config["run_type"] == "benchmark":
