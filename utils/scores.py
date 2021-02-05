@@ -4,11 +4,34 @@ import numpy as np
 
 from typing import *
 from logzero import logger
+from abc import ABC, abstractmethod
 from sklearn.metrics import f1_score, precision_score, recall_score, jaccard_score, confusion_matrix
 
 
-class Scores(object):
+class AbstractScores(ABC):
+    def __init__(self, config):
+        super(self, AbstractScores)
+        self.config = config
+
+    @abstractmethod
+    def get_scores(self):
+        pass
+
+
+class MLPScores(AbstractScores):
     def __init__(self, config, device):
+        super(MLPScores, self).__init__(config)
+        self.config = config
+        self.device = device
+
+    def get_scores(self):
+        pass
+
+
+class GraphScores(AbstractScores):
+    # XXX: PLACEHOLDER; CODE IS NOT FUNCTIONAL
+    def __init__(self, config, device):
+        super(GraphScores, self).__init__(config)
         self.config = config
         self.device = device
 
@@ -61,7 +84,7 @@ class Scores(object):
                              average=params[0],
                              sample_weight=None)
 
-    def score(self) -> Dict[str, object]:
+    def get_scores(self) -> Dict[str, object]:
         scoreset = {"acc": self.accuracy(self.score_config["acc"]),
                     "auc": self.auroc(self.score_config["auc"]),
                     "f1": self.f1_score(self.score_config["f1"]),
@@ -71,4 +94,28 @@ class Scores(object):
                     "jac": self.jaccard(self.score_config["jac"])
                     }
 
+
         return {score_type: scoreset[score_type] for score_type in self.score_config.keys()}
+
+
+class Scores(object):
+    def __init__(self, config, device):
+        self.config = config
+        self.device = device
+
+    def get_scores(self):
+        score_obj: AbstractScores = None
+        if self.config["model_config"]["model_type"] == "linear":
+            score_obj = MLPScores(self.config, self.device)
+        elif self.config["model_config"]["model_type"] == "graph":
+            score_obj = GraphScores(self.config, self.device)
+        elif self.config["model_config"]["model_type"] == "vision":
+            pass
+        elif self.config["model_config"]["model_type"] == "language":
+            pass
+        else:
+            raise NotImplementedError(f"{self.config['model_config']['model_type']} is not a model type")
+        logger.info(f"Successfully built the {self.config['model_config']['model_type']} model type")
+
+        return score_obj
+

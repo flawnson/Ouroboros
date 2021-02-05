@@ -14,6 +14,7 @@ from utils.scores import Scores
 class Trainer(object):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
     def __init__(self, config: Dict, model: torch.nn.Module, dataset: Union[DataLoader], split_masks, device):
+        self.config = config
         self.run_config = config["run_config"]
         self.model = model
         self.params = torch.nn.ParameterList(self.model.parameters())
@@ -40,8 +41,21 @@ class Trainer(object):
         predicted_param, predicted_aux = self.model(idx_vector, data[0])
         self.model(data)
 
+    def loss(self, predictions, targets):
+        loss_sr[0] = (torch.linalg.norm(predictions["param"] - targets["param"], ord=2)) ** 2
+
+        loss_task[0] = F.nll_loss(predicted_aux.unsqueeze(dim=0), data[1])
+        loss_combined[0] = loss_sr[0] + lambda_val * loss_task[0]
+        avg_relative_error[0] += formulas.relative_difference(predicted_param.item(), param.item())
+
+        total_loss_sr[0] += loss_sr[0].item()
+        total_loss_task[0] += loss_task[0].item()
+        total_loss_combined[0] += loss_combined[0].item()
+
     def score(self):
-        scores = Score()
+        scores = Scores(self.config, self.device).get_scores()
+
+        return scores
 
     def write(self, epoch: int):
         logger.info(f"Running epoch: #{epoch}")
@@ -52,12 +66,12 @@ class Trainer(object):
             if isinstance(self.dataset, DataLoader):
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[0]):
                     self.train(data.to(self.device), param_idx)
-                    self.score()
+                    scores = self.score()
 
             if isinstance(self.dataset, DataLoader):
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[0]):
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[1]):
                     self.test(data.to(self.device), param_idx)
-                    self.score()
+                    scores = self.score()
 
             self.write(epoch)
 
