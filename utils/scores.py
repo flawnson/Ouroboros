@@ -13,6 +13,9 @@ class AbstractScores(ABC):
         super(self, AbstractScores)
         self.config = config
 
+    def accuracy(self, logits, targets):
+        pass
+
     @abstractmethod
     def get_scores(self):
         pass
@@ -23,6 +26,9 @@ class MLPScores(AbstractScores):
         super(MLPScores, self).__init__(config)
         self.config = config
         self.device = device
+
+    def accuracy(self, logits, targets):
+        pass
 
     def get_scores(self):
         pass

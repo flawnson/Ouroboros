@@ -1,5 +1,5 @@
 from train import Trainer
-from tune import Tuner
+from tune import Tune
 
 from typing import *
 from logzero import logger
@@ -13,7 +13,7 @@ class Benchmarker:
         self.device = device
 
     def run_tune(self) -> Dict:
-        return Tuner(self.config, self.model, self.dataset, self.device).run()
+        return Tune(self.config, self.model, self.dataset, self.device).run()
 
     def run_train(self, best_config: Dict):
         return Trainer(best_config, self.model, self.dataset, self.device).run()

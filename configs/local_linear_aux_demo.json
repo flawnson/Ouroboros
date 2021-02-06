@@ -42,5 +42,11 @@
   "run_config":
   {
     "num_epochs": 1000
+  },
+  "score_config": {
+
+  },
+  "tuning_config": {
+
   }
 }
