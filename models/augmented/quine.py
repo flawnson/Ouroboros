@@ -8,11 +8,12 @@ from abc import ABC, abstractmethod
 from sklearn import random_projection
 
 from utils.utilities import get_example_size
+from torch.utils.data import Dataset
 
 
 class Quine(ABC):
     @abstractmethod
-    def __init__(self, config, model, device):
+    def __init__(self, config: Dict, model: torch.nn.Module, device):
         super(Quine, self).__init__()
         self.model_aug_config = config["model_aug_config"]
         self.model = model
@@ -53,12 +54,12 @@ class Quine(ABC):
         return param.view(-1)[normalized_idx]
 
     @abstractmethod
-    def forward(self):
+    def forward(self, x):
         pass
 
 
 class Vanilla(Quine, torch.nn.Module):
-    def __init__(self, config, model, device):
+    def __init__(self, config: Dict, model: torch.nn.Module, device):
         super(Vanilla, self).__init__(config, model, device)
         self.model_aug_config = config["model_aug_config"]
         self.model = model
@@ -83,19 +84,15 @@ class Vanilla(Quine, torch.nn.Module):
         self.param_names.append("wp_layer{}_bias".format(0))
         return torch.nn.Sequential(*weight_predictor_layers)
 
-    def forward(self, x):
-        x = self.van_input(x)
+    def forward(self, x: torch.tensor):
+        x = self.van_input()(x)
         x = self.model(x)
-        x = self.van_output(x)
+        x = self.van_output()(x)
         return x
-
-    def get_van(self):
-        pass
-        # self.van_input()
 
 
 class Auxiliary(Vanilla, torch.nn.Module):
-    def __init__(self, config, model, dataset, device):
+    def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dataset, device):
         super(Auxiliary, self).__init__(config, model, device)
         super(torch.nn.Module)
         self.config_aug_config = config["model_aug_config"]
@@ -106,7 +103,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
         self.aux_model = self.get_aux()
 
     @staticmethod
-    def indexer(model):
+    def indexer(model: torch.nn.Module):
         coordinates = []
         counter = 0
         for i, params in enumerate(model.param_list):
@@ -163,7 +160,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
         self.param_names.append("dp_layer{}_bias".format(0))
         return torch.nn.Sequential(*digit_predictor_layers)
 
-    def forward(self, x, y=None):
+    def forward(self, x: torch.tensor, y: torch.tensor = None):
         #x = one hot coordinate
         #y = auxiliary input
         new_output = self.van_input()(x)
@@ -184,7 +181,3 @@ class Auxiliary(Vanilla, torch.nn.Module):
         aux_output = self.aux_output()(output3)  # Auxiliary prediction network
 
         return weight, aux_output
-
-    def get_aux(self):
-        pass
-        # self.aux_input()

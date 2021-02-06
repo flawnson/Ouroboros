@@ -109,7 +109,7 @@ def main():
 
     ### Pipeline ###
     if config["run_type"] == "demo":
-        Trainer(config, aug_model, input_data, split_masks, device).run()
+        Trainer(config, aug_model, input_data, split_masks, device).run_train()
     if config["run_type"] == "tune":
         pass
     if config["run_type"] == "benchmark":

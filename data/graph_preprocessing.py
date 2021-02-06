@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 import dgl
 import json
+import torch
 import numpy as np
 import pandas as pd
 import networkx as nx
