@@ -94,8 +94,8 @@ class Auxiliary(Vanilla, torch.nn.Module):
         self.model = model
         self.dataset = dataset
         self.device = device
-        self.van_model = self.get_van()
-        self.aux_model = self.get_aux()
+        #self.van_model = self.get_van()
+        #self.aux_model = self.get_aux()
 
     @staticmethod
     def indexer(model: torch.nn.Module):

@@ -1,4 +1,5 @@
 import argparse
+import logging
 import logzero
 import torch
 import json
@@ -29,6 +30,7 @@ def main():
     args = parser.parse_args()
 
     config: Dict = json.load(open(args.config))
+    #print(config["logging"])
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
     logzero.loglevel(eval(config["logging"]))
 

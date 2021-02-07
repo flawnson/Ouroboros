@@ -1,5 +1,7 @@
 import torch
 import random
+import logzero
+from logzero import logger
 
 from abc import ABC, abstractmethod
 from torch.nn import Module
@@ -27,8 +29,7 @@ class AbstractHoldout(ABC):
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
         y = [subject[y][1] for y, d in enumerate(subject)]
         masks = list(split._iter_test_masks(subject, y))
-
-        return dict(zip(self.data_config["splits"].keys(), masks))
+        return dict(zip(self.data_config["splits"].keys(), masks)) #returns dictionary of masks based on splits in config
 
     @staticmethod
     @abstractmethod
@@ -62,11 +63,17 @@ class DataHoldout(AbstractHoldout):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
         split = StratifiedKFold(n_splits=len(self.data_config["splits"]), shuffle=self.data_config["shuffle"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
+
         y = [subject[y][1] for y, d in enumerate(subject)]
         masks = list(split._iter_test_masks(subject, y))
 
-        return dict(zip(self.data_config["splits"].keys(), masks))
-    
+        logger.info(f"Masks length: {len(masks)}")
+        logger.info(f"Masks: {masks}")
+        split_dict = dict(zip(self.data_config["splits"].keys(), masks))
+        logger.info(f"Split Dictionary: {split_dict}")
+
+        return split_dict
+
     @staticmethod
     def type_check(subject):
         assert isinstance(subject, torch.utils.data.Dataset), f"Subject: {type(subject)} is not a splittable type"
