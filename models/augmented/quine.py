@@ -5,9 +5,9 @@ from typing import *
 from copy import deepcopy
 from logzero import logger
 from abc import ABC, abstractmethod
-from sklearn import random_projection
 
 from utils.utilities import get_example_size
+from utils.reduction import Reduction
 from torch.utils.data import Dataset
 
 
@@ -22,13 +22,8 @@ class Quine(ABC):
         self.param_names = []
         self.num_params = self.num_params()
 
-    def projection(self):
-        X = np.random.rand(1, self.num_params)
-        transformer = random_projection.GaussianRandomProjection(n_components=self.model_aug_config["n_hidden"])
-        transformer.fit(X)
-        rand_proj_matrix = transformer.components_
-
-        return rand_proj_matrix
+    def reduction(self):
+        return Reduction(self.model_aug_config, self.num_params).reduce()
 
     def num_params(self, params=[]):  # To account for the input and output parameters not part of the main model
         # Create the parameter counting function
@@ -68,7 +63,7 @@ class Vanilla(Quine, torch.nn.Module):
     def van_input(self):
         rand_proj_layer = torch.nn.Linear(self.num_params, self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
                                           bias=False)  # Modify so there are half as many hidden units
-        rand_proj_layer.weight.data = torch.tensor(self.projection(), dtype=torch.float32)
+        rand_proj_layer.weight.data = torch.tensor(self.reduction(), dtype=torch.float32)
         for p in rand_proj_layer.parameters():
             p.requires_grad_(False)
         return torch.nn.Sequential(rand_proj_layer)
@@ -142,7 +137,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
         rand_proj_layer = torch.nn.Linear(get_example_size(self.dataset),
                                           self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
                                           bias=False)  # Modify so there are half as many hidden units
-        rand_proj_layer.weight.data = torch.tensor(self.projection(), dtype=torch.float32)
+        rand_proj_layer.weight.data = torch.tensor(self.reduction(), dtype=torch.float32)
         for p in rand_proj_layer.parameters():
             p.requires_grad_(False)
         return torch.nn.Sequential(rand_proj_layer)

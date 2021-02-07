@@ -1,5 +1,4 @@
 import argparse
-import logging
 import logzero
 import torch
 import json
@@ -18,7 +17,7 @@ from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset, get_aux_data
 from data.combine_preprocessing import CombineDataset
 from utils.holdout import DataHoldout, ModelHoldout
-from utils.parameters import ModelParameters
+from optim.parameters import ModelParameters
 from ops.train import Trainer
 
 
