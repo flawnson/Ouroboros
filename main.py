@@ -77,7 +77,7 @@ def main():
     logger.info(f"Successfully built the {config['model_aug_config']['model_augmentation']} augmentation")
 
     ### Param data preprocessing ###
-    param_data: Union[torch.utils.data.Dataset, List] = None
+    param_data: Union[torch.utils.data.Dataset, List] = None #do we need this?
     if config["data_config"]["dataset"] == "primary_labelset":
         pass
     elif config["data_config"]["dataset"].casefold() == "house":
@@ -92,7 +92,7 @@ def main():
 
     ### Splitting dataset and parameters ###
     input_data: Optional = None #do we need this?
-    dataloaders = [] #will contain a dataloader for each split
+    dataloaders = [] #will contain a (train,test) dataloader for each split
     if config["data_config"]["dataset"] == "primary_labelset":
         pass
     elif config["data_config"]["dataset"].casefold() == "house":
@@ -101,16 +101,22 @@ def main():
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
         data_split = DataHoldout(config, datasets, model, device)
-        model_split = ModelHoldout(config, datasets, model, device)
+        model_split = ModelHoldout(config, datasets, model, device) #should this pass in param_data
         # XXX: NEED TO FIX SPLITTING METHODS (CURRENTLY USING MASKS)
-        # split_masks = [DataLoader(CombineDataset(dataset, params)) for
-        #               dataset, params in zip(data_split.split(datasets).values(), model_split.split(param_data).values())]
+
+        #No need for params_data variable for now since we can extract parameters directly from model.
+        ###
+        # We need to decide whether we pass in parameter data as a ModelParameter object
+        # or a Model object. Right now, the Quine class has functions to extract model parameters, should these be the responsibility of ModelParameter instead?
         split_masks = zip(data_split.split(datasets).values(), model_split.split(param_data).values())
         logger.info(f"Split masks in Main: {split_masks}")
         for split_dataset, split_params in split_masks:
-            combined = CombineDataset(datasets, param_data, splits=[split_dataset, split_params])
-            dloader = DataLoader(combined)
-            dataloaders.append(dloader)
+            train_combined = CombineDataset(datasets, aug_model, splits=[split_dataset, split_params], mode="train")
+            test_combined = CombineDataset(datasets, aug_model, splits=[split_dataset, split_params], mode="val")
+
+            train_loader = DataLoader(train_combined)
+            test_loader = DataLoader(test_combined)
+            dataloaders.append([train_loader, test_loader])
 
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented
@@ -121,11 +127,13 @@ def main():
         #Run the trainer on every split
         #We can treat each split as a separate model in an ensemble
         #Each split can fully have their own charts, logging, checkpointing etc..
-        for i, split_dataloader in enumerate(dataloaders):
+        for i, dataloader in enumerate(dataloaders):
+            #dataloader is in format [train dataloader, test dataloader]
             print("Split: ", i)
-            print("Dataloader: ", split)
+            print("Dataloader: ", dataloader)
             #NOTE: Would need to modify Trainer class...
-            Trainer(config, aug_model, input_data, split_dataloader, device).run_train() #may want to remove input_data since split contains the dataloader??
+            #input_data could be redundant now as it's same as dataloader
+            Trainer(config, aug_model, input_data, dataloader, device).run_train()
     if config["run_type"] == "tune":
         pass
     if config["run_type"] == "benchmark":

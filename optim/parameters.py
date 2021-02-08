@@ -10,7 +10,7 @@ class ModelParameters(object):
         self.config = config
         self.device = device
         self.model = model
-        self.params = model.parameters()  # Default to PyTorch's parameters
+        self._params = model.parameters()  # Default to PyTorch's parameters
 
     @property
     def params(self):
