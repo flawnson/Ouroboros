@@ -91,7 +91,8 @@ def main():
     logger.info(f"Successfully generated parameter data")
 
     ### Splitting dataset and parameters ###
-    input_data: Optional = None
+    input_data: Optional = None #do we need this?
+    dataloaders = [] #will contain a dataloader for each split
     if config["data_config"]["dataset"] == "primary_labelset":
         pass
     elif config["data_config"]["dataset"].casefold() == "house":
@@ -102,15 +103,29 @@ def main():
         data_split = DataHoldout(config, datasets, model, device)
         model_split = ModelHoldout(config, datasets, model, device)
         # XXX: NEED TO FIX SPLITTING METHODS (CURRENTLY USING MASKS)
-        split_masks = [DataLoader(CombineDataset(dataset, params)) for
-                      dataset, params in zip(data_split.split(datasets).values(), model_split.split(param_data).values())]
+        # split_masks = [DataLoader(CombineDataset(dataset, params)) for
+        #               dataset, params in zip(data_split.split(datasets).values(), model_split.split(param_data).values())]
+        split_masks = zip(data_split.split(datasets).values(), model_split.split(param_data).values())
+        logger.info(f"Split masks in Main: {split_masks}")
+        for split_dataset, split_params in split_masks:
+            combined = CombineDataset(datasets, param_data, splits=[split_dataset, split_params])
+            dloader = DataLoader(combined)
+            dataloaders.append(dloader)
+
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented
     logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###
     if config["run_type"] == "demo":
-        Trainer(config, aug_model, input_data, split_masks, device).run_train()
+        #Run the trainer on every split
+        #We can treat each split as a separate model in an ensemble
+        #Each split can fully have their own charts, logging, checkpointing etc..
+        for i, split_dataloader in enumerate(dataloaders):
+            print("Split: ", i)
+            print("Dataloader: ", split)
+            #NOTE: Would need to modify Trainer class...
+            Trainer(config, aug_model, input_data, split_dataloader, device).run_train() #may want to remove input_data since split contains the dataloader??
     if config["run_type"] == "tune":
         pass
     if config["run_type"] == "benchmark":
