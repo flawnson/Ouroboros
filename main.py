@@ -20,6 +20,8 @@ from data.combine_preprocessing import CombineDataset
 from utils.holdout import DataHoldout, ModelHoldout
 from optim.parameters import ModelParameters
 from ops.train import Trainer
+from ops.tune import Tuner
+from ops.benchmark import Benchmarker
 
 
 def main():
@@ -101,8 +103,7 @@ def main():
         data_split = DataHoldout(config, datasets, model, device)
         model_split = ModelHoldout(config, datasets, model, device)
         # XXX: NEED TO FIX SPLITTING METHODS (CURRENTLY USING MASKS)
-        split_masks = [DataLoader(CombineDataset(dataset, params)) for
-                      dataset, params in zip(data_split.split(datasets).values(), model_split.split(param_data).values())]
+        split_masks = [DataLoader(CombineDataset(dataset, params)) for dataset, params in zip(data_split.split(datasets).values(), model_split.split(param_data).values())]
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented
     logger.info(f"Successfully split dataset and parameters")
@@ -111,9 +112,9 @@ def main():
     if config["run_type"] == "demo":
         Trainer(config, aug_model, input_data, split_masks, device).run_train()
     if config["run_type"] == "tune":
-        pass
+        Tuner(config, aug_model, input_data, split_masks, device)
     if config["run_type"] == "benchmark":
-        pass
+        Benchmarker(config, aug_model, input_data, split_masks, device)
 
 
 if __name__ == "__main__":

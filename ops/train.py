@@ -8,6 +8,7 @@ from tqdm import trange
 from logzero import logger
 
 from torch.utils.data import DataLoader
+from torch.nn import Module
 
 from optim.algos import OptimizerObj, LRScheduler
 from utils.scores import Scores
@@ -15,7 +16,7 @@ from utils.scores import Scores
 
 class Trainer(object):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
-    def __init__(self, config: Dict, model: torch.nn.Module, dataset: Union[DataLoader], split_masks, device):
+    def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], split_masks: List, device: torch.device):
         self.config = config
         self.run_config = config["run_config"]
         self.model = model

@@ -7,6 +7,7 @@ from logzero import logger
 from torch.utils.data import DataLoader
 
 from train import Trainer
+from torch.nn import Module
 
 try:
     import ray
@@ -16,7 +17,7 @@ except ModuleNotFoundError:
 
 
 class Tuner(Trainer):
-    def __init__(self, config: Dict, model: torch.nn.Module, dataset: Union[DataLoader], split_masks, device):
+    def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], split_masks: List, device: torch.device):
         super(Tuner, self).__init__(config, model, dataset, split_masks, device)
         self.tuning_config = config["tuning_config"]
         self.model = model
