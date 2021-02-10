@@ -12,6 +12,7 @@ from torch.nn import Module
 
 from optim.algos import OptimizerObj, LRScheduler
 from utils.scores import Scores
+from utils.checkpoint import checkpoint
 
 
 class Trainer(object):
@@ -89,5 +90,6 @@ class Trainer(object):
                     self.test(data.to(self.device), param_idx)
                     scores = self.score()
 
+            checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
             self.write(epoch)
 
