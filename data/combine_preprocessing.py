@@ -21,8 +21,10 @@ class CombineDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, i):
         #Extract the relevant indices
-        a = self.datasets[0][self.splits[0][i % len(self.datasets[0])]] #aux data
-        b = self.datasets[1].get_param(self.splits[1][i % self.datasets[1].num_params()]) #param data
+        aux_data_idx = self.splits[0][i % len(self.datasets[0])]
+        a = self.datasets[0][aux_data_idx] #aux data
+        param_data_idx = self.splits[1][i % len(self.datasets[1])]
+        b = self.datasets[1].get_param(param_data_idx) #param data
         return tuple(a,b) #all items in tuple should already be tensors
 
     def __len__(self):

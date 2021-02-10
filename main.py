@@ -90,6 +90,8 @@ def main():
         raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
     logger.info(f"Successfully generated parameter data")
 
+    #aug_model = aug_model.to(device)
+
     ### Splitting dataset and parameters ###
     input_data: Optional = None #do we need this?
     dataloaders = [] #will contain a (train,test) dataloader for each split
@@ -111,8 +113,8 @@ def main():
         split_masks = zip(data_split.split(datasets).values(), model_split.split(param_data).values())
         logger.info(f"Split masks in Main: {split_masks}")
         for split_dataset, split_params in split_masks:
-            train_combined = CombineDataset(datasets, aug_model, splits=[split_dataset, split_params], mode="train")
-            test_combined = CombineDataset(datasets, aug_model, splits=[split_dataset, split_params], mode="val")
+            train_combined = CombineDataset(datasets, param_data, splits=[split_dataset, split_params], mode="train")
+            test_combined = CombineDataset(datasets, param_data, splits=[split_dataset, split_params], mode="val")
 
             train_loader = DataLoader(train_combined)
             test_loader = DataLoader(test_combined)

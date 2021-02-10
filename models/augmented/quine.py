@@ -21,16 +21,17 @@ class Quine(ABC):
         self.param_list = []
         self.param_names = []
         self.num_params = self.num_params()
+        self.cum_params_arr = []
 
     def reduction(self):
         return Reduction(self.model_aug_config, self.num_params).reduce()
 
-    def num_params(self, params=[]):  # To account for the input and output parameters not part of the main model
+    def num_params(self):  # To account for the input and output parameters not part of the main model
         # Create the parameter counting function
         # TODO: Check if function as expected
         num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + self.param_list])
-        cum_params_arr = np.cumsum(num_params_arr)
-        num_params = int(cum_params_arr[-1])
+        self.cum_params_arr = np.cumsum(num_params_arr)
+        num_params = int(self.cum_params_arr[-1])
 
         return num_params
 

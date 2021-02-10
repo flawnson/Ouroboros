@@ -25,6 +25,8 @@ class AbstractHoldout(ABC):
     def holdout(self, subject):
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
+
+        # Should k fold just be done on the indices and not the data....
         split = StratifiedKFold(n_splits=len(self.data_config["splits"]), shuffle=self.data_config["shuffle"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
         y = [subject[y][1] for y, d in enumerate(subject)]
@@ -64,10 +66,13 @@ class DataHoldout(AbstractHoldout):
         split = StratifiedKFold(n_splits=self.data_config["num_splits"], shuffle=self.data_config["shuffle"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
 
+        logger.info("Data holdout")
+         #subject is a ConcatDataset
+
         y = [subject[y][1] for y, d in enumerate(subject)]
+
         masks = list(split._iter_test_masks(subject, y))
 
-        logger.info("Data holdout")
         logger.info(f"Masks length: {len(masks)}")
         logger.info(f"Masks: {masks}")
         index_arr = list(range(0, len(masks)))
@@ -107,11 +112,12 @@ class ModelHoldout(AbstractHoldout):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
         split = StratifiedKFold(n_splits=self.data_config["num_splits"], shuffle=self.data_config["shuffle"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
-
+        logger.info("Param holdout")
         masks = list(split._iter_test_masks(subject.params, torch.zeros_like(torch.tensor(subject.params))))
 
-        logger.info("Param holdout")
+
         logger.info(f"Masks length: {len(masks)}")
+        logger.info(f"One mask: {len(masks[0])}")
         logger.info(f"Masks: {masks}")
         index_arr = list(range(0, len(masks)))
         #split_dict = dict(zip(self.data_config["splits"].keys(), masks))
