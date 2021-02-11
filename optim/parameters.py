@@ -19,6 +19,7 @@ class ModelParameters(object):
 
     def get_param(self, idx):
         return self.model.get_param(idx)
+        
     def __len__(self):
         return self.num_params
 
