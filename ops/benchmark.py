@@ -3,8 +3,8 @@ import torch
 from torch.nn import Module
 from torch.utils.data import DataLoader
 
-from train import Trainer
-from tune import Tuner
+from ops.train import Trainer
+from ops.tune import Tuner
 
 from typing import *
 from logzero import logger
