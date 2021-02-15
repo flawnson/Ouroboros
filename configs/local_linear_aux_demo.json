@@ -21,7 +21,7 @@
     "model_type": "linear",
     "aux_input_size": 28,
     "weight_input_size": 28,
-    "layer_sizes": [256, 256, 64],
+    "layer_sizes": [64, 64, 32],
     "aux_output_size": 10,
     "weight_output_size": 1
   },

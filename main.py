@@ -17,7 +17,7 @@ from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset, get_aux_data
 from data.combine_preprocessing import CombineDataset
-from utils.holdout import DataHoldout, ModelHoldout
+from utils.holdout import MNISTHoldout, QuineHoldout
 from optim.parameters import ModelParameters
 from ops.train import Trainer
 from ops.tune import Tuner
@@ -86,7 +86,7 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        param_data = ModelParameters(config, aug_model, device)
+        param_data = ModelParameters(config, aug_model, device).params
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
     logger.info(f"Successfully generated parameter data")
@@ -100,10 +100,10 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        data_split = DataHoldout(config, datasets, model, device)
-        model_split = ModelHoldout(config, datasets, model, device)
+        data_samplers = MNISTHoldout(config, datasets, model, device)
+        model_samplers = QuineHoldout(config, datasets, model, device)
         # XXX: NEED TO FIX SPLITTING METHODS (CURRENTLY USING MASKS)
-        split_masks = [DataLoader(CombineDataset(dataset, params)) for dataset, params in zip(data_split.split(datasets).values(), model_split.split(param_data).values())]
+        split_masks = [DataLoader(CombineDataset(dataset, params)) for dataset, params in zip(data_samplers.partition(datasets).values(), model_samplers.partition(param_data).values())]
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented
     logger.info(f"Successfully split dataset and parameters")

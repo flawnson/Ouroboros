@@ -48,6 +48,7 @@ class Trainer(object):
             loss_combined[0] = 0.0
             optimizer.zero_grad()
 
+    @torch.no_grad()
     def test(self, data, param_idx):
         self.model.eval()
         idx_vector = torch.squeeze(self.params_data[param_idx])  # Pulling out the nested tensor
@@ -55,6 +56,7 @@ class Trainer(object):
         pred_param, pred_aux = self.model(idx_vector, data)
 
         loss = self.loss()
+        return loss
 
     def loss(self, predictions, targets):
         loss_sr[0] = (torch.linalg.norm(predictions["param"] - targets["param"], ord=2)) ** 2
