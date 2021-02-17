@@ -1,5 +1,4 @@
 import argparse
-import logging
 import logzero
 import torch
 import json
@@ -17,9 +16,11 @@ from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset, get_aux_data
 from data.combine_preprocessing import CombineDataset
-from utils.holdout import DataHoldout, ModelHoldout
+from utils.holdout import MNISTHoldout, QuineHoldout
 from optim.parameters import ModelParameters
 from ops.train import Trainer
+from ops.tune import Tuner
+from ops.benchmark import Benchmarker
 
 
 def main():
@@ -30,7 +31,6 @@ def main():
     args = parser.parse_args()
 
     config: Dict = json.load(open(args.config))
-    #print(config["logging"])
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
     logzero.loglevel(eval(config["logging"]))
 
@@ -77,7 +77,7 @@ def main():
     logger.info(f"Successfully built the {config['model_aug_config']['model_augmentation']} augmentation")
 
     ### Param data preprocessing ###
-    param_data: Union[torch.utils.data.Dataset, List] = None #do we need this?
+    param_data: Union[torch.utils.data.Dataset, List] = None
     if config["data_config"]["dataset"] == "primary_labelset":
         pass
     elif config["data_config"]["dataset"].casefold() == "house":
@@ -85,16 +85,13 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        param_data = ModelParameters(config, aug_model, device)
+        param_data = ModelParameters(config, aug_model, device).params
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
     logger.info(f"Successfully generated parameter data")
 
-    #aug_model = aug_model.to(device)
-
     ### Splitting dataset and parameters ###
-    input_data: Optional = None #do we need this?
-    dataloaders = [] #will contain a (train,test) dataloader for each split
+    dataloaders: List[DataLoader] = None
     if config["data_config"]["dataset"] == "primary_labelset":
         pass
     elif config["data_config"]["dataset"].casefold() == "house":
@@ -102,44 +99,22 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        data_split = DataHoldout(config, datasets, model, device)
-        model_split = ModelHoldout(config, datasets, model, device) #should this pass in param_data
+        mnist_samplers = MNISTHoldout(config, datasets, model, device)
+        quine_samplers = QuineHoldout(config, datasets, model, device)
         # XXX: NEED TO FIX SPLITTING METHODS (CURRENTLY USING MASKS)
-
-        #No need for params_data variable for now since we can extract parameters directly from model.
-        ###
-        # We need to decide whether we pass in parameter data as a ModelParameter object
-        # or a Model object. Right now, the Quine class has functions to extract model parameters, should these be the responsibility of ModelParameter instead?
-        split_masks = zip(data_split.split(datasets).values(), model_split.split(param_data).values())
-        logger.info(f"Split masks in Main: {split_masks}")
-        for split_dataset, split_params in split_masks:
-            train_combined = CombineDataset(datasets, param_data, splits=[split_dataset, split_params], mode="train")
-            test_combined = CombineDataset(datasets, param_data, splits=[split_dataset, split_params], mode="val")
-
-            train_loader = DataLoader(train_combined)
-            test_loader = DataLoader(test_combined)
-            dataloaders.append([train_loader, test_loader])
-
+        dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in mnist_samplers.partition(datasets).values()]
+        # split_masks = [DataLoader(CombineDataset(dataset, params)) for dataset, params in zip(mnist_samplers.partition(datasets).values(), quine_samplers.partition(param_data).values())]
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented
     logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###
     if config["run_type"] == "demo":
-        #Run the trainer on every split
-        #We can treat each split as a separate model in an ensemble
-        #Each split can fully have their own charts, logging, checkpointing etc..
-        for i, dataloader in enumerate(dataloaders):
-            #dataloader is in format [train dataloader, test dataloader]
-            print("Split: ", i)
-            print("Dataloader: ", dataloader)
-            #NOTE: Would need to modify Trainer class...
-            #input_data could be redundant now as it's same as dataloader
-            Trainer(config, aug_model, input_data, dataloader, device).run_train()
+        Trainer(config, aug_model, dataloaders, device).run_train()
     if config["run_type"] == "tune":
-        pass
+        Tuner(config, aug_model, dataloaders, device).run_tune()
     if config["run_type"] == "benchmark":
-        pass
+        Benchmarker(config, aug_model, dataloaders, device)
 
 
 if __name__ == "__main__":

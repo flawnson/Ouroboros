@@ -8,14 +8,16 @@ from tqdm import trange
 from logzero import logger
 
 from torch.utils.data import DataLoader
+from torch.nn import Module
 
 from optim.algos import OptimizerObj, LRScheduler
 from utils.scores import Scores
+from utils.checkpoint import checkpoint
 
 
 class Trainer(object):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
-    def __init__(self, config: Dict, model: torch.nn.Module, dataset: Union[DataLoader], split_masks, device):
+    def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], device: torch.device):
         self.config = config
         self.run_config = config["run_config"]
         self.model = model
@@ -24,7 +26,6 @@ class Trainer(object):
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.dataset = dataset
-        self.split_masks = split_masks
         self.device = device
 
     def train(self, data, param_idx, batch_idx):
@@ -47,6 +48,7 @@ class Trainer(object):
             loss_combined[0] = 0.0
             optimizer.zero_grad()
 
+    @torch.no_grad()
     def test(self, data, param_idx):
         self.model.eval()
         idx_vector = torch.squeeze(self.params_data[param_idx])  # Pulling out the nested tensor
@@ -54,6 +56,7 @@ class Trainer(object):
         pred_param, pred_aux = self.model(idx_vector, data)
 
         loss = self.loss()
+        return loss
 
     def loss(self, predictions, targets):
 
@@ -100,4 +103,5 @@ class Trainer(object):
                     self.test(data.to(self.device), param_idx)
                     scores = self.score()
 
+            checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
             self.write(epoch)
