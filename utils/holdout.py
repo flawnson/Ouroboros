@@ -35,7 +35,6 @@ class AbstractHoldout(ABC):
     def type_check(subject):
         pass
 
-    # @abstractmethod
     def partition(self, subject):
         self.type_check(subject)
         if self.data_config["split_type"] == "stratified":

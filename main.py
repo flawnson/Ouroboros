@@ -92,7 +92,7 @@ def main():
     logger.info(f"Successfully generated parameter data")
 
     ### Splitting dataset and parameters ###
-    input_data: Optional = None
+    dataloaders: List[DataLoader] = None
     if config["data_config"]["dataset"] == "primary_labelset":
         pass
     elif config["data_config"]["dataset"].casefold() == "house":
@@ -100,21 +100,22 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        data_samplers = MNISTHoldout(config, datasets, model, device)
-        model_samplers = QuineHoldout(config, datasets, model, device)
+        mnist_samplers = MNISTHoldout(config, datasets, model, device)
+        quine_samplers = QuineHoldout(config, datasets, model, device)
         # XXX: NEED TO FIX SPLITTING METHODS (CURRENTLY USING MASKS)
-        split_masks = [DataLoader(CombineDataset(dataset, params)) for dataset, params in zip(data_samplers.partition(datasets).values(), model_samplers.partition(param_data).values())]
+        dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in mnist_samplers.partition(datasets).values()]
+        # split_masks = [DataLoader(CombineDataset(dataset, params)) for dataset, params in zip(mnist_samplers.partition(datasets).values(), quine_samplers.partition(param_data).values())]
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented
     logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###
     if config["run_type"] == "demo":
-        Trainer(config, aug_model, input_data, split_masks, device).run_train()
+        Trainer(config, aug_model, dataloaders, device).run_train()
     if config["run_type"] == "tune":
-        Tuner(config, aug_model, input_data, split_masks, device)
+        Tuner(config, aug_model, dataloaders, device).run_tune()
     if config["run_type"] == "benchmark":
-        Benchmarker(config, aug_model, input_data, split_masks, device)
+        Benchmarker(config, aug_model, dataloaders, device)
 
 
 if __name__ == "__main__":

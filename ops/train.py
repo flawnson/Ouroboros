@@ -17,7 +17,7 @@ from utils.checkpoint import checkpoint
 
 class Trainer(object):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
-    def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], split_masks: List, device: torch.device):
+    def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], device: torch.device):
         self.config = config
         self.run_config = config["run_config"]
         self.model = model
@@ -26,7 +26,6 @@ class Trainer(object):
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.dataset = dataset
-        self.split_masks = split_masks
         self.device = device
 
     def train(self, data, param_idx, batch_idx):
