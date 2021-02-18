@@ -102,7 +102,12 @@ def main():
         mnist_samplers = MNISTHoldout(config, datasets, model, device)
         quine_samplers = QuineHoldout(config, datasets, model, device)
         # XXX: NEED TO FIX SPLITTING METHODS (CURRENTLY USING MASKS)
-        dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in mnist_samplers.partition(datasets).values()]
+        ## find the greater length sampler
+        if len(mnist_samplers) > len(quine_samplers):
+            dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in mnist_samplers.partition(datasets).values()]
+        else:
+            dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in quine_samplers.partition(param_data).values()]
+
         # split_masks = [DataLoader(CombineDataset(dataset, params)) for dataset, params in zip(mnist_samplers.partition(datasets).values(), quine_samplers.partition(param_data).values())]
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented

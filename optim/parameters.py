@@ -15,11 +15,19 @@ class ModelParameters(object):
         print(self.model)
         self.num_params = self.model.num_params
 
-        self.params = torch.eye(self.model.num_params, device=self.device) #takes a lot of memory I feel like
+        #self.params = torch.eye(self.model.num_params, device=self.device) #takes a lot of memory I feel like
 
     def get_param(self, idx):
-        return self.model.get_param(idx)
-        
+        #idx is an int
+        #idx -> one hot vector
+        #convert to one hot on the fly
+        values = [idx]
+        n_values = np.max(values) + 1
+        onehot = np.eye(n_values)[values][0] #not sure of dimensions (may want to print)
+        print("Onehot: ", onehot)
+
+        return self.model.get_param(onehot)
+
     def __len__(self):
         return self.num_params
 

@@ -68,7 +68,7 @@ class MNISTHoldout(AbstractHoldout):
         samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(subject, y)]
 
         return dict(zip(self.data_config["splits"].keys(), samplers))
-    
+
     @staticmethod
     def type_check(subject):
         assert isinstance(subject, torch.utils.data.Dataset), f"Subject: {type(subject)} is not a splittable type"
@@ -117,6 +117,8 @@ class QuineHoldout(AbstractHoldout):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
         splits = StratifiedKFold(n_splits=len(self.data_config["splits"]), shuffle=self.data_config["shuffle"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
+
+        #all labels are 0
         samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(subject, torch.zeros_like(torch.tensor(subject)))]
 
         return dict(zip(self.data_config["splits"].keys(), samplers))
@@ -125,4 +127,3 @@ class QuineHoldout(AbstractHoldout):
     def type_check(subject):
         pass
         # assert isinstance(subject, Quine) & isinstance(subject, Module), f"Subject: {type(subject)} is not a splittable type"
-

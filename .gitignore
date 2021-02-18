@@ -1,13 +1,10 @@
-<<<<<<< HEAD
 # data/log files
 logs/
 output/
 *.sh
-=======
 datafiles/mnist/
 *.csv
 *.ipynb
 *.pkl
 *.pb
 *.gz
->>>>>>> main
