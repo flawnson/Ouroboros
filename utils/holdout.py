@@ -119,6 +119,7 @@ class QuineHoldout(AbstractHoldout):
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
 
         #all labels are 0
+        #Does subject need to be a torch tensor
         samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(subject, torch.zeros_like(torch.tensor(subject)))]
 
         return dict(zip(self.data_config["splits"].keys(), samplers))
