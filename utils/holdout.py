@@ -62,8 +62,8 @@ class MNISTHoldout(AbstractHoldout):
         splits = StratifiedKFold(n_splits=len(self.data_config["splits"]), shuffle=self.data_config["shuffle"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split
-        y = [subject[y][1] for y, d in enumerate(subject)]
-        samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(subject, y)]
+        # y = [subject[y][1] for y, d in enumerate(subject)]
+        samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(subject, subject.targets)]
 
         return dict(zip(self.data_config["splits"].keys(), samplers))
     
