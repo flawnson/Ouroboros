@@ -1,5 +1,4 @@
 import argparse
-import logging
 import logzero
 import torch
 import json
@@ -86,7 +85,7 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        param_data = ModelParameters(config, aug_model, device).params
+        param_data = ModelParameters(config, aug_model, device)
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
     logger.info(f"Successfully generated parameter data")
@@ -100,10 +99,18 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
+        #Note: second parameter (the datasets argument) is redundant, since we are passing in dataset in .partition() later on
         mnist_samplers = MNISTHoldout(config, datasets, model, device)
-        quine_samplers = QuineHoldout(config, datasets, model, device)
+        quine_samplers = QuineHoldout(config, param_data.params, model, device)
         # XXX: NEED TO FIX SPLITTING METHODS (CURRENTLY USING MASKS)
-        dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in mnist_samplers.partition(datasets).values()]
+        ## find the greater length sampler
+        if len(mnist_samplers) > len(quine_samplers):
+            dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in mnist_samplers.partition(datasets).values()]
+        else:
+            #When splitting/partition, we split the indices of the params (which are ints)
+            #In combineDataset, the param_data indices will be passed to get_param() in get_item
+            dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in quine_samplers.partition(param_data.params).values()]
+
         # split_masks = [DataLoader(CombineDataset(dataset, params)) for dataset, params in zip(mnist_samplers.partition(datasets).values(), quine_samplers.partition(param_data).values())]
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented

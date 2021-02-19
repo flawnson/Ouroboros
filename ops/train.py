@@ -37,7 +37,8 @@ class Trainer(object):
         pred_param, pred_aux = self.model(idx_vector, data)
         self.model(data)
 
-        loss = self.loss()
+        loss = self.loss() #Incomplete? Parameters not passed in
+
 
         if ((batch_idx + 1) % self.configs["batch_size"]) == 0:
             loss_combined[0].backward()  # The combined loss is backpropagated right?
@@ -58,6 +59,17 @@ class Trainer(object):
         return loss
 
     def loss(self, predictions, targets):
+
+        ##NOTE: in nn-quine we had this:
+        #in these fields, index 0 is training value, index 1 is validation value
+        #loss_combined, avg_relative_error, loss_sr, loss_task, total_loss_sr, total_loss_task, total_loss_combined = [[0.0, 0.0] for i in range(7)]
+
+        #Everything get's reset for the next epoch
+        #loss values are batch loss, total_loss are epoch loss
+        #Only total_loss values are logged to tensorboard
+        ####
+
+
         loss_sr[0] = (torch.linalg.norm(predictions["param"] - targets["param"], ord=2)) ** 2
 
         loss_task[0] = F.nll_loss(pred_aux.unsqueeze(dim=0), data[1])
@@ -93,4 +105,3 @@ class Trainer(object):
 
             checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
             self.write(epoch)
-
