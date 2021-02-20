@@ -9,7 +9,7 @@
     "concat": true,
     "data_dir": "data/datafiles/mnist",
     "data_path": "data/datafiles/housing_prices/train.csv",
-    "split_type": "stratified",
+    "split_type": "holdout",
     "splits": {"trainset": 0.7,
                "validset": 0.2,
                "newset": 0.2,

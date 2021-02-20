@@ -1,4 +1,5 @@
 import argparse
+import logging
 import logzero
 import torch
 import json
@@ -16,7 +17,7 @@ from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset, get_aux_data
 from data.combine_preprocessing import CombineDataset
-from utils.holdout import MNISTHoldout, QuineHoldout
+from utils.holdout import MNISTSplit, QuineSplit
 from optim.parameters import ModelParameters
 from ops.train import Trainer
 from ops.tune import Tuner
@@ -100,16 +101,10 @@ def main():
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
         #Note: second parameter (the datasets argument) is redundant, since we are passing in dataset in .partition() later on
-        mnist_samplers = MNISTHoldout(config, datasets, model, device)
-        quine_samplers = QuineHoldout(config, param_data.params, model, device)
-        # XXX: NEED TO FIX SPLITTING METHODS (CURRENTLY USING MASKS)
-        ## find the greater length sampler
-        if len(mnist_samplers) > len(quine_samplers):
-            dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in mnist_samplers.partition(datasets).values()]
-        else:
-            #When splitting/partition, we split the indices of the params (which are ints)
-            #In combineDataset, the param_data indices will be passed to get_param() in get_item
-            dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in quine_samplers.partition(param_data.params).values()]
+        mnist_samplers = MNISTSplit(config, datasets, model, device)
+        quine_samplers = QuineSplit(config, param_data.params, model, device)
+        # Find the greater length sampler
+
 
         # split_masks = [DataLoader(CombineDataset(dataset, params)) for dataset, params in zip(mnist_samplers.partition(datasets).values(), quine_samplers.partition(param_data).values())]
     else:
