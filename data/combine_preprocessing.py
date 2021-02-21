@@ -22,6 +22,7 @@ class CombineDataset(torch.utils.data.Dataset):
     def __getitem__(self, i):
 
         #Extract the relevant indices
+        # Assumes that aux data is first and param data is second
 
         #MNIST
         aux_data_idx = self.splits[0][i % len(self.datasets[0])]

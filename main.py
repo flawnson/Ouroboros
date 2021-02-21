@@ -104,11 +104,18 @@ def main():
         mnist_samplers = MNISTSplit(config, datasets, model, device)
         quine_samplers = QuineSplit(config, param_data.params, model, device)
         # Find the greater length sampler
-
-
-        # split_masks = [DataLoader(CombineDataset(dataset, params)) for dataset, params in zip(mnist_samplers.partition(datasets).values(), quine_samplers.partition(param_data).values())]
+        dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in
+                       mnist_samplers.partition(datasets).values()]
+        if len(mnist_samplers) > len(quine_samplers):
+            dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in mnist_samplers.partition(datasets).values()]
+        else:
+            #When splitting/partition, we split the indices of the params (which are ints)
+            #In combineDataset, the param_data indices will be passed to get_param() in get_item
+            dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in quine_samplers.partition(param_data.params).values()]
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented
+    quine_samplers = QuineSplit(config, param_data.params, model, device)
+    dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in quine_samplers.partition(param_data.params).values()]
     logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###

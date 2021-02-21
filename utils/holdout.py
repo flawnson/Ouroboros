@@ -8,8 +8,13 @@ from abc import ABC, abstractmethod
 from logzero import logger
 from torch.nn import Module
 from torch.utils.data import Dataset
-from models.augmented.quine import Quine
 from sklearn.model_selection import StratifiedKFold, train_test_split
+from torch.utils.data import DataLoader
+
+from data.combine_preprocessing import CombineDataset
+from models.augmented.quine import Quine
+
+DEFAULT_SPLIT = 0.70
 
 
 class AbstractSplit(ABC):
@@ -50,17 +55,28 @@ class AbstractSplit(ABC):
 
 
 class MNISTSplit(AbstractSplit):
-    def __init__(self, config, dataset, model, device):
+    def __init__(self, config, dataset, param_data, model, device):
         super(MNISTSplit, self).__init__(config, dataset, model, device)
+        self.config = config
         self.data_config = config["data_config"]
         self.dataset = dataset
+        self.param_data = param_data
         self.model = model
         self.device = device
 
-    def holdout(self, subject):
-        train_test_split(subject, subject.targets, train_size=self.data_config.get("splits", .70), random_state=42)
+    def holdout(self, subject) -> Dict[str, DataLoader]:
+        try:
+            logger.info(f"Splitting dataset into {self.data_config['splits']['size']}")
+            train_x, test_x, train_y, test_y = train_test_split(subject, subject.targets, train_size=self.data_config["splits"]["size"], random_state=42)
+        except KeyError:
+            logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_SPLIT}")
+            train_x, test_x, train_y, test_y = train_test_split(subject, subject.targets, train_size=DEFAULT_SPLIT, random_state=42)
 
-    def kfold(self, subject):
+        dataloaders = [DataLoader(Dataset(trainset, labelset)) for trainset, labelset in zip([[train_x, test_x], [train_y, test_y]])]
+
+        return dict(zip(self.data_config["splits"].keys(), dataloaders))
+
+    def kfold(self, subject) -> Dict[str, DataLoader]:
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
         splits = StratifiedKFold(n_splits=len(self.data_config["splits"]), shuffle=self.data_config["shuffle"])
@@ -68,15 +84,12 @@ class MNISTSplit(AbstractSplit):
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split)
         # The .split() method from SKLearn returns a generator that generates 2 index arrays (for training and testing)
         samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(subject, subject.targets)]
-
-        if len(mnist_samplers) > len(quine_samplers):
-            dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in mnist_samplers.partition(datasets).values()]
+        if self.config["model_aug_config"]["model_augmentation"] == "auxiliary":
+            dataloaders = [DataLoader(CombineDataset(self.dataset, self.param_data), sampler=sampler) for sampler in samplers]
         else:
-            #When splitting/partition, we split the indices of the params (which are ints)
-            #In combineDataset, the param_data indices will be passed to get_param() in get_item
-            dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in quine_samplers.partition(param_data.params).values()]
+            dataloaders = [DataLoader(self.dataset, sampler=sampler) for sampler in samplers]
 
-        return dict(zip(self.data_config["splits"].keys(), samplers))
+        return dict(zip(self.data_config["splits"].keys(), dataloaders))
 
     @staticmethod
     def type_check(subject):
