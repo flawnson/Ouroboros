@@ -60,7 +60,7 @@ class MNISTSplit(AbstractSplit):
         self.config = config
         self.data_config = config["data_config"]
         self.dataset = dataset
-        self.param_data = param_data
+        self.param_data = param_data.params
         self.model = model
         self.device = device
 
@@ -127,7 +127,7 @@ class QuineSplit(AbstractSplit):
     def __init__(self, config, dataset, model, device):
         super(QuineSplit, self).__init__(config, dataset, model, device)
         self.data_config = config["data_config"]
-        self.dataset = dataset
+        self.dataset = dataset.params
         self.model = model
         self.device = device
 
