@@ -6,6 +6,7 @@ import torch.functional as F
 from typing import *
 from tqdm import trange
 from logzero import logger
+from abc import ABC, abstractmethod
 
 from torch.utils.data import DataLoader
 from torch.nn import Module
@@ -16,9 +17,43 @@ from utils.scores import Scores
 from utils.checkpoint import checkpoint
 
 
-class Trainer(object):
+class AbstractTrainer(ABC):
+
+    def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], device: torch.device):
+        self.config = config
+        self.run_config = config["run_config"]
+        self.model = model
+        self.params = torch.nn.ParameterList(self.model.parameters())
+        self.params_data = torch.eye(self.model.num_params, device=device)
+        self.optimizer = OptimizerObj(config, self.params).optim_obj
+        self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
+        self.dataset = dataset
+        self.device = device
+
+    @abstractmethod
+    def train(self):
+        pass
+
+    def test(self):
+        pass
+
+    def loss(self):
+        pass
+
+    def score(self):
+        pass
+
+    def write(self):
+        pass
+
+    def run_train(self):
+        pass
+
+
+class AuxTrainer(AbstractTrainer):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
     def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], device: torch.device):
+        super(self, AuxTrainer).__init__(config, model, dataset, device)
         self.config = config
         self.run_config = config["run_config"]
         self.model = model
@@ -40,14 +75,10 @@ class Trainer(object):
 
         loss = self.loss(self.config, self.model, predictions, targets) #Incomplete? Parameters not passed in
 
-
-        if ((batch_idx + 1) % self.configs["batch_size"]) == 0:
-            loss_combined[0].backward()  # The combined loss is backpropagated right?
-            optimizer.step()
-            loss_sr[0] = 0.0
-            loss_task[0] = 0.0
-            loss_combined[0] = 0.0
-            optimizer.zero_grad()
+        if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
+            loss.backward()  # The combined loss is backpropagated right?
+            self.optimizer.step()
+            self.optimizer.zero_grad()
 
     @torch.no_grad()
     def test(self, data, param_idx):
@@ -56,7 +87,7 @@ class Trainer(object):
         param = self.model.get_param(param_idx)
         pred_param, pred_aux = self.model(idx_vector, data)
 
-        loss = self.loss()
+        loss = self.loss(self.config, self.model, predictions, targets)
         return loss
 
     def loss(self, predictions, targets):
@@ -71,18 +102,7 @@ class Trainer(object):
         ####
         loss = Loss(self.config, self.model, predictions, targets)
 
-
-        loss_sr[0] = (torch.linalg.norm(predictions["param"] - targets["param"], ord=2)) ** 2
-
-        loss_task[0] = F.nll_loss(pred_aux.unsqueeze(dim=0), data[1])
-        loss_combined[0] = loss_sr[0] + lambda_val * loss_task[0]
-        avg_relative_error[0] += formulas.relative_difference(predicted_param.item(), param.item())
-
-        total_loss_sr[0] += loss_sr[0].item()
-        total_loss_task[0] += loss_task[0].item()
-        total_loss_combined[0] += loss_combined[0].item()
-
-        return None
+        return loss
 
     def score(self):
         scores = Scores(self.config, self.device).get_scores()

@@ -11,7 +11,8 @@
     "data_path": "data/datafiles/housing_prices/train.csv",
     "split_type": "holdout",
     "num_splits": 5,
-    "shuffle": true
+    "shuffle": true,
+    "batch_size": 1
   },
   "model_config":
   {
