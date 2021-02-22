@@ -10,10 +10,7 @@
     "data_dir": "data/datafiles/mnist",
     "data_path": "data/datafiles/housing_prices/train.csv",
     "split_type": "holdout",
-    "splits": {"trainset": 0.7,
-               "validset": 0.2,
-               "newset": 0.2,
-               "testset": 0.1},
+    "num_splits": 5,
     "shuffle": true
   },
   "model_config":
@@ -45,7 +42,8 @@
   {
     "num_epochs": 1000,
     "checkpoint_intervals": 100,
-    "checkpoint_dir": "saves/checkpoints/"
+    "checkpoint_dir": "saves/checkpoints/",
+    "lambda": 0.01
   },
   "score_config": {
 

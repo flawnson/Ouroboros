@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 from torch.nn import Module
 
 from optim.algos import OptimizerObj, LRScheduler
+from optim.losses import Loss
 from utils.scores import Scores
 from utils.checkpoint import checkpoint
 
@@ -37,7 +38,7 @@ class Trainer(object):
         pred_param, pred_aux = self.model(idx_vector, data)
         self.model(data)
 
-        loss = self.loss() #Incomplete? Parameters not passed in
+        loss = self.loss(self.config, self.model, predictions, targets) #Incomplete? Parameters not passed in
 
 
         if ((batch_idx + 1) % self.configs["batch_size"]) == 0:
@@ -68,6 +69,7 @@ class Trainer(object):
         #loss values are batch loss, total_loss are epoch loss
         #Only total_loss values are logged to tensorboard
         ####
+        loss = Loss(self.config, self.model, predictions, targets)
 
 
         loss_sr[0] = (torch.linalg.norm(predictions["param"] - targets["param"], ord=2)) ** 2

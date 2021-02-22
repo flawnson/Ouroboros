@@ -66,15 +66,16 @@ class MNISTSplit(AbstractSplit):
 
     def holdout(self, subject) -> Dict[str, DataLoader]:
         try:
+            split_size = self.data_config["splits"]["size"]
             logger.info(f"Splitting dataset into {self.data_config['splits']['size']}")
-            train_x, test_x, train_y, test_y = train_test_split(subject, subject.targets, train_size=self.data_config["splits"]["size"], random_state=42)
         except KeyError:
+            split_size = DEFAULT_SPLIT
             logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_SPLIT}")
-            train_x, test_x, train_y, test_y = train_test_split(subject, subject.targets, train_size=DEFAULT_SPLIT, random_state=42)
 
+        train_x, test_x, train_y, test_y = train_test_split(subject, subject.targets, train_size=split_size, random_state=42)
         dataloaders = [DataLoader(Dataset(trainset, labelset)) for trainset, labelset in zip([[train_x, test_x], [train_y, test_y]])]
 
-        return dict(zip(self.data_config["splits"].keys(), dataloaders))
+        return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
 
     def kfold(self, subject) -> Dict[str, DataLoader]:
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
@@ -89,7 +90,7 @@ class MNISTSplit(AbstractSplit):
         else:
             dataloaders = [DataLoader(self.dataset, sampler=sampler) for sampler in samplers]
 
-        return dict(zip(self.data_config["splits"].keys(), dataloaders))
+        return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
 
     @staticmethod
     def type_check(subject):

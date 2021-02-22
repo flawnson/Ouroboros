@@ -102,13 +102,12 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "mnist":
         #Note: second parameter (the datasets argument) is redundant, since we are passing in dataset in .partition() later on
         # Find the greater length sampler
-        if len(mnist_samplers) > len(quine_samplers):
-            mnist_samplers = MNISTSplit(config, datasets, param_data, model, device).partition()
+        if len(datasets) > len(param_data.params):
+            mnist_dataloaders = MNISTSplit(config, datasets, param_data, model, device).partition()
         else:
-            quine_samplers = QuineSplit(config, param_data, model, device).partition()
+            quine_dataloaders = QuineSplit(config, param_data, model, device).partition()
             #When splitting/partition, we split the indices of the params (which are ints)
             #In combineDataset, the param_data indices will be passed to get_param() in get_item
-            dataloaders = [DataLoader(CombineDataset(datasets, param_data), sampler=sampler) for sampler in quine_samplers.partition(param_data.params).values()]
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented
     quine_samplers = QuineSplit(config, param_data.params, model, device)
