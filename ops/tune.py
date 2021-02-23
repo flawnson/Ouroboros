@@ -6,7 +6,7 @@ from typing import *
 from logzero import logger
 from torch.utils.data import DataLoader
 
-from ops.train import Trainer
+from ops.train import AbstractTrainer
 from torch.nn import Module
 
 try:
@@ -16,7 +16,7 @@ except ModuleNotFoundError:
     logger.info("Ray is not available, continuing run without benchmarking")
 
 
-class Tuner(Trainer):
+class Tuner(AbstractTrainer):
     def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], split_masks: List, device: torch.device):
         super(Tuner, self).__init__(config, model, dataset, split_masks, device)
         self.tuning_config = config["tuning_config"]

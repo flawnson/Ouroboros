@@ -19,7 +19,7 @@ from data.linear_preprocessing import HousingDataset, get_aux_data
 from data.combine_preprocessing import CombineDataset
 from utils.holdout import MNISTSplit, QuineSplit
 from optim.parameters import ModelParameters
-from ops.train import Trainer
+from ops.train import AuxTrainer
 from ops.tune import Tuner
 from ops.benchmark import Benchmarker
 
@@ -116,7 +116,7 @@ def main():
 
     ### Pipeline ###
     if config["run_type"] == "demo":
-        Trainer(config, aug_model, dataloaders, device).run_train()
+        AuxTrainer(config, aug_model, dataloaders, device).run_train()  # Temporary specific to Aux model
     if config["run_type"] == "tune":
         Tuner(config, aug_model, dataloaders, device).run_tune()
     if config["run_type"] == "benchmark":

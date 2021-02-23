@@ -4,6 +4,7 @@ import logzero
 
 import numpy as np
 
+from typing import *
 from abc import ABC, abstractmethod
 from logzero import logger
 from torch.nn import Module
@@ -25,17 +26,17 @@ class AbstractSplit(ABC):
         self.device = device
 
     @abstractmethod
-    def holdout(self, subject):
+    def holdout(self):
         pass
 
     @abstractmethod
-    def kfold(self, subject):
+    def kfold(self):
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
         splits = StratifiedKFold(n_splits=len(self.data_config["splits"]), shuffle=self.data_config["shuffle"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
-        y = [subject[y][1] for y, d in enumerate(subject)]
-        masks = list(splits._iter_test_masks(subject, y))
+        y = [self.dataset[y][1] for y, d in enumerate(self.dataset)]
+        masks = list(splits._iter_test_masks(self.dataset, y))
 
         return dict(zip(self.data_config["splits"].keys(), masks))
 
@@ -44,12 +45,12 @@ class AbstractSplit(ABC):
     def type_check(subject):
         pass
 
-    def partition(self, subject):
-        self.type_check(subject)
+    def partition(self):
+        self.type_check(self.dataset)
         if self.data_config["split_type"] == "stratified":
-            return self.kfold(subject)
+            return self.kfold()
         elif self.data_config["split_type"] == "holdout":
-            return self.holdout(subject)
+            return self.holdout()
         else:
             raise NotImplementedError(f"Split-type: {self.data_config['split_type']} not understood")
 
@@ -64,7 +65,7 @@ class MNISTSplit(AbstractSplit):
         self.model = model
         self.device = device
 
-    def holdout(self, subject) -> Dict[str, DataLoader]:
+    def holdout(self) -> Dict[str, DataLoader]:
         try:
             split_size = self.data_config["splits"]["size"]
             logger.info(f"Splitting dataset into {self.data_config['splits']['size']}")
@@ -72,19 +73,19 @@ class MNISTSplit(AbstractSplit):
             split_size = DEFAULT_SPLIT
             logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_SPLIT}")
 
-        train_x, test_x, train_y, test_y = train_test_split(subject, subject.targets, train_size=split_size, random_state=42)
-        dataloaders = [DataLoader(Dataset(trainset, labelset)) for trainset, labelset in zip([[train_x, test_x], [train_y, test_y]])]
+        train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=42)
+        dataloaders = [DataLoader({"examples": trainset, "labels": labelset}) for trainset, labelset in [(train_x, test_x), (train_y, test_y)]]
 
         return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
 
-    def kfold(self, subject) -> Dict[str, DataLoader]:
+    def kfold(self) -> Dict[str, DataLoader]:
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
         splits = StratifiedKFold(n_splits=len(self.data_config["splits"]), shuffle=self.data_config["shuffle"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split)
         # The .split() method from SKLearn returns a generator that generates 2 index arrays (for training and testing)
-        samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(subject, subject.targets)]
+        samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(self.dataset, self.dataset.targets)]
         if self.config["model_aug_config"]["model_augmentation"] == "auxiliary":
             dataloaders = [DataLoader(CombineDataset(self.dataset, self.param_data), sampler=sampler) for sampler in samplers]
         else:

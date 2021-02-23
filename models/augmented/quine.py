@@ -83,7 +83,7 @@ class Vanilla(Quine, torch.nn.Module):
         x = self.van_input()(x)
         x = self.model(x)
         x = self.van_output()(x)
-        return x
+        return {"pred_param": x}
 
 
 class Auxiliary(Vanilla, torch.nn.Module):
@@ -173,4 +173,4 @@ class Auxiliary(Vanilla, torch.nn.Module):
         weight = self.van_output()(output3)  # Weight prediction network
         aux_output = self.aux_output()(output3)  # Auxiliary prediction network
 
-        return weight, aux_output
+        return {"pred_param": weight, "pred_aux": aux_output}

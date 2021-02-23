@@ -70,8 +70,7 @@ class AuxTrainer(AbstractTrainer):
         idx_vector = torch.squeeze(self.params_data[param_idx])  # Pulling out the nested tensor
         # param_idx should already be a tensor on the device when we initialized it using torch.eye
         param = self.model.get_param(param_idx)
-        pred_param, pred_aux = self.model(idx_vector, data)
-        self.model(data)
+        predictions = self.model(idx_vector, data)
 
         loss = self.loss(self.config, self.model, predictions, targets) #Incomplete? Parameters not passed in
 
@@ -100,14 +99,10 @@ class AuxTrainer(AbstractTrainer):
         #loss values are batch loss, total_loss are epoch loss
         #Only total_loss values are logged to tensorboard
         ####
-        loss = Loss(self.config, self.model, predictions, targets)
-
-        return loss
+        return Loss(self.config, self.model, predictions, targets)
 
     def score(self):
-        scores = Scores(self.config, self.device).get_scores()
-
-        return scores
+        return Scores(self.config, self.device).get_scores()
 
     def write(self, epoch: int):
         logger.info(f"Running epoch: #{epoch}")
