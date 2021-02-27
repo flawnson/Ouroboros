@@ -1,5 +1,6 @@
 {
   "run_name": "Linear_MNST_auxiliary",
+  "seed": 42,
   "run_type": "demo",
   "logging": "logging.INFO",
   "device": "cpu",

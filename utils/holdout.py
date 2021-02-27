@@ -8,9 +8,8 @@ from typing import *
 from abc import ABC, abstractmethod
 from logzero import logger
 from torch.nn import Module
-from torch.utils.data import Dataset
-from sklearn.model_selection import StratifiedKFold, train_test_split
-from torch.utils.data import DataLoader
+from sklearn.model_selection import StratifiedKFold, train_test_split, ShuffleSplit
+from torch.utils.data import Dataset, TensorDataset, DataLoader
 
 from data.combine_preprocessing import CombineDataset
 from models.augmented.quine import Quine
@@ -19,10 +18,9 @@ DEFAULT_SPLIT = 0.70
 
 
 class AbstractSplit(ABC):
-    def __init__(self, config, dataset, model, device):
+    def __init__(self, config, dataset, device):
         self.data_config = config["data_config"]
         self.dataset = dataset
-        self.model = model
         self.device = device
 
     @abstractmethod
@@ -56,13 +54,12 @@ class AbstractSplit(ABC):
 
 
 class MNISTSplit(AbstractSplit):
-    def __init__(self, config, dataset, param_data, model, device):
-        super(MNISTSplit, self).__init__(config, dataset, model, device)
+    def __init__(self, config, dataset, param_data, device):
+        super(MNISTSplit, self).__init__(config, dataset, device)
         self.config = config
         self.data_config = config["data_config"]
         self.dataset = dataset
         self.param_data = param_data.params
-        self.model = model
         self.device = device
 
     def holdout(self) -> Dict[str, DataLoader]:
@@ -73,9 +70,10 @@ class MNISTSplit(AbstractSplit):
             split_size = DEFAULT_SPLIT
             logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_SPLIT}")
 
-        train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=42)
-        dataloaders = [DataLoader({"examples": trainset, "labels": labelset}) for trainset, labelset in [(train_x, test_x), (train_y, test_y)]]
-
+        # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])
+        split_idx = list(ShuffleSplit(n_splits=1, train_size=split_size, random_state=self.config["seed"]).split(self.dataset, self.dataset.targets))
+        samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx]
+        dataloaders = [DataLoader(self.dataset, sampler=sampler) for sampler in samplers]
         return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
 
     def kfold(self) -> Dict[str, DataLoader]:
@@ -100,23 +98,23 @@ class MNISTSplit(AbstractSplit):
 
 class GraphSplit(AbstractSplit):
     def __init__(self, config, dataset, model, device):
-        super(MNISTSplit, self).__init__(config, dataset, model, device)
+        super(GraphSplit, self).__init__(config, dataset, device)
         self.data_config = config["data_config"]
         self.dataset = dataset
         self.model = model
         self.device = device
 
-    def holdout(self, subject):
+    def holdout(self):
         pass
 
-    def kfold(self, subject):
+    def kfold(self):
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
         splits = StratifiedKFold(n_splits=len(self.data_config["splits"]), shuffle=self.data_config["shuffle"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split
-        y = [subject[y][1] for y, d in enumerate(subject)]
-        masks = list(splits._iter_test_masks(subject, y))
+        y = [self.dataset[y][1] for y, d in enumerate(self.dataset)]
+        masks = list(splits._iter_test_masks(self.dataset, y))
 
         return dict(zip(self.data_config["splits"].keys(), masks))
 
@@ -126,17 +124,16 @@ class GraphSplit(AbstractSplit):
 
 
 class QuineSplit(AbstractSplit):
-    def __init__(self, config, dataset, model, device):
-        super(QuineSplit, self).__init__(config, dataset, model, device)
+    def __init__(self, config, dataset, device):
+        super(QuineSplit, self).__init__(config, dataset, device)
         self.data_config = config["data_config"]
-        self.dataset = dataset.params
-        self.model = model
+        self.dataset = dataset
         self.device = device
 
-    def holdout(self, subject):
+    def holdout(self):
         pass
 
-    def kfold(self, subject):
+    def kfold(self):
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
         splits = StratifiedKFold(n_splits=len(self.data_config["splits"]), shuffle=self.data_config["shuffle"])
@@ -144,7 +141,7 @@ class QuineSplit(AbstractSplit):
 
         #all labels are 0
         #Does subject need to be a torch tensor
-        samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(subject, torch.zeros_like(torch.tensor(subject)))]
+        samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(self.dataset, torch.zeros_like(torch.tensor(self.dataset)))]
 
         return dict(zip(self.data_config["splits"].keys(), samplers))
 

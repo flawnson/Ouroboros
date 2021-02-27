@@ -84,7 +84,7 @@ class AuxTrainer(AbstractTrainer):
         self.model.eval()
         idx_vector = torch.squeeze(self.params_data[param_idx])  # Pulling out the nested tensor
         param = self.model.get_param(param_idx)
-        pred_param, pred_aux = self.model(idx_vector, data)
+        predictions = self.model(idx_vector, data)
 
         loss = self.loss(self.config, self.model, predictions, targets)
         return loss

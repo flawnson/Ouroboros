@@ -1,5 +1,6 @@
 import torch
 import random
+import numpy as np
 
 from typing import *
 from logzero import logger
@@ -16,7 +17,7 @@ class ModelParameters(object):
         self.num_params = self.model.num_params
 
         #Not sure if self.params list should be a torch tensor
-        self.params = list(range(self.num_params)) #indices of all params: [1, 2, ......, num_params - 1]
+        self.params = torch.tensor(list(range(self.num_params))) #indices of all params: [1, 2, ......, num_params - 1]
 
         #self.params = torch.eye(self.model.num_params, device=self.device) #takes a lot of memory I feel like
 
