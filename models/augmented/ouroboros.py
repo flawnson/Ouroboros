@@ -7,18 +7,7 @@ class Ouroboros(ABC):
         pass
 
     def get_param(self, idx):
-        assert idx < self.num_params
-        subtract = 0
-        param = None
-        normalized_idx = None
-        for i, n_params in enumerate(self.cum_params_arr):
-            if idx < n_params:
-                param = self.param_list[i]
-                normalized_idx = idx - subtract
-                break
-            else:
-                subtract = n_params
-        return param.view(-1)[normalized_idx]
+        pass
 
 
 class Jung(Ouroboros):

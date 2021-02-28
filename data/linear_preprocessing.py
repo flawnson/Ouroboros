@@ -25,7 +25,17 @@ class HousingDataset(Dataset):
         return None
 
 
-def get_aux_data(config: Dict) -> Dataset:
+def get_aux_data(config: Dict) -> ConcatDataset:
+    """
+    Load torchvision data, both training and tuning, and return a concatenated Dataset object.
+    Splitting occurs further downstream (in holdout class methods)
+
+    Args:
+        config: Configuration dictionary
+
+    Returns:
+        torch.utils.data.Datasets
+    """
     logger.info(f"Downloading MNIST data to {config['data_config']['data_dir']}")
     transform = tv.transforms.Compose([tv.transforms.ToTensor()])
     dataset = ConcatDataset([tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']),

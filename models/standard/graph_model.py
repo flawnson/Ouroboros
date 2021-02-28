@@ -11,7 +11,8 @@ from dgl.nn.pytorch.glob import AvgPooling, MaxPooling, SortPooling, GlobalAtten
 
 class AbstractGNNModel(torch.nn.Module, ABC):
     def __init__(self, config: dict, layer_dict: list, pooling: torch.nn.functional, device: torch.device):
-        """ Class for training and testing loops
+        """
+        Class for training and testing loops
         Args:
             config: Model config file (Python dictionary from JSON)
             linear_model: Either None or Linear model stored as torch Module object (only implemented for GCN model)

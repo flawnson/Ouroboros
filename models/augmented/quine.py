@@ -25,7 +25,20 @@ class Quine(ABC):
     def reduction(self):
         return Reduction(self.model_aug_config, self.num_params).reduce()
 
-    def num_params(self, params=[]):  # To account for the input and output parameters not part of the main model
+    def num_params(self) -> int:
+        """
+        To account for the input and output parameters not part of the main model
+
+        Args:
+            param1: This is the first param.
+            param2: This is a second param.
+
+        Returns:
+            This is a description of what is returned.
+
+        Raises:
+            KeyError: Raises an exception.
+        """
         # Create the parameter counting function
         # TODO: Check if function as expected
         num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + self.param_list])
@@ -34,7 +47,7 @@ class Quine(ABC):
 
         return num_params
 
-    def get_param(self, idx):
+    def get_param(self, idx: int) -> float:
         assert idx < self.num_params
         subtract = 0
         param = None
@@ -49,12 +62,12 @@ class Quine(ABC):
         return param.view(-1)[normalized_idx]
 
     @abstractmethod
-    def forward(self, x):
+    def forward(self, x: torch.tensor):
         pass
 
 
 class Vanilla(Quine, torch.nn.Module):
-    def __init__(self, config: Dict, model: torch.nn.Module, device):
+    def __init__(self, config: Dict, model: torch.nn.Module, device: torch.device):
         super(Vanilla, self).__init__(config, model, device)
         self.model_aug_config = config["model_aug_config"]
         self.model = model
