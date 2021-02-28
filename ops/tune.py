@@ -17,12 +17,11 @@ except ModuleNotFoundError:
 
 
 class Tuner(AbstractTrainer):
-    def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], split_masks: List, device: torch.device):
-        super(Tuner, self).__init__(config, model, dataset, split_masks, device)
+    def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], device: torch.device):
+        super(Tuner, self).__init__(config, model, dataset, device)
         self.tuning_config = config["tuning_config"]
         self.model = model
         self.dataset = dataset
-        self.split_masks = split_masks
         self.device = device
 
     def run_tune(self):

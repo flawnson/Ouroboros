@@ -27,19 +27,12 @@ class Quine(ABC):
 
     def num_params(self) -> int:
         """
+        Create the parameter counting function
         To account for the input and output parameters not part of the main model
 
-        Args:
-            param1: This is the first param.
-            param2: This is a second param.
-
         Returns:
-            This is a description of what is returned.
-
-        Raises:
-            KeyError: Raises an exception.
+            The number of model parameters as an int
         """
-        # Create the parameter counting function
         # TODO: Check if function as expected
         num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + self.param_list])
         cum_params_arr = np.cumsum(num_params_arr)

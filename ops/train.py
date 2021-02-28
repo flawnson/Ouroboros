@@ -34,18 +34,23 @@ class AbstractTrainer(ABC):
     def train(self):
         pass
 
+    @abstractmethod
     def test(self):
         pass
 
+    @abstractmethod
     def loss(self):
         pass
 
+    @abstractmethod
     def score(self):
         pass
 
+    @abstractmethod
     def write(self):
         pass
 
+    @abstractmethod
     def run_train(self):
         pass
 

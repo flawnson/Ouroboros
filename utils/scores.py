@@ -9,11 +9,11 @@ from sklearn.metrics import f1_score, precision_score, recall_score, jaccard_sco
 
 
 class AbstractScores(ABC):
-    def __init__(self, config):
-        super(self, AbstractScores)
+    def __init__(self, config: Dict):
+        super(AbstractScores, self)
         self.config = config
 
-    def accuracy(self, logits, targets):
+    def accuracy(self, logits: torch.tensor, targets):
         pass
 
     @abstractmethod
@@ -22,12 +22,12 @@ class AbstractScores(ABC):
 
 
 class MLPScores(AbstractScores):
-    def __init__(self, config, device):
+    def __init__(self, config: Dict, device: torch.device):
         super(MLPScores, self).__init__(config)
         self.config = config
         self.device = device
 
-    def accuracy(self, logits, targets):
+    def accuracy(self, logits: torch.tensor, targets):
         pass
 
     def get_scores(self):
@@ -36,7 +36,7 @@ class MLPScores(AbstractScores):
 
 class GraphScores(AbstractScores):
     # XXX: PLACEHOLDER; CODE IS NOT FUNCTIONAL
-    def __init__(self, config, device):
+    def __init__(self, config: Dict, device: torch.device):
         super(GraphScores, self).__init__(config)
         self.config = config
         self.device = device

@@ -7,6 +7,13 @@ from torch.optim import Optimizer
 
 class OptimizerObj(Optimizer):
     def __init__(self, config: Dict, params: torch.nn.ParameterList):
+        """
+        Consider switching to __call__ method instead of __init__
+
+        Args:
+            config: Configuration dictionary
+            params: Pytorch parameter list of model parameters
+        """
         super(OptimizerObj, self).__init__(params, config)
         self.optim_config = config["optim_config"]
         self.param_groups = None
@@ -29,7 +36,13 @@ class OptimizerObj(Optimizer):
 
 class LRScheduler(object):
     def __init__(self, config: Dict, optim_obj: Optimizer):
-        # super(LRScheduler, self).__init__(optim_obj)
+        """
+        Consider switching to __call__ method instead of __init__
+
+        Args:
+            config: Configuration dictionary
+            optim_obj: Pytorch optimizer object
+        """
         self.optim_config = config["optim_config"]
         try:
             if self.optim_config["scheduler"].casefold() == "cawr":

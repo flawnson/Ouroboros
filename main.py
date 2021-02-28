@@ -33,6 +33,7 @@ def main():
     config: Dict = json.load(open(args.config))
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
     logzero.loglevel(eval(config["logging"]))
+    logger.info(f"Successfully retrieved config json. Running {config['run_name']} on {device}.")
 
     ### Aux Data preprocessing ###
     datasets: Union[torch.utils.data.Dataset, List] = None

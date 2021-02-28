@@ -19,6 +19,7 @@ class Loss:
         self.targets = targets
 
     def sr_loss(self) -> float:
+
         loss_sr = (torch.linalg.norm(self.predictions["param"] - self.targets["param"], ord=2)) ** 2
 
         return loss_sr
