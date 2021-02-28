@@ -53,7 +53,7 @@ class AbstractTrainer(ABC):
 class AuxTrainer(AbstractTrainer):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
     def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], device: torch.device):
-        super(self, AuxTrainer).__init__(config, model, dataset, device)
+        super(AuxTrainer, self).__init__(config, model, dataset, device)
         self.config = config
         self.run_config = config["run_config"]
         self.model = model

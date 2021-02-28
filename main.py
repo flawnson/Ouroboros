@@ -16,7 +16,6 @@ from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset, get_aux_data
-from data.combine_preprocessing import CombineDataset
 from utils.holdout import MNISTSplit, QuineSplit
 from optim.parameters import ModelParameters
 from ops.train import AuxTrainer
@@ -103,14 +102,14 @@ def main():
         #Note: second parameter (the datasets argument) is redundant, since we are passing in dataset in .partition() later on
         # Find the greater length sampler
         if len(datasets) > len(param_data.params):
-            mnist_dataloaders = MNISTSplit(config, datasets, param_data, model, device).partition()
+            mnist_dataloaders = MNISTSplit(config, datasets, param_data, device).partition()
         else:
-            quine_dataloaders = QuineSplit(config, param_data, model, device).partition()
+            quine_dataloaders = QuineSplit(config, param_data, device).partition()
             #When splitting/partition, we split the indices of the params (which are ints)
             #In combineDataset, the param_data indices will be passed to get_param() in get_item
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented
-    quine_dataloaders = QuineSplit(config, param_data.params, model, device).partition()
+    quine_dataloaders = QuineSplit(config, param_data.params, device).partition()
     logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###
