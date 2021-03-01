@@ -110,7 +110,6 @@ def main():
             #In combineDataset, the param_data indices will be passed to get_param() in get_item
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented
-    quine_dataloaders = QuineSplit(config, param_data.params, device).partition()
     logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###
