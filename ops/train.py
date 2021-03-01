@@ -19,7 +19,7 @@ from utils.checkpoint import checkpoint
 
 class AbstractTrainer(ABC):
 
-    def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], device: torch.device):
+    def __init__(self, config: Dict, model: Module, dataset: Dict, device: torch.device):
         self.config = config
         self.run_config = config["run_config"]
         self.model = model
@@ -57,7 +57,7 @@ class AbstractTrainer(ABC):
 
 class AuxTrainer(AbstractTrainer):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
-    def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], device: torch.device):
+    def __init__(self, config: Dict, model: Module, dataset: Dict, device: torch.device):
         super(AuxTrainer, self).__init__(config, model, dataset, device)
         self.config = config
         self.run_config = config["run_config"]
@@ -113,15 +113,14 @@ class AuxTrainer(AbstractTrainer):
         logger.info(f"Running epoch: #{epoch}")
 
     def run_train(self):
-        for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
-            logger.info(f"Epoch: {epoch}")
-            if isinstance(self.dataset, DataLoader):
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[0]):
+        if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
+            for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
+                logger.info(f"Epoch: {epoch}")
+                for batch_idx, (data, param_idx) in enumerate(self.dataset):
                     self.train(data.to(self.device), param_idx, batch_idx)
                     scores = self.score()
 
-            if isinstance(self.dataset, DataLoader):
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[1]):
+                for batch_idx, (data, param_idx) in enumerate(self.dataset):
                     self.test(data.to(self.device), param_idx)
                     scores = self.score()
 
