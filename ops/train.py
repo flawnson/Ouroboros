@@ -116,11 +116,11 @@ class AuxTrainer(AbstractTrainer):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
-                for batch_idx, (data, param_idx) in enumerate(self.dataset):
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
                     self.train(data.to(self.device), param_idx, batch_idx)
                     scores = self.score()
 
-                for batch_idx, (data, param_idx) in enumerate(self.dataset):
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
                     self.test(data.to(self.device), param_idx)
                     scores = self.score()
 
