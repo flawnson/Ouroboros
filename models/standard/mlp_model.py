@@ -51,9 +51,9 @@ class MLPModel(AbstractMLPModel, ABC):
     def __init__(self, config: Dict, data: torch.tensor, device: torch.device, pooling: str = None, **kwargs):
         self.data = data
         self.model_config = config["model_config"]
-        self.layer_sizes = [self.model_config["2*model_aug_n_hidden"]] + \
+        self.layer_sizes = [self.model_config["input_layer_size_2*model_aug_n_hidden"]] + \
                             self.model_config["layer_sizes"] + \
-                           [self.model_config["aux_output_size"] + self.model_config["weight_output_size"]]
+                           [self.model_config["output_layer_size_model_aug_n_hidden"]]
         super(MLPModel, self).__init__(
             config=self.model_config,
             layer_dict=[dict(name=nn.Linear.__name__,

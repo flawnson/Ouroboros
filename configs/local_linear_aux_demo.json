@@ -19,10 +19,9 @@
   {
     "model_type": "linear",
     "dropout": 0.50,
-    "2*model_aug_n_hidden": 80,
+    "input_layer_size_2*model_aug_n_hidden": 80,
     "layer_sizes": [64, 64, 32],
-    "aux_output_size": 10,
-    "weight_output_size": 1
+    "output_layer_size_model_aug_n_hidden": 40
   },
   "model_aug_config":
   {
