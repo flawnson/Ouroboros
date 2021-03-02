@@ -18,8 +18,8 @@
   "model_config":
   {
     "model_type": "linear",
-    "aux_input_size": 28,
-    "weight_input_size": 28,
+    "dropout": 0.50,
+    "2*model_aug_n_hidden": 80,
     "layer_sizes": [64, 64, 32],
     "aux_output_size": 10,
     "weight_output_size": 1

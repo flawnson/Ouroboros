@@ -9,9 +9,9 @@ from sklearn.decomposition import PCA
 
 
 class Reduction(object):
-    def __init__(self, model_aug_config: Dict, data: torch.tensor):
+    def __init__(self, model_aug_config: Dict, data_size: int):
         self.model_aug_config = model_aug_config
-        self.data = data
+        self.data_size = data_size
 
     def pca(self):
         pass
@@ -23,7 +23,7 @@ class Reduction(object):
         Returns:
             A numpy array (matrix) of the projected values
         """
-        X = np.random.rand(1, self.data)
+        X = np.random.rand(1, self.data_size)
         transformer = random_projection.GaussianRandomProjection(n_components=self.model_aug_config["n_hidden"])
         transformer.fit(X)
         rand_proj_matrix = transformer.components_

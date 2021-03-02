@@ -22,14 +22,14 @@ class Quine(ABC):
         self.param_names = []
         self.num_params = int(self.cumulate_params()[-1])
 
-    def reduction(self) -> Reduction:
+    def reduction(self, data) -> Reduction:
         """
         Select the reduction method
 
         Returns:
             Output of the reduction method
         """
-        return Reduction(self.model_aug_config, self.num_params).reduce()
+        return Reduction(self.model_aug_config, data).reduce()
 
     def cumulate_params(self):
         num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + self.param_list])
@@ -66,9 +66,10 @@ class Vanilla(Quine, torch.nn.Module):
         self.van_output = self.van_output()
 
     def van_input(self):
-        rand_proj_layer = torch.nn.Linear(self.num_params, self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
+        rand_proj_layer = torch.nn.Linear(self.num_params,
+                                          self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
                                           bias=False)  # Modify so there are half as many hidden units
-        rand_proj_layer.weight.data = torch.tensor(self.reduction(), dtype=torch.float32)
+        rand_proj_layer.weight.data = torch.tensor(self.reduction(self.num_params), dtype=torch.float32)
         for p in rand_proj_layer.parameters():
             p.requires_grad_(False)
         return torch.nn.Sequential(rand_proj_layer)
@@ -142,7 +143,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
         rand_proj_layer = torch.nn.Linear(get_example_size(self.dataset),
                                           self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
                                           bias=False)  # Modify so there are half as many hidden units
-        rand_proj_layer.weight.data = torch.tensor(self.reduction(), dtype=torch.float32)
+        rand_proj_layer.weight.data = torch.tensor(self.reduction(get_example_size(self.dataset)), dtype=torch.float32)
         for p in rand_proj_layer.parameters():
             p.requires_grad_(False)
         return torch.nn.Sequential(rand_proj_layer)
