@@ -6,9 +6,9 @@ from logzero import logging
 
 
 def checkpoint(config: Dict, epoch: int, model: torch.nn.Module, loss: float, optimizer: torch.optim):
-    # Checkpoint intervals must be a divisor of the total number of epochs
     """
     This is an example of Google style.
+    Checkpoint intervals must be a divisor of the total number of epochs
 
     Args:
         config: Configuration dictionary
