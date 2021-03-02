@@ -9,9 +9,9 @@ from sklearn.decomposition import PCA
 
 
 class Reduction(object):
-    def __init__(self, config: Dict, data: torch.tensor):
-        self.config = config
-        self.data = data
+    def __init__(self, model_aug_config: Dict, data_size: int):
+        self.model_aug_config = model_aug_config
+        self.data_size = data_size
 
     def pca(self):
         pass
@@ -23,8 +23,8 @@ class Reduction(object):
         Returns:
             A numpy array (matrix) of the projected values
         """
-        X = np.random.rand(1, self.data)
-        transformer = random_projection.GaussianRandomProjection(n_components=self.config["n_hidden"])
+        X = np.random.rand(1, self.data_size)
+        transformer = random_projection.GaussianRandomProjection(n_components=self.model_aug_config["n_hidden"])
         transformer.fit(X)
         rand_proj_matrix = transformer.components_
 
@@ -37,11 +37,15 @@ class Reduction(object):
         Returns:
             The output from whichever dimensionality reduction algorithm was chosen
         """
-        if self.config["reduction_method"] is None:
+        if self.model_aug_config["reduction_method"] is None:
             logger.info("No dimension reduction method provided... Continuing without reducing")
-        elif self.config["reduction_method"].casefold() == "random":
+        elif self.model_aug_config["reduction_method"].casefold() == "random":
             return self.random()
-        elif self.config["reduction_method"].casefold() == "pca":
+        elif self.model_aug_config["reduction_method"].casefold() == "pca":
             return self.pca()
         else:
-            logger.info(f"Dimension reduction method {self.config['reduce_dimension']} not undersood... Continuing without reducing")
+            logger.info(f"Dimension reduction method {self.model_aug_config['reduce_dimension']} not undersood..."
+                        f"Continuing without reducing")
+
+
+

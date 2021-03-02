@@ -20,32 +20,29 @@ class Quine(ABC):
         self.device = device
         self.param_list = []
         self.param_names = []
-        self.num_params = self.num_params()
+        self.num_params = int(self.cumulate_params()[-1])
 
-    def reduction(self):
-        return Reduction(self.model_aug_config, self.num_params).reduce()
-
-    def num_params(self) -> int:
+    def reduction(self, data) -> Reduction:
         """
-        Create the parameter counting function
-        To account for the input and output parameters not part of the main model
+        Select the reduction method
 
         Returns:
-            The number of model parameters as an int
+            Output of the reduction method
         """
-        # TODO: Check if function as expected
+        return Reduction(self.model_aug_config, data).reduce()
+
+    def cumulate_params(self):
         num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + self.param_list])
         cum_params_arr = np.cumsum(num_params_arr)
-        num_params = int(cum_params_arr[-1])
 
-        return num_params
+        return cum_params_arr
 
     def get_param(self, idx: int) -> float:
         assert idx < self.num_params
         subtract = 0
         param = None
         normalized_idx = None
-        for i, n_params in enumerate(self.cum_params_arr):
+        for i, n_params in enumerate(self.cumulate_params()):
             if idx < n_params:
                 param = self.param_list[i]
                 normalized_idx = idx - subtract
@@ -65,11 +62,14 @@ class Vanilla(Quine, torch.nn.Module):
         self.model_aug_config = config["model_aug_config"]
         self.model = model
         self.device = device
+        self.van_input = self.van_input()
+        self.van_output = self.van_output()
 
     def van_input(self):
-        rand_proj_layer = torch.nn.Linear(self.num_params, self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
+        rand_proj_layer = torch.nn.Linear(self.num_params,
+                                          self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
                                           bias=False)  # Modify so there are half as many hidden units
-        rand_proj_layer.weight.data = torch.tensor(self.reduction(), dtype=torch.float32)
+        rand_proj_layer.weight.data = torch.tensor(self.reduction(self.num_params), dtype=torch.float32)
         for p in rand_proj_layer.parameters():
             p.requires_grad_(False)
         return torch.nn.Sequential(rand_proj_layer)
@@ -100,6 +100,8 @@ class Auxiliary(Vanilla, torch.nn.Module):
         self.model = model
         self.dataset = dataset
         self.device = device
+        self.aux_input = self.aux_input()
+        self.aux_output = self.aux_output()
 
     @staticmethod
     def indexer(model: torch.nn.Module):
@@ -141,7 +143,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
         rand_proj_layer = torch.nn.Linear(get_example_size(self.dataset),
                                           self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
                                           bias=False)  # Modify so there are half as many hidden units
-        rand_proj_layer.weight.data = torch.tensor(self.reduction(), dtype=torch.float32)
+        rand_proj_layer.weight.data = torch.tensor(self.reduction(get_example_size(self.dataset)), dtype=torch.float32)
         for p in rand_proj_layer.parameters():
             p.requires_grad_(False)
         return torch.nn.Sequential(rand_proj_layer)
@@ -160,11 +162,19 @@ class Auxiliary(Vanilla, torch.nn.Module):
         return torch.nn.Sequential(*digit_predictor_layers)
 
     def forward(self, x: torch.tensor, y: torch.tensor = None):
-        #x = one hot coordinate
-        #y = auxiliary input
+        """
+        Forward method of augmented model
+
+        Args:
+            x: The one hot coordinate for the model parameter
+            y: Auxiliary input data (MNIST)
+
+        Returns:
+            torch.tensor output
+        """
         new_output = self.van_input()(x)
         if y is not None:
-            y = y.reshape(-1) #Flatten MNIST input
+            y = y.reshape(-1)  # Flatten MNIST input in place
             output2 = self.aux_input()(y)
             new_output = torch.cat((new_output, output2))
         else:

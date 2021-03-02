@@ -32,12 +32,12 @@ class AbstractMLPModel(torch.nn.Module, ABC):
         sizes_copy.pop("name", None)
         return eval(name)(**sizes_copy)
 
-    def forward(self, data_obj, x: torch.tensor) -> torch.tensor:
+    def forward(self, x: torch.tensor) -> torch.tensor:
         z = x
         for layer, pooling in zip(self.layers, self.pool):
-            x = layer(data_obj, x)
+            x = layer(x)
             z = x
-            x = pooling(data_obj, x) if pooling else x
+            x = pooling(x) if pooling else x
             x = F.relu(x)
             x = F.dropout(x, p=self.config["dropout"], training=self.training)
         x = z
@@ -51,9 +51,9 @@ class MLPModel(AbstractMLPModel, ABC):
     def __init__(self, config: Dict, data: torch.tensor, device: torch.device, pooling: str = None, **kwargs):
         self.data = data
         self.model_config = config["model_config"]
-        self.layer_sizes = [self.model_config["aux_input_size"] + self.model_config["weight_input_size"]] + \
+        self.layer_sizes = [self.model_config["input_layer_size_2*model_aug_n_hidden"]] + \
                             self.model_config["layer_sizes"] + \
-                           [self.model_config["aux_output_size"] + self.model_config["weight_output_size"]]
+                           [self.model_config["output_layer_size_model_aug_n_hidden"]]
         super(MLPModel, self).__init__(
             config=self.model_config,
             layer_dict=[dict(name=nn.Linear.__name__,

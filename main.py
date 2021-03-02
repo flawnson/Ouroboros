@@ -100,12 +100,11 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        #Note: second parameter (the datasets argument) is redundant, since we are passing in dataset in .partition() later on
         # Find the greater length sampler
         if len(datasets) > len(param_data.params):
-            mnist_dataloaders = MNISTSplit(config, datasets, param_data, device).partition()
+            dataloaders = MNISTSplit(config, datasets, param_data, device).partition()
         else:
-            quine_dataloaders = QuineSplit(config, param_data, device).partition()
+            dataloaders = QuineSplit(config, param_data, device).partition()
             #When splitting/partition, we split the indices of the params (which are ints)
             #In combineDataset, the param_data indices will be passed to get_param() in get_item
     else:

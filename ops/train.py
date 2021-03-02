@@ -19,7 +19,7 @@ from utils.checkpoint import checkpoint
 
 class AbstractTrainer(ABC):
 
-    def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], device: torch.device):
+    def __init__(self, config: Dict, model: Module, dataset: Dict, device: torch.device):
         self.config = config
         self.run_config = config["run_config"]
         self.model = model
@@ -57,7 +57,7 @@ class AbstractTrainer(ABC):
 
 class AuxTrainer(AbstractTrainer):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
-    def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], device: torch.device):
+    def __init__(self, config: Dict, model: Module, dataset: Dict, device: torch.device):
         super(AuxTrainer, self).__init__(config, model, dataset, device)
         self.config = config
         self.run_config = config["run_config"]
@@ -77,7 +77,7 @@ class AuxTrainer(AbstractTrainer):
         param = self.model.get_param(param_idx)
         predictions = self.model(idx_vector, data)
 
-        loss = self.loss(self.config, self.model, predictions, targets) #Incomplete? Parameters not passed in
+        loss = self.loss(self.config, self.model, predictions, data[-1])
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
             loss.backward()  # The combined loss is backpropagated right?
@@ -113,16 +113,15 @@ class AuxTrainer(AbstractTrainer):
         logger.info(f"Running epoch: #{epoch}")
 
     def run_train(self):
-        for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
-            logger.info(f"Epoch: {epoch}")
-            if isinstance(self.dataset, DataLoader):
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[0]):
-                    self.train(data.to(self.device), param_idx, batch_idx)
+        if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
+            for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
+                logger.info(f"Epoch: {epoch}")
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
+                    self.train(data, param_idx, batch_idx)
                     scores = self.score()
 
-            if isinstance(self.dataset, DataLoader):
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[1]):
-                    self.test(data.to(self.device), param_idx)
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
+                    self.test(data, param_idx)
                     scores = self.score()
 
             checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
