@@ -78,6 +78,7 @@ class AuxTrainer(AbstractTrainer):
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
         predictions = self.wrapper.model(idx_vector, data)
+        #SHOULD BE: predicted_param, predicted_aux = self.wrapper.model(idx_vector, data)
 
         #IMPORTANT: NEED to pass param and idx_vector into self.loss somehow
         loss = self.loss(self.config, self.wrapper.model, predictions, data[-1])
