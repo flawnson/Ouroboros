@@ -77,7 +77,7 @@ class AuxTrainer(AbstractTrainer):
         param = self.model.get_param(param_idx)
         predictions = self.model(idx_vector, data)
 
-        loss = self.loss(self.config, self.model, predictions, targets) #Incomplete? Parameters not passed in
+        loss = self.loss(self.config, self.model, predictions, data[-1])
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
             loss.backward()  # The combined loss is backpropagated right?
@@ -117,11 +117,11 @@ class AuxTrainer(AbstractTrainer):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
-                    self.train(data.to(self.device), param_idx, batch_idx)
+                    self.train(data, param_idx, batch_idx)
                     scores = self.score()
 
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
-                    self.test(data.to(self.device), param_idx)
+                    self.test(data, param_idx)
                     scores = self.score()
 
             checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
