@@ -113,7 +113,8 @@ def main():
 
     ### Pipeline ###
     if config["run_type"] == "demo":
-        AuxTrainer(config, aug_model, dataloaders, device).run_train()  # Temporary specific to Aux model
+        #Pass in the ModelParameter instead of model directly
+        AuxTrainer(config, param_data, dataloaders, device).run_train()  # Temporary specific to Aux model
     if config["run_type"] == "tune":
         Tuner(config, aug_model, dataloaders, device).run_tune()
     if config["run_type"] == "benchmark":

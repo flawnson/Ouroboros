@@ -13,18 +13,22 @@ from torch.nn import Module
 
 from optim.algos import OptimizerObj, LRScheduler
 from optim.losses import Loss
+from optim.parameters import ModelParameters
 from utils.scores import Scores
 from utils.checkpoint import checkpoint
 
 
 class AbstractTrainer(ABC):
 
-    def __init__(self, config: Dict, model: Module, dataset: Dict, device: torch.device):
+    def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict, device: torch.device):
         self.config = config
         self.run_config = config["run_config"]
-        self.model = model
-        self.params = torch.nn.ParameterList(self.model.parameters())
-        self.params_data = torch.eye(self.model.num_params, device=device)
+        self.wrapper = model_wrapper
+        #if we kept model as a separate attribute, will be it by reference
+        self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
+
+        #Will self.params in OptimizerObj update the parameters in wrapper?
+        #by reference?
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.dataset = dataset
@@ -57,27 +61,26 @@ class AbstractTrainer(ABC):
 
 class AuxTrainer(AbstractTrainer):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
-    def __init__(self, config: Dict, model: Module, dataset: Dict, device: torch.device):
-        super(AuxTrainer, self).__init__(config, model, dataset, device)
+    def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict, device: torch.device):
+        super(AuxTrainer, self).__init__(config, model_wrapper, dataset, device)
         self.config = config
         self.run_config = config["run_config"]
-        self.model = model
-        self.params = torch.nn.ParameterList(self.model.parameters())
-        self.params_data = torch.eye(self.model.num_params, device=device)
+        self.wrapper = model_wrapper
+        self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.dataset = dataset
         self.device = device
 
     def train(self, data, param_idx, batch_idx):
-        self.model.train()
+        self.wrapper.model.train()
         self.optimizer.zero_grad()
-        idx_vector = torch.squeeze(self.params_data[param_idx])  # Pulling out the nested tensor
-        # param_idx should already be a tensor on the device when we initialized it using torch.eye
-        param = self.model.get_param(param_idx)
-        predictions = self.model(idx_vector, data)
+        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
+        param = self.wrapper.model.get_param(param_idx)
+        predictions = self.wrapper.model(idx_vector, data)
 
-        loss = self.loss(self.config, self.model, predictions, data[-1])
+        #IMPORTANT: NEED to pass param and idx_vector into self.loss somehow
+        loss = self.loss(self.config, self.wrapper.model, predictions, data[-1])
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
             loss.backward()  # The combined loss is backpropagated right?
@@ -86,12 +89,12 @@ class AuxTrainer(AbstractTrainer):
 
     @torch.no_grad()
     def test(self, data, param_idx):
-        self.model.eval()
-        idx_vector = torch.squeeze(self.params_data[param_idx])  # Pulling out the nested tensor
-        param = self.model.get_param(param_idx)
-        predictions = self.model(idx_vector, data)
+        self.wrapper.model.eval()
+        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
+        param = self.wrapper.model.get_param(param_idx)
+        predictions = self.wrapper.model(idx_vector, data)
 
-        loss = self.loss(self.config, self.model, predictions, targets)
+        loss = self.loss(self.config, self.wrapper.model, predictions, targets)
         return loss
 
     def loss(self, predictions, targets):
@@ -104,7 +107,7 @@ class AuxTrainer(AbstractTrainer):
         #loss values are batch loss, total_loss are epoch loss
         #Only total_loss values are logged to tensorboard
         ####
-        return Loss(self.config, self.model, predictions, targets)
+        return Loss(self.config, self.wrapper.model, predictions, targets)
 
     def score(self):
         return Scores(self.config, self.device).get_scores()
@@ -117,6 +120,8 @@ class AuxTrainer(AbstractTrainer):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
+                    print("data: ", data)
+                    print("param_idx", param_idx)
                     self.train(data, param_idx, batch_idx)
                     scores = self.score()
 
@@ -124,5 +129,5 @@ class AuxTrainer(AbstractTrainer):
                     self.test(data, param_idx)
                     scores = self.score()
 
-            checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
+            checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
             self.write(epoch)

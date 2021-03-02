@@ -33,6 +33,13 @@ class ModelParameters(object):
         self.params = torch.tensor(list(range(self.num_params))) #indices of all params: [1, 2, ......, num_params - 1]
         # logger.info("Model Structure: ")
         # logger.info(self.model)
+        self.device = device
+
+    def to_onehot(self, idx):
+        onehot = torch.zeros(self.num_params, device=self.device)
+        onehot[idx] = 1
+        print("Onehot: ", onehot)
+        return onehot
 
     def get_param(self, idx):
         """
@@ -44,15 +51,7 @@ class ModelParameters(object):
         Returns:
             A parameter at index idx as a torch tensor.
         """
-        #idx is an int
-        #idx -> one hot vector
-        #convert to one hot on the fly
-        values = [idx]
-        n_values = np.max(values) + 1
-        onehot = np.eye(n_values)[values][0] #not sure of dimensions (may want to print)
-        print("Onehot: ", onehot)
-
-        return self.model.get_param(onehot)
+        return self.model.get_param(idx)
 
     def __len__(self):
         """
