@@ -59,6 +59,12 @@ class AbstractSplit(ABC):
     def type_check(subject):
         pass
 
+    def get_dataloaders(self, samplers: List[torch.utils.data.Sampler]) -> List:
+        if self.config["model_aug_config"]["model_augmentation"] == "auxiliary":
+            return [DataLoader(CombineDataset(self.dataset, self.param_data), sampler=sampler) for sampler in samplers]
+        else:
+            return [DataLoader(self.dataset, sampler=sampler) for sampler in samplers]
+
     def partition(self):
         self.type_check(self.dataset)
         if self.data_config["split_type"] == "stratified":
@@ -89,7 +95,8 @@ class MNISTSplit(AbstractSplit):
         # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])
         split_idx = list(ShuffleSplit(n_splits=1, train_size=split_size, random_state=self.config["seed"]).split(self.dataset, self.dataset.targets))
         samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx[0]]
-        dataloaders = [DataLoader(self.dataset, sampler=sampler) for sampler in samplers]
+        dataloaders = self.get_dataloaders(samplers)
+
         return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
 
     def kfold(self) -> Dict[str, DataLoader]:
@@ -100,10 +107,7 @@ class MNISTSplit(AbstractSplit):
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split)
         # The .split() method from SKLearn returns a generator that generates 2 index arrays (for training and testing)
         samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(self.dataset, self.dataset.targets)]
-        if self.config["model_aug_config"]["model_augmentation"] == "auxiliary":
-            dataloaders = [DataLoader(CombineDataset(self.dataset, self.param_data), sampler=sampler) for sampler in samplers]
-        else:
-            dataloaders = [DataLoader(self.dataset, sampler=sampler) for sampler in samplers]
+        dataloaders = self.get_dataloaders(samplers)
 
         return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
 
@@ -157,7 +161,8 @@ class QuineSplit(AbstractSplit):
         # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])
         split_idx = list(ShuffleSplit(n_splits=1, train_size=split_size, random_state=self.config["seed"]).split(self.dataset, self.dataset.targets))
         samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx]
-        dataloaders = [DataLoader(self.dataset, sampler=sampler) for sampler in samplers]
+        dataloaders = self.get_dataloaders(samplers)
+
         return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
 
     def kfold(self):
@@ -168,10 +173,7 @@ class QuineSplit(AbstractSplit):
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split)
         # The .split() method from SKLearn returns a generator that generates 2 index arrays (for training and testing)
         samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(self.dataset, self.dataset.targets)]
-        if self.config["model_aug_config"]["model_augmentation"] == "auxiliary":
-            dataloaders = [DataLoader(CombineDataset(self.dataset, self.param_data), sampler=sampler) for sampler in samplers]
-        else:
-            dataloaders = [DataLoader(self.dataset, sampler=sampler) for sampler in samplers]
+        dataloaders = self.get_dataloaders(samplers)
 
         return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
 
