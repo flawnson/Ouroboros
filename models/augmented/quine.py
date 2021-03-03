@@ -190,4 +190,4 @@ class Auxiliary(Vanilla, torch.nn.Module):
         weight = self.van_output()(output3)  # Weight prediction network
         aux_output = self.aux_output()(output3)  # Auxiliary prediction network
 
-        return {"pred_param": weight, "pred_aux": aux_output}
+        return {"param": weight, "aux": aux_output}
