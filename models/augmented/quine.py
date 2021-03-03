@@ -32,7 +32,8 @@ class Quine(ABC):
         return Reduction(self.model_aug_config, data).reduce()
 
     def cumulate_params(self):
-        num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + self.param_list])
+        # num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + self.param_list])
+        num_params_arr = np.array([np.prod(p.shape) for p in self.param_list])
         cum_params_arr = np.cumsum(num_params_arr)
 
         return cum_params_arr

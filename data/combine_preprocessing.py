@@ -20,8 +20,7 @@ class CombineDataset(torch.utils.data.Dataset):
         print("param_data_idx: ", param_data_idx)
         b = self.datasets[1].get_param(param_data_idx) #param data
 
-
-        return (a,b) #all items in tuple should already be tensors
+        return (a, b) #all items in tuple should already be tensors
 
     def __len__(self):
         return max(len(self.datasets[0]), len(self.datasets[1]))
