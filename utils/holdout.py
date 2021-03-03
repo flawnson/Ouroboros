@@ -81,7 +81,7 @@ class MNISTSplit(AbstractSplit):
         self.config = config
         self.data_config = config["data_config"]
         self.dataset = dataset
-        self.param_data = param_data.params
+        self.param_data = param_data
         self.device = device
 
     def holdout(self) -> Dict[str, DataLoader]:
