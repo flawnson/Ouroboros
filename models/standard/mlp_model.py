@@ -63,4 +63,5 @@ class MLPModel(AbstractMLPModel, ABC):
                         for in_size, out_size in zip(self.layer_sizes, self.layer_sizes[1:])],
             pooling=[eval(pooling)(kwargs).to(device) for size in self.layer_sizes[1:]] if pooling else None,
             device=device)
+        self.param_list = [layer.weight for layer in self.layers] + [layer.bias for layer in self.layers]  # Keeping track of params for Quine
 

@@ -37,7 +37,7 @@ class ModelParameters(object):
 
     def to_onehot(self, idx):
         onehot = torch.zeros(self.num_params, device=self.device)
-        onehot[idx] = 1
+        onehot[idx.item()] = 1
         print("Onehot: ", onehot)
         return onehot
 

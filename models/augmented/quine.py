@@ -18,7 +18,7 @@ class Quine(ABC):
         self.model_aug_config = config["model_aug_config"]
         self.model = model
         self.device = device
-        self.param_list = []
+        self.param_list = [] + self.model.param_list  # Combine the parameters from the main model
         self.param_names = []
         self.num_params = int(self.cumulate_params()[-1])
 
@@ -32,7 +32,8 @@ class Quine(ABC):
         return Reduction(self.model_aug_config, data).reduce()
 
     def cumulate_params(self):
-        num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + self.param_list])
+        # num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + self.param_list])
+        num_params_arr = np.array([np.prod(p.shape) for p in self.param_list])
         cum_params_arr = np.cumsum(num_params_arr)
 
         return cum_params_arr
