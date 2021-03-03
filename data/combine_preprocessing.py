@@ -18,8 +18,8 @@ class CombineDataset(torch.utils.data.Dataset):
         #Model Param (Quine)
         param_data_idx = i % len(self.datasets[1])
         print("param_data_idx: ", param_data_idx)
-        b = self.datasets[1].get_param(param_data_idx) #param data
-
+        b = self.datasets[1].params[param_data_idx] #return an integer index
+        
         return (a, b) #all items in tuple should already be tensors
 
     def __len__(self):

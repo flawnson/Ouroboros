@@ -30,15 +30,16 @@ class ModelParameters(object):
         self.num_params = self.model.num_params
 
         #Not sure if self.params list should be a torch tensor
-        self.params = torch.tensor(list(range(self.num_params))) #indices of all params: [1, 2, ......, num_params - 1]
+        self.params = torch.tensor(list(range(self.num_params)), device=device) #indices of all params: [1, 2, ......, num_params - 1]
         # logger.info("Model Structure: ")
         # logger.info(self.model)
         self.device = device
 
     def to_onehot(self, idx):
+        #print("Idx onehot 1: ", idx)
         onehot = torch.zeros(self.num_params, device=self.device)
         onehot[idx.item()] = 1
-        print("Onehot: ", onehot)
+        #print("Onehot: ", onehot)
         return onehot
 
     def get_param(self, idx):
@@ -51,6 +52,7 @@ class ModelParameters(object):
         Returns:
             A parameter at index idx as a torch tensor.
         """
+        #print("Idx get_param 2: ", idx)
         return self.model.get_param(idx)
 
     def __len__(self):

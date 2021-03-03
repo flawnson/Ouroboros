@@ -24,11 +24,10 @@ class AbstractTrainer(ABC):
         self.config = config
         self.run_config = config["run_config"]
         self.wrapper = model_wrapper
-        #if we kept model as a separate attribute, will be it by reference
         self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
 
-        #Will self.params in OptimizerObj update the parameters in wrapper?
-        #by reference?
+        #Will self.params in OptimizerObj update the parameters in wrapper? If so, will it be by reference?
+        #We want the parameters inside the wrapper to change too during training
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.dataset = dataset
@@ -75,13 +74,20 @@ class AuxTrainer(AbstractTrainer):
     def train(self, data, param_idx, batch_idx):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
+
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx).detach()) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
-        predictions = self.wrapper.model(idx_vector, data)
-        #SHOULD BE: predicted_param, predicted_aux = self.wrapper.model(idx_vector, data)
 
-        #IMPORTANT: NEED to pass param and idx_vector into self.loss somehow
-        loss = self.loss(self.config, self.wrapper.model, predictions, data[-1])
+        #Both predictions and targets will be dictionaries that hold two elements
+        predictions = self.wrapper.model(idx_vector, data[0])
+        targets = {
+            "aux": data[-1],
+            "param": param
+        }
+
+
+        #IMPORTANT: NEED to pass param inside self.loss as a target
+        loss = self.loss(predictions, targets)
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
             loss.backward()  # The combined loss is backpropagated right?
@@ -94,8 +100,12 @@ class AuxTrainer(AbstractTrainer):
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
         predictions = self.wrapper.model(idx_vector, data)
+        targets = {
+            "aux": data[-1],
+            "param": param
+        }
 
-        loss = self.loss(self.config, self.wrapper.model, predictions, targets)
+        loss = self.loss(predictions, targets)
         return loss
 
     def loss(self, predictions, targets):
@@ -121,8 +131,6 @@ class AuxTrainer(AbstractTrainer):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
-                    print("data: ", data)
-                    print("param_idx", param_idx)
                     self.train(data, param_idx, batch_idx)
                     scores = self.score()
 
