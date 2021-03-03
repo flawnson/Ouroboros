@@ -25,7 +25,7 @@ class Loss:
         return loss_sr
 
     def task_loss(self) -> float:
-        loss_task = F.nll_loss(self.predictions.unsqueeze(dim=0), self.targets)
+        loss_task = F.nll_loss(self.predictions.unsqueeze(dim=0), self.targets) #create dictionary indices
 
         return loss_task
 
@@ -46,5 +46,3 @@ class Loss:
             return self.new_loss()
         else:
             raise NotImplementedError("The specified loss is not implemented for this class")
-
-
