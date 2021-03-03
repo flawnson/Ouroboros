@@ -75,7 +75,7 @@ class AuxTrainer(AbstractTrainer):
     def train(self, data, param_idx, batch_idx):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
-        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
+        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx).detach()) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
         predictions = self.wrapper.model(idx_vector, data)
         #SHOULD BE: predicted_param, predicted_aux = self.wrapper.model(idx_vector, data)
