@@ -121,7 +121,6 @@ class Scores(object):
             pass
         else:
             raise NotImplementedError(f"{self.config['model_config']['model_type']} is not a model type")
-        logger.info(f"Successfully built the {self.config['model_config']['model_type']} model type")
 
         return score_obj
 

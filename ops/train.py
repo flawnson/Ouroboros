@@ -118,7 +118,7 @@ class AuxTrainer(AbstractTrainer):
         #loss values are batch loss, total_loss are epoch loss
         #Only total_loss values are logged to tensorboard
         ####
-        return Loss(self.config, self.wrapper.model, predictions, targets)
+        return Loss(self.config, self.wrapper.model, predictions, targets).get_loss()
 
     def score(self):
         return Scores(self.config, self.device).get_scores()
