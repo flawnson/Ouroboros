@@ -80,10 +80,7 @@ class AuxTrainer(AbstractTrainer):
 
         #Both predictions and targets will be dictionaries that hold two elements
         predictions = self.wrapper.model(idx_vector, data[0])
-        targets = {
-            "aux": data[-1],
-            "param": param
-        }
+        targets = {"aux": data[-1], "param": param}
 
 
         #IMPORTANT: NEED to pass param inside self.loss as a target
@@ -100,10 +97,7 @@ class AuxTrainer(AbstractTrainer):
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
         predictions = self.wrapper.model(idx_vector, data)
-        targets = {
-            "aux": data[-1],
-            "param": param
-        }
+        targets = {"aux": data[-1], "param": param}
 
         loss = self.loss(predictions, targets)
         return loss
@@ -123,8 +117,9 @@ class AuxTrainer(AbstractTrainer):
     def score(self):
         return Scores(self.config, self.device).get_scores()
 
-    def write(self, epoch: int):
+    def write(self, epoch: int, scores: Dict):
         logger.info(f"Running epoch: #{epoch}")
+        logger.info(f"Scores: {scores}")
 
     def run_train(self):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
@@ -133,10 +128,12 @@ class AuxTrainer(AbstractTrainer):
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
                     self.train(data, param_idx, batch_idx)
                     scores = self.score()
+                    logger.info(f"Running batch: #{batch_idx}")
 
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
                     self.test(data, param_idx)
                     scores = self.score()
+                    logger.info(f"Running batch: #{batch_idx}")
 
-            checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
-            self.write(epoch)
+                checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
+                self.write(epoch, scores)

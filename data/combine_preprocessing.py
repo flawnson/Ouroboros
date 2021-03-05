@@ -12,12 +12,10 @@ class CombineDataset(torch.utils.data.Dataset):
 
         #MNIST
         aux_data_idx = i % len(self.datasets[0])
-        print("aux_data_idx: ", aux_data_idx)
         a = self.datasets[0][aux_data_idx] #aux data
 
         #Model Param (Quine)
         param_data_idx = i % len(self.datasets[1])
-        print("param_data_idx: ", param_data_idx)
         b = self.datasets[1].params[param_data_idx] #return an integer index
         
         return (a, b) #all items in tuple should already be tensors

@@ -47,7 +47,13 @@
     "lambda": 0.01
   },
   "score_config": {
-
+      "acc": null,
+      "f1": ["macro"],
+      "auc": ["macro", "ovo"],
+      "con": null,
+      "prec": ["macro", "warn"],
+      "rec": ["macro", "warn"],
+      "jac": ["macro"]
   },
   "tuning_config": {
 
