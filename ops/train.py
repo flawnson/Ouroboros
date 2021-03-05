@@ -16,6 +16,7 @@ from optim.losses import Loss
 from optim.parameters import ModelParameters
 from utils.scores import Scores
 from utils.checkpoint import checkpoint
+from utils.logging import Logger
 
 
 class AbstractTrainer(ABC):
@@ -86,8 +87,9 @@ class AuxTrainer(AbstractTrainer):
         }
 
 
-        #IMPORTANT: NEED to pass param inside self.loss as a target
         loss = self.loss(predictions, targets)
+
+        #Log loss here
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
             loss.backward()  # The combined loss is backpropagated right?
@@ -118,7 +120,7 @@ class AuxTrainer(AbstractTrainer):
         #loss values are batch loss, total_loss are epoch loss
         #Only total_loss values are logged to tensorboard
         ####
-        return Loss(self.config, self.wrapper.model, predictions, targets)
+        return Loss(self.config, self.wrapper.model, predictions, targets).get_loss()
 
     def score(self):
         return Scores(self.config, self.device).get_scores()
