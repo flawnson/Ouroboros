@@ -32,16 +32,21 @@ We have an annotated bibliography in progress ([Link to LaTeX document on Overle
 
 ## About The Project
 ### Built With
+Several specialty libraries are used. A list of all packages and their version can be found in the config/envs directory.
 ### Code Style
+Docstrings, typehints, and comments brought to you in [Google Style](https://google.github.io/styleguide/pyguide.html).
 ### Directory Structure
+Directory structure mimics conventional PyTorch projects. A full dated summary can be found in directory_tree.txt.
 
 ## Getting Started
 ### Prerequisites
 ### Installation
 ### Environment Setup
 ### Container Setup
+Docker containers for running the project are on the roadmap!
 
 ## Usage
+The core component of usage is the training pipeline. The tuning pipeline, parallelization pipeline, and all others inherit from the Trainer superclass.
 ### Demo
 ### Tuning
 ### Parallelizing
@@ -49,10 +54,13 @@ We have an annotated bibliography in progress ([Link to LaTeX document on Overle
 ## Roadmap
 
 ## Contributing
+Currently we have a couple branches for making changes and contributions.
+New branches can be created if the process of achieving the desired outcome risks breaking the existing copy of the codebase on main.
 
 ## License
 
 ## Contact
+The core contributors are reachable by email, Twitter, and most other means.
 
 ## Acknowledgements
 Thank you to Kevin for being a reliable partner, and a close friend.
