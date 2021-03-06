@@ -16,6 +16,7 @@ from optim.losses import Loss
 from optim.parameters import ModelParameters
 from utils.scores import scores
 from utils.checkpoint import checkpoint
+from utils.logging import Logger
 
 
 class AbstractTrainer(ABC):
@@ -82,8 +83,9 @@ class AuxTrainer(AbstractTrainer):
         predictions = self.wrapper.model(idx_vector, data[0])
         targets = {"aux": data[-1], "param": param}
 
-        #IMPORTANT: NEED to pass param inside self.loss as a target
         loss = self.loss(predictions, targets)
+
+        #Log loss here
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
             loss.backward()  # The combined loss is backpropagated right?
