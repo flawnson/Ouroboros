@@ -8,45 +8,31 @@ from abc import ABC, abstractmethod
 from sklearn.metrics import f1_score, precision_score, recall_score, jaccard_score, confusion_matrix
 
 
-class AbstractScores(ABC):
-    def __init__(self, config: Dict):
-        super(AbstractScores, self)
+class MLPScores:
+    def __init__(self, config: Dict, targets, predictions, device: torch.device):
         self.score_config = config["score_config"]
-
-    def accuracy(self, logits: torch.tensor, targets):
-        pass
-
-    @abstractmethod
-    def get_scores(self):
-        pass
-
-
-class MLPScores(AbstractScores):
-    def __init__(self, config: Dict, device: torch.device):
-        super(MLPScores, self).__init__(config)
-        self.score_config = config["score_config"]
+        self.targets = targets
+        self.predictions = predictions
         self.device = device
+        self.correct = 0
 
-    def accuracy(self, logits: torch.tensor, targets):
-        pass
+    def accuracy(self):
+        pred = self.predictions.argmax(keepdim=True)  # get the index of the max log-probability
+        self.correct += pred.eq(self.targets.view_as(pred)).sum().item()
+        self.correct / len(self.targets)
 
     def get_scores(self) -> Dict[str, object]:
-        scoreset = {"acc": self.accuracy(self.score_config["acc"]),
-                    "auc": self.auroc(self.score_config["auc"]),
-                    "f1": self.f1_score(self.score_config["f1"]),
-                    "con": self.confusion_mat(self.score_config["con"]),
-                    "prec": self.precision(self.score_config["prec"]),
-                    "rec": self.recall(self.score_config["rec"]),
-                    }
+        scoreset = {"acc": self.accuracy()}
 
         return {score_type: scoreset[score_type] for score_type in self.score_config.keys()}
 
 
-class GraphScores(AbstractScores):
+class GraphScores:
     # XXX: PLACEHOLDER; CODE IS NOT FUNCTIONAL
-    def __init__(self, config: Dict, device: torch.device):
-        super(GraphScores, self).__init__(config)
+    def __init__(self, config: Dict, targets, predictions, device: torch.device):
         self.score_config = config["score_config"]
+        self.targets = targets
+        self.predictions = predictions
         self.device = device
 
     def accuracy(self, params) -> float:
@@ -111,20 +97,27 @@ class GraphScores(AbstractScores):
         return {score_type: scoreset[score_type] for score_type in self.score_config.keys()}
 
 
-class Scores(object):
-    def __init__(self, config, device):
-        self.config = config
-        self.device = device
+def scores(config, predictions, targets, device):
+    """
+    Function to call the correct score class
 
-    def get_scores(self):
-        if self.config["model_config"]["model_type"] == "linear":
-            return MLPScores(self.config, self.device).get_scores()
-        elif self.config["model_config"]["model_type"] == "graph":
-            return GraphScores(self.config, self.device).get_scores()
-        elif self.config["model_config"]["model_type"] == "vision":
-            pass
-        elif self.config["model_config"]["model_type"] == "language":
-            pass
-        else:
-            raise NotImplementedError(f"{self.config['model_config']['model_type']} is not a model type")
+    Args:
+        config: Configuration dict
+        device: torch.device
+
+    Returns:
+        Score object corresponding to the type of data (which then returns a dictionary of scores)
+
+    """
+    if config["model_config"]["model_type"] == "linear":
+        return MLPScores(config, predictions, targets, device).get_scores()
+    elif config["model_config"]["model_type"] == "graph":
+        return GraphScores(config, predictions, targets, device).get_scores()
+    elif config["model_config"]["model_type"] == "image":
+        pass
+    elif config["model_config"]["model_type"] == "language":
+        pass
+    else:
+        raise NotImplementedError(f"{config['model_config']['model_type']} is not a model type")
+
 

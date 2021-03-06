@@ -14,7 +14,7 @@ from torch.nn import Module
 from optim.algos import OptimizerObj, LRScheduler
 from optim.losses import Loss
 from optim.parameters import ModelParameters
-from utils.scores import Scores
+from utils.scores import scores
 from utils.checkpoint import checkpoint
 
 
@@ -82,7 +82,6 @@ class AuxTrainer(AbstractTrainer):
         predictions = self.wrapper.model(idx_vector, data[0])
         targets = {"aux": data[-1], "param": param}
 
-
         #IMPORTANT: NEED to pass param inside self.loss as a target
         loss = self.loss(predictions, targets)
 
@@ -90,6 +89,8 @@ class AuxTrainer(AbstractTrainer):
             loss.backward()  # The combined loss is backpropagated right?
             self.optimizer.step()
             self.optimizer.zero_grad()
+
+        return predictions, targets
 
     @torch.no_grad()
     def test(self, data, param_idx):
@@ -99,8 +100,7 @@ class AuxTrainer(AbstractTrainer):
         predictions = self.wrapper.model(idx_vector, data)
         targets = {"aux": data[-1], "param": param}
 
-        loss = self.loss(predictions, targets)
-        return loss
+        return predictions, targets
 
     def loss(self, predictions, targets):
 
@@ -114,8 +114,8 @@ class AuxTrainer(AbstractTrainer):
         ####
         return Loss(self.config, self.wrapper.model, predictions, targets).get_loss()
 
-    def score(self):
-        return Scores(self.config, self.device).get_scores()
+    def score(self, predictions, targets):
+        return scores(self.config, predictions, targets, self.device)
 
     def write(self, epoch: int, scores: Dict):
         logger.info(f"Running epoch: #{epoch}")
@@ -126,14 +126,17 @@ class AuxTrainer(AbstractTrainer):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
-                    self.train(data, param_idx, batch_idx)
-                    scores = self.score()
+                    predictions, targets = self.train(data, param_idx, batch_idx)
                     logger.info(f"Running batch: #{batch_idx}")
 
+                train_scores = self.score(predictions, targets)
+                logger.info(train_scores)
+
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
-                    self.test(data, param_idx)
-                    scores = self.score()
+                    predictions, targets = self.test(data, param_idx)
                     logger.info(f"Running batch: #{batch_idx}")
+
+                test_scores = self.score(predictions, targets)
 
                 checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
                 self.write(epoch, scores)
