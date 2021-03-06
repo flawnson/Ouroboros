@@ -36,20 +36,72 @@ Several specialty libraries are used. A list of all packages and their version c
 ### Code Style
 Docstrings, typehints, and comments brought to you in [Google Style](https://google.github.io/styleguide/pyguide.html).
 ### Directory Structure
-Directory structure mimics conventional PyTorch projects. A full dated summary can be found in directory_tree.txt.
+Directory structure mimics conventional PyTorch projects. A full dated summary can be found in directory_tree.txt (use ```Get-ChildItem | tree /F > foo.txt``` in PowerShell to create your own!)
 
 ## Getting Started
 ### Prerequisites
+You will need conda and Python version 3.6 or above.
+
 ### Installation
+Assuming you're in base dir of this project and are using a Linux based system:
+First you'll want to create a new conda (or pip) env with Python 3.7
+```shell
+conda create -n env_name python=3.7 anaconda
+source activate env_name
+```
+
+Before cloning into this repository:
+```shell
+git clone https://github.com/flawnson/Generic_GNN.git
+OR
+pip install git+https://github.com/flawnson/Generic_GNN.git
+```
+
+Then you can run setup.py
+```shell
+python setup.py
+```
+
 ### Environment Setup
+Install depedencies in the requirements.txt.
+```shell
+pip install -r configs/envs/requirements.txt
+```
+
+Then you'll need to create an empty directory for model outputs (including saved models).
+```shell
+cd Generic_GNN && mkdir outputs
+```
+
+Finally you can run a demo version of the pipeline (default configs in configs directory).
+```shell
+python -c path/to/config/files/file.json -s path/to/schema/files/file.json
+```
+
+You can see the logged results using TensorBoard (to be setup soon).
+```shell
+tensorboard --logdir=logs/GAT_tuning/tune_model
+```
+
 ### Container Setup
 Docker containers for running the project are on the roadmap!
 
 ## Usage
 The core component of usage is the training pipeline. The tuning pipeline, parallelization pipeline, and all others inherit from the Trainer superclass.
+
+Run:
+```shell
+python main.py -c "path_to_config_file.json"
+```
+
 ### Demo
+Demo is a simple training run. It takes a configuration file and runs the Trainer once.
+
 ### Tuning
+Tuning is a pair of consecutive runs. The first run executes the Tuner (a wrapper of the Trainer pipeline meant to find and return the best parameters it can find) once and the second run executes the Trainer once.
 ### Parallelizing
+
+Parallelizing allows you to execute and run several Demo and/or Tuning pipelines in tandem. It uses mutliprocessing to find and use as many cores you define in the confiuration file (yet to be implemented).
 
 ## Roadmap
 
