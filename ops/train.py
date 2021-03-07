@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import pathlib
 
 import torch.functional as F
 
@@ -31,6 +32,10 @@ class AbstractTrainer(ABC):
         #We want the parameters inside the wrapper to change too during training
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
+
+        log_path = self.run_config["log_dir"] + "/" + self.config["run_name"]
+        pathlib.Path(log_path).mkdir(parents=True, exist_ok=True)
+        self.logger = Logger(log_path)
         self.dataset = dataset
         self.device = device
 
@@ -69,8 +74,13 @@ class AuxTrainer(AbstractTrainer):
         self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
+
+        log_path = self.run_config["log_dir"] + "/" + self.config["run_name"]
+        pathlib.Path(log_path).mkdir(parents=True, exist_ok=True)
+        self.logger = Logger(log_path)
         self.dataset = dataset
         self.device = device
+
 
     def train(self, data, param_idx, batch_idx):
         self.wrapper.model.train()
@@ -89,12 +99,8 @@ class AuxTrainer(AbstractTrainer):
 
         loss = self.loss(predictions, targets)
 
-        #Log loss here
 
-        if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
-            loss.backward()  # The combined loss is backpropagated right?
-            self.optimizer.step()
-            self.optimizer.zero_grad()
+        return loss
 
     @torch.no_grad()
     def test(self, data, param_idx):
@@ -132,13 +138,41 @@ class AuxTrainer(AbstractTrainer):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
+                epoch_loss = {
+                    "sr_loss": [0, 0],
+                    "task_loss": [0, 0],
+                    "combined_loss": [0, 0]
+                }
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
-                    self.train(data, param_idx, batch_idx)
+                    loss = self.train(data, param_idx, batch_idx)
+                    epoch_loss["sr_loss"][0] += loss["sr_loss"]
+                    epoch_loss["task_loss"][0] += loss["task_loss"]
+                    epoch_loss["combined_loss"][0] += loss["combined_loss"]
+
+                    #backpropagate every few batches
+                    if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
+                        loss["combined_loss"].backward()  # The combined loss is backpropagated right?
+                        self.optimizer.step()
+                        self.optimizer.zero_grad()
+
                     scores = self.score()
 
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
-                    self.test(data, param_idx)
+                    loss = self.test(data, param_idx)
+                    epoch_loss["sr_loss"][1] += loss["sr_loss"]
+                    epoch_loss["task_loss"][1] += loss["task_loss"]
+                    epoch_loss["combined_loss"][1] += loss["combined_loss"]
                     scores = self.score()
+
+                #Log values for training
+                logger.scalar_summary('sr_loss (train)', epoch_loss["sr_loss"][0], epoch)
+                logger.scalar_summary('task_loss (train)', epoch_loss["task_loss"][0], epoch)
+                logger.scalar_summary('combined_loss (train)', epoch_loss["combined_loss"][0], epoch)
+
+                #Log values for testing
+                logger.scalar_summary('sr_loss (test)', epoch_loss["sr_loss"][1], epoch)
+                logger.scalar_summary('task_loss (test)', epoch_loss["task_loss"][1], epoch)
+                logger.scalar_summary('combined_loss (test)', epoch_loss["combined_loss"][1], epoch)
 
             checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
             self.write(epoch)
