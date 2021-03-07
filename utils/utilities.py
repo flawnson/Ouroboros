@@ -8,6 +8,10 @@ from logzero import logger
 from typing import *
 
 
+def relative_difference(x, y):
+    return abs(x-y)/max(abs(x), abs(y))
+
+
 def get_example_size(dataset: torch) -> int:
     # A function to return the size of an example for any dataset and datatype
     # Might be a bit convoluted right now
@@ -32,7 +36,7 @@ def timed(func: Callable):
         start = time.time()
         result = func(*args, **kwargs)
         end = time.time()
-        logger(__name__).info("{} ran in {}s".format(func.__name__, round(end - start, 2)))
+        logger(__name__).info(f"{func.__name__} ran in {round(end - start, 2)}s")
         return result
 
     return wrapper

@@ -17,6 +17,7 @@ from optim.parameters import ModelParameters
 from utils.scores import scores
 from utils.checkpoint import checkpoint
 from utils.logging import Logger
+from utils.utilities import timed, relative_difference
 
 
 class AbstractTrainer(ABC):
@@ -71,12 +72,13 @@ class AuxTrainer(AbstractTrainer):
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.dataset = dataset
         self.device = device
+        self.counter = {}
 
     def train(self, data, param_idx, batch_idx):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
 
-        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx).detach()) #coordinate of the param in one hot vector form
+        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
 
         #Both predictions and targets will be dictionaries that hold two elements
@@ -84,8 +86,6 @@ class AuxTrainer(AbstractTrainer):
         targets = {"aux": data[-1], "param": param}
 
         loss = self.loss(predictions, targets)
-
-        #Log loss here
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
             loss.backward()  # The combined loss is backpropagated right?
@@ -123,22 +123,26 @@ class AuxTrainer(AbstractTrainer):
         logger.info(f"Running epoch: #{epoch}")
         logger.info(f"Scores: {scores}")
 
+    @timed
     def run_train(self):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
+                    logger.info(f"Running train batch: #{batch_idx}")
                     predictions, targets = self.train(data, param_idx, batch_idx)
-                    logger.info(f"Running batch: #{batch_idx}")
 
+                # Scores cumulated and calculated per epoch, as done in Quine
                 train_scores = self.score(predictions, targets)
                 logger.info(train_scores)
 
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
+                    logger.info(f"Running test batch: #{batch_idx}")
                     predictions, targets = self.test(data, param_idx)
-                    logger.info(f"Running batch: #{batch_idx}")
 
+                # Scores cumulated and calculated per epoch, as done in Quine
                 test_scores = self.score(predictions, targets)
+                logger.info(test_scores)
 
                 checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
-                self.write(epoch, scores)
+                self.write(epoch, train_scores)

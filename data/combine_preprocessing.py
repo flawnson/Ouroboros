@@ -23,7 +23,7 @@ class CombineDataset(torch.utils.data.Dataset):
     def __len__(self):
         return max(len(self.datasets[0]), len(self.datasets[1]))
 
-#
+# # Old Quine implementation of CombineDataset
 # class CombineDataset(torch.utils.data.Dataset):
 #     def __init__(self, *datasets):
 #         self.datasets = datasets
