@@ -1,7 +1,7 @@
 "File for all implemented loss functions"
 
 import torch
-import torch.functional as F
+import torch.nn.functional as F
 
 from models.augmented.quine import Vanilla, Auxiliary
 from models.augmented.ouroboros import Ouroboros
@@ -38,7 +38,7 @@ class Loss:
         return loss_task
 
     def combined_loss(self) -> float:
-        loss_combined = self.sr_loss() + self.config["lambda"] * self.task_loss()
+        loss_combined = self.sr_loss() + self.config["run_config"]["lambda"] * self.task_loss()
 
         return loss_combined
 
@@ -47,15 +47,12 @@ class Loss:
 
     def get_loss(self) -> float:
         if type(self.model) is Vanilla:
-            print("vanilla model loss")
             return self.sr_loss()
         elif type(self.model) is Auxiliary:
-            print("aux model loss")
             return {"sr_loss": self.sr_loss(),
                     "task_loss": self.task_loss(),
                     "combined_loss": self.combined_loss()}
         elif type(self.model) is Ouroboros:
-            print("ouroboros model loss")
             return self.new_loss()
         else:
             raise NotImplementedError("The specified loss is not implemented for this class")
