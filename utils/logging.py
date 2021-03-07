@@ -3,6 +3,7 @@ Logging class/functions, inspired/copied from:
 https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/04-utils/tensorboard/logger.py
 """
 import os
+import pathlib
 import tensorflow as tf
 import numpy as np
 
@@ -11,6 +12,7 @@ class Logger(object):
 
     def __init__(self, log_dir):
         """Create a summary writer logging to log_dir."""
+        self.mk_dir = pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
         self.writer = tf.summary.create_file_writer(log_dir)
 
     def scalar_summary(self, tag, value, step):

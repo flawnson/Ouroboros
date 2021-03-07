@@ -3,6 +3,7 @@
   "seed": 42,
   "run_type": "demo",
   "logging": "logging.INFO",
+  "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs",
   "device": "cpu",
   "data_config":
   {
@@ -45,7 +46,6 @@
     "checkpoint_intervals": 100,
     "checkpoint_dir": "saves/checkpoints/",
     "lambda": 0.01,
-    "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs"
   },
   "score_config": {
       "acc": null,

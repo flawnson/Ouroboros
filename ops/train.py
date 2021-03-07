@@ -1,12 +1,11 @@
 import torch
 import numpy as np
-import pathlib
 
-import torch.functional as F
 
 from typing import *
 from tqdm import trange
 from logzero import logger
+import torch.functional as F
 from abc import ABC, abstractmethod
 
 from torch.utils.data import DataLoader
@@ -28,15 +27,11 @@ class AbstractTrainer(ABC):
         self.run_config = config["run_config"]
         self.wrapper = model_wrapper
         self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
-
         #Will self.params in OptimizerObj update the parameters in wrapper? If so, will it be by reference?
         #We want the parameters inside the wrapper to change too during training
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-
-        log_path = self.run_config["log_dir"] + "/" + self.config["run_name"]
-        pathlib.Path(log_path).mkdir(parents=True, exist_ok=True)
-        self.logger = Logger(log_path)
+        self.logger = Logger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
         self.device = device
 
@@ -75,10 +70,7 @@ class AuxTrainer(AbstractTrainer):
         self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-
-        log_path = self.run_config["log_dir"] + "/" + self.config["run_name"]
-        pathlib.Path(log_path).mkdir(parents=True, exist_ok=True)
-        self.logger = Logger(log_path)
+        self.logger = Logger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
         self.device = device
         self.epoch_loss = {"sr_loss": [0, 0], "task_loss": [0, 0], "combined_loss": [0, 0]}
@@ -97,7 +89,7 @@ class AuxTrainer(AbstractTrainer):
         loss = self.loss(predictions, targets)
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
-            loss.backward()  # The combined loss is backpropagated right?
+            loss["combined_loss"].backward()  # The combined loss is backpropagated right?
             self.optimizer.step()
             self.optimizer.zero_grad()
 
