@@ -22,14 +22,14 @@ class Quine(ABC):
         self.param_names = []
         self.num_params = int(self.cumulate_params()[-1])
 
-    def reduction(self, data) -> Reduction:
+    def reduction(self, data_size) -> Reduction:
         """
         Select the reduction method
 
         Returns:
             Output of the reduction method
         """
-        return Reduction(self.model_aug_config, data).reduce()
+        return Reduction(self.model_aug_config, data_size).reduce()
 
     def cumulate_params(self):
         # num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + self.param_list])

@@ -15,9 +15,10 @@ from torch.nn import Module
 from optim.algos import OptimizerObj, LRScheduler
 from optim.losses import Loss
 from optim.parameters import ModelParameters
-from utils.scores import Scores
+from utils.scores import scores
 from utils.checkpoint import checkpoint
 from utils.logging import Logger
+from utils.utilities import timed, relative_difference
 
 
 class AbstractTrainer(ABC):
@@ -80,27 +81,31 @@ class AuxTrainer(AbstractTrainer):
         self.logger = Logger(log_path)
         self.dataset = dataset
         self.device = device
-
+        self.epoch_loss = {"sr_loss": [0, 0], "task_loss": [0, 0], "combined_loss": [0, 0]}
 
     def train(self, data, param_idx, batch_idx):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
 
-        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx).detach()) #coordinate of the param in one hot vector form
+        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
 
         #Both predictions and targets will be dictionaries that hold two elements
         predictions = self.wrapper.model(idx_vector, data[0])
-        targets = {
-            "aux": data[-1],
-            "param": param
-        }
-
+        targets = {"aux": data[-1], "param": param}
 
         loss = self.loss(predictions, targets)
 
+        if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
+            loss.backward()  # The combined loss is backpropagated right?
+            self.optimizer.step()
+            self.optimizer.zero_grad()
 
-        return loss
+        self.epoch_loss["sr_loss"][0] += loss["sr_loss"]
+        self.epoch_loss["task_loss"][0] += loss["task_loss"]
+        self.epoch_loss["combined_loss"][0] += loss["combined_loss"]
+
+        return predictions, targets
 
     @torch.no_grad()
     def test(self, data, param_idx):
@@ -108,13 +113,15 @@ class AuxTrainer(AbstractTrainer):
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
         predictions = self.wrapper.model(idx_vector, data)
-        targets = {
-            "aux": data[-1],
-            "param": param
-        }
+        targets = {"aux": data[-1], "param": param}
 
         loss = self.loss(predictions, targets)
-        return loss
+
+        self.epoch_loss["sr_loss"][1] += loss["sr_loss"]
+        self.epoch_loss["task_loss"][1] += loss["task_loss"]
+        self.epoch_loss["combined_loss"][1] += loss["combined_loss"]
+
+        return predictions, targets
 
     def loss(self, predictions, targets):
 
@@ -128,51 +135,42 @@ class AuxTrainer(AbstractTrainer):
         ####
         return Loss(self.config, self.wrapper.model, predictions, targets).get_loss()
 
-    def score(self):
-        return Scores(self.config, self.device).get_scores()
+    def score(self, predictions, targets):
+        return scores(self.config, predictions, targets, self.device)
 
-    def write(self, epoch: int):
+    def write(self, epoch: int, scores: Dict):
         logger.info(f"Running epoch: #{epoch}")
+        logger.info(f"Scores: {scores}")
 
+        # Log values for training
+        logger.scalar_summary('sr_loss (train)', self.epoch_loss["sr_loss"][0], epoch)
+        logger.scalar_summary('task_loss (train)', self.epoch_loss["task_loss"][0], epoch)
+        logger.scalar_summary('combined_loss (train)', self.epoch_loss["combined_loss"][0], epoch)
+
+        # Log values for testing
+        logger.scalar_summary('sr_loss (test)', self.epoch_loss["sr_loss"][1], epoch)
+        logger.scalar_summary('task_loss (test)', self.epoch_loss["task_loss"][1], epoch)
+        logger.scalar_summary('combined_loss (test)', self.epoch_loss["combined_loss"][1], epoch)
+
+    @timed
     def run_train(self):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
-                epoch_loss = {
-                    "sr_loss": [0, 0],
-                    "task_loss": [0, 0],
-                    "combined_loss": [0, 0]
-                }
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
-                    loss = self.train(data, param_idx, batch_idx)
-                    epoch_loss["sr_loss"][0] += loss["sr_loss"]
-                    epoch_loss["task_loss"][0] += loss["task_loss"]
-                    epoch_loss["combined_loss"][0] += loss["combined_loss"]
+                    logger.info(f"Running train batch: #{batch_idx}")
+                    predictions, targets = self.train(data, param_idx, batch_idx)
 
-                    #backpropagate every few batches
-                    if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
-                        loss["combined_loss"].backward()  # The combined loss is backpropagated right?
-                        self.optimizer.step()
-                        self.optimizer.zero_grad()
-
-                    scores = self.score()
+                train_scores = self.score(predictions, targets)
+                logger.info(train_scores)
 
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
-                    loss = self.test(data, param_idx)
-                    epoch_loss["sr_loss"][1] += loss["sr_loss"]
-                    epoch_loss["task_loss"][1] += loss["task_loss"]
-                    epoch_loss["combined_loss"][1] += loss["combined_loss"]
-                    scores = self.score()
+                    logger.info(f"Running test batch: #{batch_idx}")
+                    predictions, targets = self.test(data, param_idx)
 
-                #Log values for training
-                logger.scalar_summary('sr_loss (train)', epoch_loss["sr_loss"][0], epoch)
-                logger.scalar_summary('task_loss (train)', epoch_loss["task_loss"][0], epoch)
-                logger.scalar_summary('combined_loss (train)', epoch_loss["combined_loss"][0], epoch)
-
-                #Log values for testing
-                logger.scalar_summary('sr_loss (test)', epoch_loss["sr_loss"][1], epoch)
-                logger.scalar_summary('task_loss (test)', epoch_loss["task_loss"][1], epoch)
-                logger.scalar_summary('combined_loss (test)', epoch_loss["combined_loss"][1], epoch)
+                # Scores cumulated and calculated per epoch, as done in Quine
+                test_scores = self.score(predictions, targets)
+                logger.info(test_scores)
 
             checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
             self.write(epoch)

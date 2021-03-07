@@ -47,10 +47,7 @@ class AbstractSplit(ABC):
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split)
         # The .split() method from SKLearn returns a generator that generates 2 index arrays (for training and testing)
         samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(self.dataset, self.dataset.targets)]
-        if self.config["model_aug_config"]["model_augmentation"] == "auxiliary":
-            dataloaders = [DataLoader(CombineDataset(self.dataset, self.param_data), sampler=sampler) for sampler in samplers]
-        else:
-            dataloaders = [DataLoader(self.dataset, sampler=sampler) for sampler in samplers]
+        dataloaders = self.get_dataloaders(samplers)
 
         return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
 
@@ -61,9 +58,13 @@ class AbstractSplit(ABC):
 
     def get_dataloaders(self, samplers: List[torch.utils.data.Sampler]) -> List:
         if self.config["model_aug_config"]["model_augmentation"] == "auxiliary":
-            return [DataLoader(CombineDataset(self.dataset, self.param_data), sampler=sampler) for sampler in samplers]
+            return [DataLoader(CombineDataset(self.dataset, self.param_data),
+                                      batch_size=self.data_config["batch_size"],
+                                      sampler=sampler) for sampler in samplers]
         else:
-            return [DataLoader(self.dataset, sampler=sampler) for sampler in samplers]
+            return [DataLoader(self.dataset,
+                                      batch_size=self.data_config["batch_size"],
+                                      sampler=sampler) for sampler in samplers]
 
     def partition(self):
         self.type_check(self.dataset)

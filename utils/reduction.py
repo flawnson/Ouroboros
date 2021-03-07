@@ -13,9 +13,6 @@ class Reduction(object):
         self.model_aug_config = model_aug_config
         self.data_size = data_size
 
-    def pca(self):
-        pass
-
     def random(self) -> np.array:
         """
         Random project method from Scikitlearn (as used in the Quine paper)
@@ -41,8 +38,6 @@ class Reduction(object):
             logger.info("No dimension reduction method provided... Continuing without reducing")
         elif self.model_aug_config["reduction_method"].casefold() == "random":
             return self.random()
-        elif self.model_aug_config["reduction_method"].casefold() == "pca":
-            return self.pca()
         else:
             logger.info(f"Dimension reduction method {self.model_aug_config['reduce_dimension']} not undersood..."
                         f"Continuing without reducing")

@@ -35,11 +35,10 @@ class ModelParameters(object):
         # logger.info(self.model)
         self.device = device
 
-    def to_onehot(self, idx):
-        #print("Idx onehot 1: ", idx)
+    def to_onehot(self, idxs: torch.tensor):
         onehot = torch.zeros(self.num_params, device=self.device)
-        onehot[idx.item()] = 1
-        #print("Onehot: ", onehot)
+        onehot[idxs.item()] = 1
+        # onehots = [torch.zeros(self.num_params, device=self.device)[idx.item()] for idx in idxs]  # Was testing different batch sizes
         return onehot
 
     def get_param(self, idx):
