@@ -18,6 +18,14 @@ class Loss:
         self.predictions = predictions
         self.targets = targets
 
+
+    def calculate_relative_difference(x, y):
+        return abs(x-y)/max(abs(x), abs(y))
+
+    def relative_difference(self) -> float:
+        rel_diff = relative_difference(self.predictions["param"].item(), self.targets["param"].item())
+        return rel_diff
+
     def sr_loss(self) -> float:
 
         loss_sr = (torch.linalg.norm(self.predictions["param"] - self.targets["param"], ord=2)) ** 2
@@ -25,7 +33,7 @@ class Loss:
         return loss_sr
 
     def task_loss(self) -> float:
-        loss_task = F.nll_loss(self.predictions.unsqueeze(dim=0), self.targets) #create dictionary indices
+        loss_task = F.nll_loss(self.predictions["aux"].unsqueeze(dim=0), self.targets["aux"]) #create dictionary indices
 
         return loss_task
 
@@ -41,7 +49,9 @@ class Loss:
         if isinstance(self.model, Vanilla):
             return self.sr_loss()
         elif isinstance(self.model, Auxiliary):
-            return self.combined_loss()
+            return {"sr_loss": self.sr_loss(),
+                    "task_loss": self.task_loss(),
+                    "combined_loss": self.combined_loss()}
         elif isinstance(self.model, Ouroboros):
             return self.new_loss()
         else:

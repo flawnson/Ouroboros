@@ -44,7 +44,8 @@
     "num_epochs": 1000,
     "checkpoint_intervals": 100,
     "checkpoint_dir": "saves/checkpoints/",
-    "lambda": 0.01
+    "lambda": 0.01,
+    "log_dir": "/insertpathhere/"
   },
   "score_config": {
 
