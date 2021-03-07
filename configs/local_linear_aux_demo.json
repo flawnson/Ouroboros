@@ -45,7 +45,7 @@
     "checkpoint_intervals": 100,
     "checkpoint_dir": "saves/checkpoints/",
     "lambda": 0.01,
-    "log_dir": "/insertpathhere/"
+    "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs"
   },
   "score_config": {
 

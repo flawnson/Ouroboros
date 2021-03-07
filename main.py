@@ -101,7 +101,7 @@ def main():
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
         # Find the greater length sampler
-        if len(datasets) > len(param_data.params):
+        if len(datasets) > len(param_data):
             dataloaders = MNISTSplit(config, datasets, param_data, device).partition()
         else:
             dataloaders = QuineSplit(config, param_data, device).partition()

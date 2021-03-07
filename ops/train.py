@@ -34,7 +34,7 @@ class AbstractTrainer(ABC):
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
 
         log_path = self.run_config["log_dir"] + "/" + self.config["run_name"]
-        pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(log_path).mkdir(parents=True, exist_ok=True)
         self.logger = Logger(log_path)
         self.dataset = dataset
         self.device = device
@@ -76,7 +76,7 @@ class AuxTrainer(AbstractTrainer):
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
 
         log_path = self.run_config["log_dir"] + "/" + self.config["run_name"]
-        pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(log_path).mkdir(parents=True, exist_ok=True)
         self.logger = Logger(log_path)
         self.dataset = dataset
         self.device = device

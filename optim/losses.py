@@ -46,13 +46,16 @@ class Loss:
         pass
 
     def get_loss(self) -> float:
-        if isinstance(self.model, Vanilla):
+        if type(self.model) is Vanilla:
+            print("vanilla model loss")
             return self.sr_loss()
-        elif isinstance(self.model, Auxiliary):
+        elif type(self.model) is Auxiliary:
+            print("aux model loss")
             return {"sr_loss": self.sr_loss(),
                     "task_loss": self.task_loss(),
                     "combined_loss": self.combined_loss()}
-        elif isinstance(self.model, Ouroboros):
+        elif type(self.model) is Ouroboros:
+            print("ouroboros model loss")
             return self.new_loss()
         else:
             raise NotImplementedError("The specified loss is not implemented for this class")
