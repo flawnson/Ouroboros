@@ -12,7 +12,7 @@ class Logger(object):
 
     def __init__(self, log_dir):
         """Create a summary writer logging to log_dir."""
-        self.mk_dir = pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(log_dir).mkdir(parents=True, exist_ok=True)
         self.writer = tf.summary.create_file_writer(log_dir)
 
     def scalar_summary(self, tag, value, step):

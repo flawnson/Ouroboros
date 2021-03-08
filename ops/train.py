@@ -40,6 +40,7 @@ class AbstractTrainer(ABC):
         pass
 
     @abstractmethod
+    @torch.no_grad()
     def test(self):
         pass
 
@@ -56,6 +57,54 @@ class AbstractTrainer(ABC):
         pass
 
     @abstractmethod
+    def run_train(self):
+        pass
+
+
+class ClassicalTrainer(AbstractTrainer):
+
+    def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dict, device: torch.device):
+        super(ClassicalTrainer, self).__init__(config, model, dataset, device)
+        self.config = config
+        self.run_config = config["run_config"]
+        self.model = model
+        self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
+        #Will self.params in OptimizerObj update the parameters in wrapper? If so, will it be by reference?
+        #We want the parameters inside the wrapper to change too during training
+        self.optimizer = OptimizerObj(config, self.params).optim_obj
+        self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
+        self.logger = Logger(self.config["log_dir"] + "/" + self.config["run_name"])
+        self.dataset = dataset
+        self.device = device
+
+    def train(self, data, targets, batch_idx):
+        self.model.train()
+        self.optimizer.zero_grad()
+
+        predictions = self.model(data)
+        loss = self.loss(predictions, targets)
+
+        if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
+            loss["combined_loss"].backward()  # The combined loss is backpropagated right?
+            self.optimizer.step()
+            self.optimizer.zero_grad()
+
+    @torch.no_grad()
+    def test(self, data, targets):
+        self.model.eval()
+
+        predictions = self.model(data)
+        loss = self.loss(predictions, targets)
+
+    def loss(self, predictions, targets):
+        return Loss(self.config, self.model, predictions, targets).get_loss()
+
+    def score(self):
+        pass
+
+    def write(self):
+        pass
+
     def run_train(self):
         pass
 
@@ -163,6 +212,9 @@ class AuxTrainer(AbstractTrainer):
                 # Scores cumulated and calculated per epoch, as done in Quine
                 test_scores = self.score(predictions, targets)
                 logger.info(test_scores)
+
+                # Regeneration step if specified in config
+                if self.run_config["regenerate"]: self.wrapper.model.regenerate()
 
             checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
             self.write(epoch)

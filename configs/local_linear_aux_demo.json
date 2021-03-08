@@ -46,6 +46,7 @@
     "checkpoint_intervals": 100,
     "checkpoint_dir": "saves/checkpoints/",
     "lambda": 0.01,
+    "regenerate": true
   },
   "score_config": {
       "acc": null,

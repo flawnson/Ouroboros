@@ -13,7 +13,7 @@ from torch.utils.data import Dataset
 
 class Quine(ABC):
     @abstractmethod
-    def __init__(self, config: Dict, model: torch.nn.Module, device):
+    def __init__(self, config: Dict, model: torch.nn.Module, device: torch.device):
         super(Quine, self).__init__()
         self.model_aug_config = config["model_aug_config"]
         self.model = model
@@ -31,14 +31,14 @@ class Quine(ABC):
         """
         return Reduction(self.model_aug_config, data_size).reduce()
 
-    def cumulate_params(self):
+    def cumulate_params(self) -> np.array:
         # num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + self.param_list])
         num_params_arr = np.array([np.prod(p.shape) for p in self.param_list])
         cum_params_arr = np.cumsum(num_params_arr)
 
         return cum_params_arr
 
-    def get_param(self, idx: int) -> float:
+    def get_param(self, idx: int) -> torch.tensor:
         assert idx < self.num_params
         subtract = 0
         param = None
