@@ -26,7 +26,7 @@
   },
   "model_aug_config":
   {
-    "model_augmentation": "auxiliary",
+    "model_augmentation": "classical",
     "n_inputs": 2,
     "n_hidden": 40,
     "reduction_method": "random"

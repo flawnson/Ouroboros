@@ -45,16 +45,16 @@ class AbstractTrainer(ABC):
         pass
 
     @abstractmethod
-    def loss(self):
-        pass
+    def loss(self, predictions, targets):
+        return Loss(self.config, self.model, predictions, targets).get_loss()
 
     @abstractmethod
-    def score(self):
-        pass
+    def score(self, predictions, targets):
+        return scores(self.config, predictions, targets, self.device)
 
     @abstractmethod
-    def write(self):
-        pass
+    def write(self, epoch: int):
+        logger.info(f"Running epoch: #{epoch}")
 
     @abstractmethod
     def run_train(self):
@@ -99,14 +99,18 @@ class ClassicalTrainer(AbstractTrainer):
     def loss(self, predictions, targets):
         return Loss(self.config, self.model, predictions, targets).get_loss()
 
-    def score(self):
-        pass
+    def score(self, predictions, targets):
+        return scores(self.config, predictions, targets, self.device)
 
-    def write(self):
-        pass
+    def write(self, epoch: int):
+        logger.info(f"Running epoch: #{epoch}")
 
     def run_train(self):
-        pass
+        if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
+            for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
+                logger.info(f"Epoch: {epoch}")
+
+            checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
 
 
 class AuxTrainer(AbstractTrainer):
@@ -217,4 +221,4 @@ class AuxTrainer(AbstractTrainer):
                 if self.run_config["regenerate"]: self.wrapper.model.regenerate()
 
             checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
-            self.write(epoch)
+            self.write(epoch, train_scores)

@@ -46,7 +46,7 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "mnist":
         datasets = get_aux_data(config)
     else:
-        raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
+        raise NotImplementedError(f"{config['dataset']} is not a dataset")
     logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
 
     ### Model preparation ###
@@ -79,16 +79,12 @@ def main():
 
     ### Param data preprocessing ###
     param_data: Union[torch.utils.data.Dataset, List] = None
-    if config["data_config"]["dataset"] == "primary_labelset":
+    if config["model_aug_config"]["model_augmentation"].casefold() == "classical":
         pass
-    elif config["data_config"]["dataset"].casefold() == "house":
-        pass
-    elif config["data_config"]["dataset"].casefold() == "cora":
-        pass
-    elif config["data_config"]["dataset"].casefold() == "mnist":
+    elif config["model_aug_config"]["model_augmentation"].casefold() == "auxiliary":
         param_data = ModelParameters(config, aug_model, device)
     else:
-        raise NotImplementedError(f"{config['dataset']} is not a dataset")  # Add to logger when implemented
+        raise NotImplementedError(f"{config['model_aug_config']['model_augmentation']} does not require param data")
     logger.info(f"Successfully generated parameter data")
 
     ### Splitting dataset and parameters ###
@@ -100,15 +96,13 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        # Find the greater length sampler
-        if len(datasets) > len(param_data):
-            dataloaders = MNISTSplit(config, datasets, param_data, device).partition()
-        else:
+        dataloaders = MNISTSplit(config, datasets, param_data, device).partition()
+        if len(datasets) < len(param_data):
             dataloaders = QuineSplit(config, param_data, device).partition()
             #When splitting/partition, we split the indices of the params (which are ints)
             #In combineDataset, the param_data indices will be passed to get_param() in get_item
     else:
-        raise NotImplementedError(f"{config['dataset']} is not a valid split")  # Add to logger when implemented
+        raise NotImplementedError(f"{config['dataset']} is not a valid split")
     logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###
