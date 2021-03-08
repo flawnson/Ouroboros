@@ -63,8 +63,8 @@ class AbstractSplit(ABC):
                                       sampler=sampler) for sampler in samplers]
         else:
             return [DataLoader(self.dataset,
-                                      batch_size=self.data_config["batch_size"],
-                                      sampler=sampler) for sampler in samplers]
+                               batch_size=self.data_config["batch_size"],
+                               sampler=sampler) for sampler in samplers]
 
     def partition(self):
         self.type_check(self.dataset)
@@ -77,11 +77,12 @@ class AbstractSplit(ABC):
 
 
 class MNISTSplit(AbstractSplit):
-    def __init__(self, config, dataset, device):
+    def __init__(self, config, dataset, param_data, device):
         super(MNISTSplit, self).__init__(config, dataset, device)
         self.config = config
         self.data_config = config["data_config"]
         self.dataset = dataset
+        self.param_data = param_data  # Needed for Aux models
         self.device = device
 
     def holdout(self) -> Dict[str, DataLoader]:

@@ -96,7 +96,7 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        dataloaders = MNISTSplit(config, datasets, device).partition()
+        dataloaders = MNISTSplit(config, datasets, param_data, device).partition()
         if param_data is not None:
             if len(datasets) < len(param_data):
                 dataloaders = QuineSplit(config, param_data, device).partition()

@@ -133,7 +133,7 @@ class VanillaTrainer(AbstractTrainer):
 class AuxiliaryTrainer(AbstractTrainer):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
     def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict, device: torch.device):
-        super(AuxiliaryTrainer, self).__init__(config, model_wrapper, dataset, device)
+        super(AuxiliaryTrainer, self).__init__(config, model_wrapper.model, dataset, device)
         self.config = config
         self.run_config = config["run_config"]
         self.wrapper = model_wrapper
