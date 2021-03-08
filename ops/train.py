@@ -70,7 +70,7 @@ class ClassicalTrainer(AbstractTrainer):
         self.config = config
         self.run_config = config["run_config"]
         self.model = model
-        self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
+        self.params = torch.nn.ParameterList(self.model.parameters())
         #Will self.params in OptimizerObj update the parameters in wrapper? If so, will it be by reference?
         #We want the parameters inside the wrapper to change too during training
         self.optimizer = OptimizerObj(config, self.params).optim_obj
@@ -112,7 +112,7 @@ class ClassicalTrainer(AbstractTrainer):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
 
-            checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
+            checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
 
 
 class VanillaTrainer(AbstractTrainer):
@@ -241,16 +241,16 @@ class AuxiliaryTrainer(AbstractTrainer):
             self.write(epoch, train_scores)
 
 
-def trainer(config, model, dataloaders, device):
+def trainer(config, model, param_data, dataloaders, device):
     if isinstance(model, Auxiliary):
-        return AuxiliaryTrainer(config, model, dataloaders, device)
+        return AuxiliaryTrainer(config, param_data, dataloaders, device).run_train()
     if isinstance(model, Vanilla):
-        return VanillaTrainer(config, model, dataloaders, device)
+        return VanillaTrainer(config, param_data, dataloaders, device).run_train()
     elif isinstance(model, Classical):
-        return ClassicalTrainer
+        return ClassicalTrainer(config, model, dataloaders, device).run_train()
     else:
         try:
-            return AbstractTrainer(config, model, dataloaders, device)
+            return AbstractTrainer(config, model, dataloaders, device).run_train()
         except:
             raise NotImplementedError(f"Model {model} has no trainer pipeline")
 

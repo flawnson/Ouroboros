@@ -18,7 +18,7 @@ from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset, get_aux_data
 from utils.holdout import MNISTSplit, QuineSplit
 from optim.parameters import ModelParameters
-from ops.train import AuxiliaryTrainer
+from ops.train import trainer
 from ops.tune import Tuner
 from ops.benchmark import Benchmarker
 
@@ -106,13 +106,11 @@ def main():
 
     ### Pipeline ###
     if config["run_type"] == "demo":
-        #Pass in the ModelParameter instead of model directly
-        AuxiliaryTrainer(config, param_data, dataloaders, device).run_train()  # Temporarily specific to Aux model
-        Trainer(config)
+        trainer(config, aug_model, param_data, dataloaders, device)
     if config["run_type"] == "tune":
-        Tuner(config, aug_model, dataloaders, device).run_tune()
+        Tuner(config, aug_model, param_data, dataloaders, device)
     if config["run_type"] == "benchmark":
-        Benchmarker(config, aug_model, dataloaders, device)
+        Benchmarker(config, aug_model, param_data, dataloaders, device)
 
 
 if __name__ == "__main__":
