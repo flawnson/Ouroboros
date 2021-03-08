@@ -77,12 +77,11 @@ class AbstractSplit(ABC):
 
 
 class MNISTSplit(AbstractSplit):
-    def __init__(self, config, dataset, param_data, device):
+    def __init__(self, config, dataset, device):
         super(MNISTSplit, self).__init__(config, dataset, device)
         self.config = config
         self.data_config = config["data_config"]
         self.dataset = dataset
-        self.param_data = param_data
         self.device = device
 
     def holdout(self) -> Dict[str, DataLoader]:
@@ -152,6 +151,8 @@ class QuineSplit(AbstractSplit):
         self.device = device
 
     def holdout(self):
+        # When splitting/partition, we split the indices of the params (which are ints)
+        # In combineDataset, the param_data indices will be passed to get_param() in get_item
         try:
             split_size = self.data_config["splits"]["size"]
             logger.info(f"Splitting dataset into {self.data_config['splits']['size']}")

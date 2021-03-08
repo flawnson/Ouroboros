@@ -3,7 +3,7 @@ import torch
 from torch.nn import Module
 from torch.utils.data import DataLoader
 
-from ops.train import AuxTrainer
+from ops.train import AuxiliaryTrainer
 from ops.tune import Tuner
 
 from typing import *
@@ -21,7 +21,7 @@ class Benchmarker:
         return Tuner(self.config, self.model, self.dataset, self.device).run()
 
     def run_train(self, best_config: Dict):
-        return AuxTrainer(best_config, self.model, self.dataset, self.device).run()
+        return AuxiliaryTrainer(best_config, self.model, self.dataset, self.device).run()
 
     def run(self):
         return self.run_train(self.run_tune())

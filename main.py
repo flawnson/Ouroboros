@@ -18,7 +18,7 @@ from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset, get_aux_data
 from utils.holdout import MNISTSplit, QuineSplit
 from optim.parameters import ModelParameters
-from ops.train import AuxTrainer
+from ops.train import AuxiliaryTrainer
 from ops.tune import Tuner
 from ops.benchmark import Benchmarker
 
@@ -96,11 +96,10 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        dataloaders = MNISTSplit(config, datasets, param_data, device).partition()
-        if len(datasets) < len(param_data):
-            dataloaders = QuineSplit(config, param_data, device).partition()
-            #When splitting/partition, we split the indices of the params (which are ints)
-            #In combineDataset, the param_data indices will be passed to get_param() in get_item
+        dataloaders = MNISTSplit(config, datasets, device).partition()
+        if param_data is not None:
+            if len(datasets) < len(param_data):
+                dataloaders = QuineSplit(config, param_data, device).partition()
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")
     logger.info(f"Successfully split dataset and parameters")
@@ -108,7 +107,8 @@ def main():
     ### Pipeline ###
     if config["run_type"] == "demo":
         #Pass in the ModelParameter instead of model directly
-        AuxTrainer(config, param_data, dataloaders, device).run_train()  # Temporarily specific to Aux model
+        AuxiliaryTrainer(config, param_data, dataloaders, device).run_train()  # Temporarily specific to Aux model
+        Trainer(config)
     if config["run_type"] == "tune":
         Tuner(config, aug_model, dataloaders, device).run_tune()
     if config["run_type"] == "benchmark":

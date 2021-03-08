@@ -11,6 +11,8 @@ from abc import ABC, abstractmethod
 from torch.utils.data import DataLoader
 from torch.nn import Module
 
+from models.augmented.quine import Quine, Auxiliary, Vanilla
+from models.augmented.classical import Classical
 from optim.algos import OptimizerObj, LRScheduler
 from optim.losses import Loss
 from optim.parameters import ModelParameters
@@ -22,11 +24,11 @@ from utils.utilities import timed, relative_difference
 
 class AbstractTrainer(ABC):
 
-    def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict, device: torch.device):
+    def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dict, device: torch.device):
         self.config = config
         self.run_config = config["run_config"]
-        self.wrapper = model_wrapper
-        self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
+        self.model = model
+        self.params = torch.nn.ParameterList(self.model.parameters())
         #Will self.params in OptimizerObj update the parameters in wrapper? If so, will it be by reference?
         #We want the parameters inside the wrapper to change too during training
         self.optimizer = OptimizerObj(config, self.params).optim_obj
@@ -113,10 +115,25 @@ class ClassicalTrainer(AbstractTrainer):
             checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
 
 
-class AuxTrainer(AbstractTrainer):
+class VanillaTrainer(AbstractTrainer):
+    def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict, device: torch.device):
+        super(VanillaTrainer, self).__init__(config, model_wrapper, dataset, device)
+        self.config = config
+        self.run_config = config["run_config"]
+        self.wrapper = model_wrapper
+        self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
+        self.optimizer = OptimizerObj(config, self.params).optim_obj
+        self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
+        self.logger = Logger(self.config["log_dir"] + "/" + self.config["run_name"])
+        self.dataset = dataset
+        self.device = device
+        self.epoch_loss = {"sr_loss": [0, 0], "task_loss": [0, 0], "combined_loss": [0, 0]}
+
+
+class AuxiliaryTrainer(AbstractTrainer):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
     def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict, device: torch.device):
-        super(AuxTrainer, self).__init__(config, model_wrapper, dataset, device)
+        super(AuxiliaryTrainer, self).__init__(config, model_wrapper, dataset, device)
         self.config = config
         self.run_config = config["run_config"]
         self.wrapper = model_wrapper
@@ -222,3 +239,26 @@ class AuxTrainer(AbstractTrainer):
 
             checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
             self.write(epoch, train_scores)
+
+
+def trainer(config, model, dataloaders, device):
+    if isinstance(model, Auxiliary):
+        return AuxiliaryTrainer(config, model, dataloaders, device)
+    if isinstance(model, Vanilla):
+        return VanillaTrainer(config, model, dataloaders, device)
+    elif isinstance(model, Classical):
+        return ClassicalTrainer
+    else:
+        try:
+            return AbstractTrainer(config, model, dataloaders, device)
+        except:
+            raise NotImplementedError(f"Model {model} has no trainer pipeline")
+
+
+
+
+
+
+
+
+
