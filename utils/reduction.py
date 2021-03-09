@@ -2,10 +2,8 @@ import torch
 import numpy as np
 
 from typing import *
-from copy import deepcopy
 from logzero import logger
 from sklearn import random_projection
-from sklearn.decomposition import PCA
 
 
 class Reduction(object):

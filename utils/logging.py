@@ -2,10 +2,8 @@
 Logging class/functions, inspired/copied from:
 https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/04-utils/tensorboard/logger.py
 """
-import os
 import pathlib
 import tensorflow as tf
-import numpy as np
 
 
 class TBLogger(object):

@@ -19,7 +19,7 @@ from optim.parameters import ModelParameters
 from utils.scores import scores
 from utils.checkpoint import checkpoint
 from utils.logging import TBLogger
-from utils.utilities import timed, relative_difference
+from utils.utilities import timed
 
 
 class AbstractTrainer(ABC):

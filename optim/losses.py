@@ -7,7 +7,6 @@ from models.augmented.quine import Vanilla, Auxiliary
 from models.augmented.ouroboros import Ouroboros
 
 from typing import *
-from logzero import logger
 
 
 class Loss:

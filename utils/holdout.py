@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from logzero import logger
 from torch.nn import Module
 from sklearn.model_selection import StratifiedKFold, train_test_split, ShuffleSplit
-from torch.utils.data import Dataset, TensorDataset, DataLoader
+from torch.utils.data import Dataset, DataLoader
 
 from data.combine_preprocessing import CombineDataset
 from models.augmented.quine import Quine
