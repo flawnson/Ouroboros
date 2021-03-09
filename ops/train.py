@@ -18,7 +18,7 @@ from optim.losses import Loss
 from optim.parameters import ModelParameters
 from utils.scores import scores
 from utils.checkpoint import checkpoint
-from utils.logging import Logger
+from utils.logging import TBLogger
 from utils.utilities import timed, relative_difference
 
 
@@ -33,7 +33,7 @@ class AbstractTrainer(ABC):
         #We want the parameters inside the wrapper to change too during training
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-        self.logger = Logger(self.config["log_dir"] + "/" + self.config["run_name"])
+        self.tb_logger = TBLogger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
         self.device = device
 
@@ -55,7 +55,7 @@ class AbstractTrainer(ABC):
         return scores(self.config, predictions, targets, self.device)
 
     @abstractmethod
-    def write(self, epoch: int):
+    def write(self, epoch: int, **kwargs):
         logger.info(f"Running epoch: #{epoch}")
 
     @abstractmethod
@@ -75,7 +75,7 @@ class ClassicalTrainer(AbstractTrainer):
         #We want the parameters inside the wrapper to change too during training
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-        self.logger = Logger(self.config["log_dir"] + "/" + self.config["run_name"])
+        self.tb_logger = TBLogger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
         self.device = device
 
@@ -124,10 +124,13 @@ class VanillaTrainer(AbstractTrainer):
         self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-        self.logger = Logger(self.config["log_dir"] + "/" + self.config["run_name"])
+        self.tb_logger = TBLogger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
         self.device = device
-        self.epoch_loss = {"sr_loss": [0, 0], "task_loss": [0, 0], "combined_loss": [0, 0]}
+        self.epoch_data = {"sr_loss": [0, 0],
+                           "task_loss": [0, 0],
+                           "combined_loss": [0, 0],
+                           "correct": [0, 0]}  # First position for training scores, second position for test scores
 
 
 class AuxiliaryTrainer(AbstractTrainer):
@@ -140,10 +143,13 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
         self.optimizer = OptimizerObj(config, self.params).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-        self.logger = Logger(self.config["log_dir"] + "/" + self.config["run_name"])
+        self.tb_logger = TBLogger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
         self.device = device
-        self.epoch_loss = {"sr_loss": [0, 0], "task_loss": [0, 0], "combined_loss": [0, 0]}
+        self.epoch_data = {"sr_loss": [0, 0],
+                           "task_loss": [0, 0],
+                           "combined_loss": [0, 0],
+                           "correct": [0, 0]}  # First position for training scores, second position for test scores
 
     def train(self, data, param_idx, batch_idx):
         self.wrapper.model.train()
@@ -153,7 +159,8 @@ class AuxiliaryTrainer(AbstractTrainer):
         param = self.wrapper.model.get_param(param_idx)
 
         #Both predictions and targets will be dictionaries that hold two elements
-        predictions = self.wrapper.model(idx_vector, data[0])
+        predictions: Dict = self.wrapper.model(idx_vector, data[0])
+        aux_pred = predictions["aux"].argmax(keepdim=True)  # get the index of the max log-probability
         targets = {"aux": data[-1], "param": param}
 
         loss = self.loss(predictions, targets)
@@ -163,9 +170,10 @@ class AuxiliaryTrainer(AbstractTrainer):
             self.optimizer.step()
             self.optimizer.zero_grad()
 
-        self.epoch_loss["sr_loss"][0] += loss["sr_loss"]
-        self.epoch_loss["task_loss"][0] += loss["task_loss"]
-        self.epoch_loss["combined_loss"][0] += loss["combined_loss"]
+        self.epoch_data["sr_loss"][0] += loss["sr_loss"]
+        self.epoch_data["task_loss"][0] += loss["task_loss"]
+        self.epoch_data["combined_loss"][0] += loss["combined_loss"]
+        self.epoch_data["correct"][0] += aux_pred.eq(data[1].view_as(aux_pred)).sum().item()
 
         return predictions, targets
 
@@ -175,13 +183,18 @@ class AuxiliaryTrainer(AbstractTrainer):
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
         predictions = self.wrapper.model(idx_vector, data)
+        aux_pred = predictions["aux"].argmax(keepdim=True)  # get the index of the max log-probability
         targets = {"aux": data[-1], "param": param}
 
         loss = self.loss(predictions, targets)
 
-        self.epoch_loss["sr_loss"][1] += loss["sr_loss"]
-        self.epoch_loss["task_loss"][1] += loss["task_loss"]
-        self.epoch_loss["combined_loss"][1] += loss["combined_loss"]
+        self.tb_logger.scalar_summary('mse_loss', total_loss / nnq.num_params, epoch)
+        self.tb_logger.scalar_summary('rel_error', avg_relative_error / nnq.num_params, epoch)
+
+        self.epoch_data["sr_loss"][1] += loss["sr_loss"]
+        self.epoch_data["task_loss"][1] += loss["task_loss"]
+        self.epoch_data["combined_loss"][1] += loss["combined_loss"]
+        self.epoch_data["correct"][1] += aux_pred.eq(data[1].view_as(aux_pred)).sum().item()
 
         return predictions, targets
 
@@ -198,21 +211,21 @@ class AuxiliaryTrainer(AbstractTrainer):
         return Loss(self.config, self.wrapper.model, predictions, targets).get_loss()
 
     def score(self, predictions, targets):
-        return scores(self.config, predictions, targets, self.device)
+        return scores(self.config, self.dataset, self.epoch_data, self.device)
 
     def write(self, epoch: int, scores: Dict):
         logger.info(f"Running epoch: #{epoch}")
         logger.info(f"Scores: {scores}")
 
         # Log values for training
-        logger.scalar_summary('sr_loss (train)', self.epoch_loss["sr_loss"][0], epoch)
-        logger.scalar_summary('task_loss (train)', self.epoch_loss["task_loss"][0], epoch)
-        logger.scalar_summary('combined_loss (train)', self.epoch_loss["combined_loss"][0], epoch)
+        self.tb_logger.scalar_summary('sr_loss (train)', self.epoch_data["sr_loss"][0], epoch)
+        self.tb_logger.scalar_summary('task_loss (train)', self.epoch_data["task_loss"][0], epoch)
+        self.tb_logger.scalar_summary('combined_loss (train)', self.epoch_data["combined_loss"][0], epoch)
 
         # Log values for testing
-        logger.scalar_summary('sr_loss (test)', self.epoch_loss["sr_loss"][1], epoch)
-        logger.scalar_summary('task_loss (test)', self.epoch_loss["task_loss"][1], epoch)
-        logger.scalar_summary('combined_loss (test)', self.epoch_loss["combined_loss"][1], epoch)
+        self.tb_logger.scalar_summary('sr_loss (test)', self.epoch_data["sr_loss"][1], epoch)
+        self.tb_logger.scalar_summary('task_loss (test)', self.epoch_data["task_loss"][1], epoch)
+        self.tb_logger.scalar_summary('combined_loss (test)', self.epoch_data["combined_loss"][1], epoch)
 
     @timed
     def run_train(self):
@@ -234,7 +247,7 @@ class AuxiliaryTrainer(AbstractTrainer):
                 test_scores = self.score(predictions, targets)
                 logger.info(test_scores)
 
-                # Regeneration step if specified in config
+                # Regeneration (per epoch) step if specified in config
                 if self.run_config["regenerate"]: self.wrapper.model.regenerate()
 
             checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)

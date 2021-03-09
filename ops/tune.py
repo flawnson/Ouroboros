@@ -37,7 +37,7 @@ class Tuner(AbstractTrainer):
                                "logs",
                                self.tuning_config.get("model_config")["model"] + "_tuning"),
             resources_per_trial={"cpu": cpus, "gpu": gpus},
-            loggers=tune.logger.DEFAULT_LOGGERS,
+            loggers=tune.tb_logger.DEFAULT_LOGGERS,
         )
 
         df = analysis.dataframe()
