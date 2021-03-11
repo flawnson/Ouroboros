@@ -40,6 +40,17 @@ def timed(func: Callable):
 
 
 def make_clean_directories(beta, root_folder, iteration):
+    """
+
+    Args:
+        beta: Filler info for naming
+        root_folder: The root directory to check for
+        iteration: The iteration number for logging
+
+    Returns:
+        The name of the data directory that was cleaned and prepared
+
+    """
     data_dir = root_folder + '/results_' + str(beta) + '_' + str(iteration)
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)

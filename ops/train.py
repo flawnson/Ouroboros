@@ -28,10 +28,7 @@ class AbstractTrainer(ABC):
         self.config = config
         self.run_config = config["run_config"]
         self.model = model
-        self.params = torch.nn.ParameterList(self.model.parameters())
-        #Will self.params in OptimizerObj update the parameters in wrapper? If so, will it be by reference?
-        #We want the parameters inside the wrapper to change too during training
-        self.optimizer = OptimizerObj(config, self.params).optim_obj
+        self.optimizer = OptimizerObj(config, model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = TBLogger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
@@ -70,10 +67,7 @@ class ClassicalTrainer(AbstractTrainer):
         self.config = config
         self.run_config = config["run_config"]
         self.model = model
-        self.params = torch.nn.ParameterList(self.model.parameters())
-        #Will self.params in OptimizerObj update the parameters in wrapper? If so, will it be by reference?
-        #We want the parameters inside the wrapper to change too during training
-        self.optimizer = OptimizerObj(config, self.params).optim_obj
+        self.optimizer = OptimizerObj(config, self.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = TBLogger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
@@ -121,8 +115,7 @@ class VanillaTrainer(AbstractTrainer):
         self.config = config
         self.run_config = config["run_config"]
         self.wrapper = model_wrapper
-        self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
-        self.optimizer = OptimizerObj(config, self.params).optim_obj
+        self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = TBLogger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
@@ -140,8 +133,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.config = config
         self.run_config = config["run_config"]
         self.wrapper = model_wrapper
-        self.params = torch.nn.ParameterList(self.wrapper.model.parameters())
-        self.optimizer = OptimizerObj(config, self.params).optim_obj
+        self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = TBLogger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
@@ -159,15 +151,18 @@ class AuxiliaryTrainer(AbstractTrainer):
         param = self.wrapper.model.get_param(param_idx)
 
         #Both predictions and targets will be dictionaries that hold two elements
-        predictions: Dict = self.wrapper.model(idx_vector, data[0])
+        predictions: Dict = self.wrapper.model(idx_vector, data[0].to(self.device))
         aux_pred = predictions["aux"].argmax(keepdim=True)  # get the index of the max log-probability
-        targets = {"aux": data[-1], "param": param}
+        targets = {"aux": data[-1].to(self.device), "param": param}
 
         loss = self.loss(predictions, targets)
 
-        if ((batch_idx + 1) % 64) == 0:
+        if ((batch_idx + 1) % 16) == 0:
             loss["combined_loss"].backward()  # The combined loss is backpropagated right?
             self.optimizer.step()
+            self.epoch_data["sr_loss"][0] = 0.0
+            self.epoch_data["task_loss"][0] = 0.0
+            self.epoch_data["combined_loss"][0] = 0.0
             self.optimizer.zero_grad()
 
         self.epoch_data["sr_loss"][0] += loss["sr_loss"]

@@ -6,7 +6,7 @@ from torch.optim import Optimizer
 
 
 class OptimizerObj(Optimizer):
-    def __init__(self, config: Dict, params: torch.nn.ParameterList):
+    def __init__(self, config: Dict, model: torch.nn.Module):
         """
         Consider switching to __call__ method instead of __init__
 
@@ -14,21 +14,20 @@ class OptimizerObj(Optimizer):
             config: Configuration dictionary
             params: Pytorch parameter list of model parameters
         """
-        super(OptimizerObj, self).__init__(params, config)
+        super(OptimizerObj, self).__init__(model.parameters(), config)
         self.optim_config = config["optim_config"]
-        self.param_groups = None
-        self.params = params
+        self.params = model.parameters()
 
         if self.optim_config["optimizer"].casefold() == "adam":
-            self.optim_obj = torch.optim.Adam(params, **self.optim_config["optim_kwargs"])
+            self.optim_obj = torch.optim.Adam(self.params, **self.optim_config["optim_kwargs"])
         elif self.optim_config["optimizer"].casefold() == "sgd":
-            self.optim_obj = torch.optim.SGD(params, **self.optim_config["optim_kwargs"])
+            self.optim_obj = torch.optim.SGD(self.params, **self.optim_config["optim_kwargs"])
         elif self.optim_config["optimizer"].casefold() == "adagrad":
-            self.optim_obj = torch.optim.Adagrad(params, **self.optim_config["optim_kwargs"])
+            self.optim_obj = torch.optim.Adagrad(self.params, **self.optim_config["optim_kwargs"])
         elif self.optim_config["optimizer"].casefold() == "rmsprop":
-            self.optim_obj = torch.optim.RMSprop(params, **self.optim_config["optim_kwargs"])
+            self.optim_obj = torch.optim.RMSprop(self.params, **self.optim_config["optim_kwargs"])
         elif self.optim_config["optimizer"].casefold() == "adadelta":
-            self.optim_obj = torch.optim.Adadelta(params, **self.optim_config["optim_kwargs"])
+            self.optim_obj = torch.optim.Adadelta(self.params, **self.optim_config["optim_kwargs"])
         else:
             logger.info(f"Optimizer {self.optim_config['optim']} not understood")
             raise NotImplementedError(f"Optimizer {self.optim_config['optim']} not implemented")
