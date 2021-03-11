@@ -19,7 +19,7 @@ from optim.parameters import ModelParameters
 from utils.scores import scores
 from utils.checkpoint import checkpoint
 from utils.logging import TBLogger
-from utils.utilities import timed, relative_difference
+from utils.utilities import timed
 
 
 class AbstractTrainer(ABC):
@@ -165,7 +165,7 @@ class AuxiliaryTrainer(AbstractTrainer):
 
         loss = self.loss(predictions, targets)
 
-        if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
+        if ((batch_idx + 1) % 64) == 0:
             loss["combined_loss"].backward()  # The combined loss is backpropagated right?
             self.optimizer.step()
             self.optimizer.zero_grad()
@@ -187,9 +187,6 @@ class AuxiliaryTrainer(AbstractTrainer):
         targets = {"aux": data[-1], "param": param}
 
         loss = self.loss(predictions, targets)
-
-        self.tb_logger.scalar_summary('mse_loss', total_loss / nnq.num_params, epoch)
-        self.tb_logger.scalar_summary('rel_error', avg_relative_error / nnq.num_params, epoch)
 
         self.epoch_data["sr_loss"][1] += loss["sr_loss"]
         self.epoch_data["task_loss"][1] += loss["task_loss"]
@@ -264,7 +261,8 @@ def trainer(config, model, param_data, dataloaders, device):
     else:
         try:
             return AbstractTrainer(config, model, dataloaders, device).run_train()
-        except:
+        except Exception as e:
+            logger.info(e)
             raise NotImplementedError(f"Model {model} has no trainer pipeline")
 
 

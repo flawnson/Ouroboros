@@ -1,3 +1,4 @@
+import os
 import torch
 import time
 import numpy as np
@@ -32,7 +33,19 @@ def timed(func: Callable):
         start = time.time()
         result = func(*args, **kwargs)
         end = time.time()
-        logger(__name__).info(f"{func.__name__} ran in {round(end - start, 2)}s")
+        logger(__name__).info(f"{func.__name__} ran in {round(end - start, 2)}s \n")
         return result
 
     return wrapper
+
+
+def make_clean_directories(beta, root_folder, iteration):
+    data_dir = root_folder + '/results_' + str(beta) + '_' + str(iteration)
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    else:
+        if len(os.listdir(data_dir)) > 0:
+            os.system("rm -r %s/*" % (data_dir))
+
+    return data_dir
+
