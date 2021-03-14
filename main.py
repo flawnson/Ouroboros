@@ -37,7 +37,7 @@ def main():
 
     ### Aux Data preprocessing ###
     datasets: Union[torch.utils.data.Dataset, List] = None
-    if config["data_config"]["dataset"] == "primary_labelset":
+    if config["data_config"]["dataset"].casefold() == "primary_labelset":
         datasets = PrimaryLabelset(config).dataset.to(device)
     elif config["data_config"]["dataset"].casefold() == "house":
         datasets = HousingDataset(config).dataset.to(device)
@@ -51,13 +51,13 @@ def main():
 
     ### Model preparation ###
     model: torch.nn.Module = None
-    if config["model_config"]["model_type"] == "linear":
+    if config["model_config"]["model_type"].casefold() == "linear":
         model = MLPModel(config, datasets, device).to(device)
-    elif config["model_config"]["model_type"] == "graph":
+    elif config["model_config"]["model_type"].casefold() == "graph":
         model = GNNModel(config, datasets, device).to(device)
-    elif config["model_config"]["model_type"] == "vision":
+    elif config["model_config"]["model_type"].casefold() == "vision":
         pass
-    elif config["model_config"]["model_type"] == "language":
+    elif config["model_config"]["model_type"].casefold() == "language":
         pass
     else:
         raise NotImplementedError(f"{config['model_config']['model_type']} is not a model type")
@@ -65,13 +65,13 @@ def main():
 
     ### Model augmentation ### (for none, use classical, all augmentations are model agnostic)
     aug_model: torch.nn.Module = None
-    if config["model_aug_config"]["model_augmentation"] == "classical":
+    if config["model_aug_config"]["model_augmentation"].casefold() == "classical":
         aug_model = Classical(config, model, device).to(device)
-    elif config["model_aug_config"]["model_augmentation"] == "ouroboros":
+    elif config["model_aug_config"]["model_augmentation"].casefold() == "ouroboros":
         aug_model = Ouroboros(config, model, device).to(device)
-    elif config["model_aug_config"]["model_augmentation"] == "auxiliary":
+    elif config["model_aug_config"]["model_augmentation"].casefold() == "auxiliary":
         aug_model = Auxiliary(config, model, datasets, device).to(device)
-    elif config["model_aug_config"]["model_augmentation"] == "vanilla":
+    elif config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
         aug_model = Vanilla(config, model, device).to(device)
     else:
         raise NotImplementedError(f"{config['model_aug_config']['model_augmentation']} is not a model augmentation")
@@ -105,11 +105,11 @@ def main():
     logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###
-    if config["run_type"] == "demo":
+    if config["run_type"].casefold() == "demo":
         trainer(config, aug_model, param_data, dataloaders, device)
-    if config["run_type"] == "tune":
+    if config["run_type"].casefold() == "tune":
         Tuner(config, aug_model, param_data, dataloaders, device)
-    if config["run_type"] == "benchmark":
+    if config["run_type"].casefold() == "benchmark":
         Benchmarker(config, aug_model, param_data, dataloaders, device)
 
 

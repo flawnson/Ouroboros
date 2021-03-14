@@ -20,7 +20,8 @@ class Quine(ABC):
         self.device = device
         self.param_list = [] + self.model.param_list  # Combine the parameters from the main model
         self.param_names = []
-        self.num_params = int(self.cumulate_params()[-1])
+        self.cum_params_arr = np.cumsum(np.array([np.prod(p.shape) for p in self.param_list]))
+        self.num_params = int(self.cum_params_arr[-1])
 
     def reduction(self, data_size) -> Reduction:
         """
@@ -31,19 +32,12 @@ class Quine(ABC):
         """
         return Reduction(self.model_aug_config, data_size).reduce()
 
-    def cumulate_params(self) -> np.array:
-        # num_params_arr = np.array([np.prod(p.shape) for p in list(self.model.parameters()) + self.param_list])
-        num_params_arr = np.array([np.prod(p.shape) for p in self.param_list])
-        cum_params_arr = np.cumsum(num_params_arr)
-
-        return cum_params_arr
-
     def get_param(self, idx: int) -> torch.tensor:
         assert idx < self.num_params
         subtract = 0
         param = None
         normalized_idx = None
-        for i, n_params in enumerate(self.cumulate_params()):
+        for i, n_params in enumerate(self.cum_params_arr):
             if idx < n_params:
                 param = self.param_list[i]
                 normalized_idx = idx - subtract
