@@ -33,7 +33,7 @@ def timed(func: Callable):
         start = time.time()
         result = func(*args, **kwargs)
         end = time.time()
-        logger(__name__).info(f"{func.__name__} ran in {round(end - start, 2)}s \n")
+        logger.info(f"{func.__name__} ran in {round(end - start, 2)}s \n")
         return result
 
     return wrapper
