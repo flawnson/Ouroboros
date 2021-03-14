@@ -105,6 +105,7 @@ class ClassicalTrainer(AbstractTrainer):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
+                self.train()
 
             checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
 

@@ -1,15 +1,22 @@
 import os
 import torch
 import time
-import numpy as np
 
-from torch.utils.data import ConcatDataset
 from functools import wraps
 from logzero import logger
 from typing import *
 
 
 def get_example_size(dataset: torch) -> int:
+    """
+    This function returns the size of a single data example, agnostic of types
+
+    Args:
+        dataset: The entire dataset from which to identify the example size
+
+    Return:
+        The integer size of a single example
+    """
     # A function to return the size of an example for any dataset and datatype
     # Might be a bit convoluted right now
     # if isinstance(dataset, ConcatDataset):
@@ -26,7 +33,15 @@ def get_example_size(dataset: torch) -> int:
 
 
 def timed(func: Callable):
-    """This decorator prints the execution time for the decorated function."""
+    """
+    This decorator prints the execution time for the decorated function.
+
+    Args:
+        func: The function to call (name used for logging)
+
+    Returns:
+        The wrapped function executed
+    """
 
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -41,6 +56,7 @@ def timed(func: Callable):
 
 def make_clean_directories(beta, root_folder, iteration):
     """
+    This function receives a file name, a directory name, and iteration number to check and wipe clean
 
     Args:
         beta: Filler info for naming
