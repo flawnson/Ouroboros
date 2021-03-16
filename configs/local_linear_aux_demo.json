@@ -3,7 +3,7 @@
   "seed": 42,
   "run_type": "demo",
   "logging": "logging.INFO",
-  "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs",
+  "log_dir": "C:\\Users\\flawn\\Documents\\Projects\\Project Introversion\\Ouroboros\\logs",
   "device": "cpu",
   "data_config":
   {
@@ -26,7 +26,7 @@
   },
   "model_aug_config":
   {
-    "model_augmentation": "classical",
+    "model_augmentation": "auxiliary",
     "n_inputs": 2,
     "n_hidden": 40,
     "reduction_method": "random"
@@ -49,13 +49,7 @@
     "regenerate": true
   },
   "score_config": {
-      "acc": null,
-      "f1": ["macro"],
-      "auc": ["macro", "ovo"],
-      "con": null,
-      "prec": ["macro", "warn"],
-      "rec": ["macro", "warn"],
-      "jac": ["macro"]
+      "acc": null
   },
   "tuning_config": {
 

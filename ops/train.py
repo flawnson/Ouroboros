@@ -14,7 +14,7 @@ from torch.nn import Module
 from models.augmented.quine import Quine, Auxiliary, Vanilla
 from models.augmented.classical import Classical
 from optim.algos import OptimizerObj, LRScheduler
-from optim.losses import Loss
+from optim.losses import loss
 from optim.parameters import ModelParameters
 from utils.scores import scores
 from utils.checkpoint import checkpoint
@@ -45,19 +45,39 @@ class AbstractTrainer(ABC):
 
     @abstractmethod
     def loss(self, predictions, targets):
-        return Loss(self.config, self.model, predictions, targets).get_loss()
+        return loss(self.config, self.model, predictions, targets)
 
     @abstractmethod
     def score(self, predictions, targets):
         return scores(self.config, predictions, targets, self.device)
 
     @abstractmethod
-    def write(self, epoch: int, **kwargs):
+    def write(self, epoch: int):
         logger.info(f"Running epoch: #{epoch}")
 
+    @timed
     @abstractmethod
     def run_train(self):
-        pass
+        if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
+            for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
+                logger.info(f"Epoch: {epoch}")
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
+                    logger.info(f"Running train batch: #{batch_idx}")
+                    predictions, targets = self.train(data, param_idx, batch_idx)
+
+                train_scores = self.score(predictions, targets)
+                logger.info(train_scores)
+
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
+                    logger.info(f"Running test batch: #{batch_idx}")
+                    predictions, targets = self.test(data, param_idx)
+
+                # Scores cumulated and calculated per epoch, as done in Quine
+                test_scores = self.score(predictions, targets)
+                logger.info(test_scores)
+
+            checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
+            self.write(epoch, train_scores)
 
 
 class ClassicalTrainer(AbstractTrainer):
@@ -81,7 +101,7 @@ class ClassicalTrainer(AbstractTrainer):
         loss = self.loss(predictions, targets)
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
-            loss["combined_loss"].backward()  # The combined loss is backpropagated right?
+            loss.backward()
             self.optimizer.step()
             self.optimizer.zero_grad()
 
@@ -93,21 +113,13 @@ class ClassicalTrainer(AbstractTrainer):
         loss = self.loss(predictions, targets)
 
     def loss(self, predictions, targets):
-        return Loss(self.config, self.model, predictions, targets).get_loss()
+        return loss(self.config, self.model, predictions, targets)
 
     def score(self, predictions, targets):
         return scores(self.config, predictions, targets, self.device)
 
     def write(self, epoch: int):
-        logger.info(f"Running epoch: #{epoch}")
-
-    def run_train(self):
-        if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
-            for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
-                logger.info(f"Epoch: {epoch}")
-                self.train()
-
-            checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
+        self.tb_logger.scalar_summary('Loss (train)', 0, epoch)
 
 
 class VanillaTrainer(AbstractTrainer):
@@ -178,7 +190,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.wrapper.model.eval()
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
-        predictions = self.wrapper.model(idx_vector, data)
+        predictions = self.wrapper.model(idx_vector, data[0])
         aux_pred = predictions["aux"].argmax(keepdim=True)  # get the index of the max log-probability
         targets = {"aux": data[-1], "param": param}
 
@@ -201,13 +213,12 @@ class AuxiliaryTrainer(AbstractTrainer):
         #loss values are batch loss, total_loss are epoch loss
         #Only total_loss values are logged to tensorboard
         ####
-        return Loss(self.config, self.wrapper.model, predictions, targets).get_loss()
+        return loss(self.config, self.wrapper.model, predictions, targets)
 
     def score(self, predictions, targets):
         return scores(self.config, self.dataset, self.epoch_data, self.device)
 
     def write(self, epoch: int, scores: Dict):
-        logger.info(f"Running epoch: #{epoch}")
         logger.info(f"Scores: {scores}")
 
         # Log values for training
@@ -225,6 +236,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
+
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
                     predictions, targets = self.train(data, param_idx, batch_idx)
@@ -248,12 +260,12 @@ class AuxiliaryTrainer(AbstractTrainer):
 
 
 def trainer(config, model, param_data, dataloaders, device):
-    if isinstance(model, Auxiliary):
-        return AuxiliaryTrainer(config, param_data, dataloaders, device).run_train()
-    if isinstance(model, Vanilla):
-        return VanillaTrainer(config, param_data, dataloaders, device).run_train()
-    elif isinstance(model, Classical):
+    if isinstance(model, Classical):
         return ClassicalTrainer(config, model, dataloaders, device).run_train()
+    elif isinstance(model, Auxiliary):
+        return AuxiliaryTrainer(config, param_data, dataloaders, device).run_train()
+    elif isinstance(model, Vanilla):
+        return VanillaTrainer(config, param_data, dataloaders, device).run_train()
     else:
         try:
             return AbstractTrainer(config, model, dataloaders, device).run_train()
