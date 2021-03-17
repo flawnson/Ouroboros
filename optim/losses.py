@@ -3,21 +3,27 @@
 import torch
 import torch.nn.functional as F
 
-from models.augmented.quine import Vanilla, Auxiliary
+from models.augmented.quine import Quine, Vanilla, Auxiliary
 from models.augmented.ouroboros import Ouroboros
 
 from typing import *
 
 
-class Loss:
-
-    def __init__(self, config: Dict, model: torch.nn.Module, predictions: torch.tensor, targets: torch.tensor):
+class ClassicalLoss:
+    def __init__(self, config: Dict, predictions: torch.tensor, targets: torch.tensor):
         self.config = config
-        self.model = model
         self.predictions = predictions
         self.targets = targets
 
 
+class QuineLoss:
+
+    def __init__(self, config: Dict, predictions: torch.tensor, targets: torch.tensor):
+        self.config = config
+        self.predictions = predictions
+        self.targets = targets
+
+    @staticmethod
     def calculate_relative_difference(x, y):
         return abs(x-y)/max(abs(x), abs(y))
 
@@ -41,17 +47,20 @@ class Loss:
 
         return loss_combined
 
-    def new_loss(self) -> float:
-        pass
 
-    def get_loss(self) -> float:
-        if type(self.model) is Vanilla:
-            return self.sr_loss()
-        elif type(self.model) is Auxiliary:
-            return {"sr_loss": self.sr_loss(),
-                    "task_loss": self.task_loss(),
-                    "combined_loss": self.combined_loss()}
-        elif type(self.model) is Ouroboros:
-            return self.new_loss()
-        else:
-            raise NotImplementedError("The specified loss is not implemented for this class")
+def loss(config, model, predictions, targets) -> Union[Dict, float]:
+    # if isinstance(model, torch.nn.Module):
+    #     classical_loss = ClassicalLoss(config, predictions, targets)
+    #     return classical_loss
+    if isinstance(model, Quine):
+        quine_loss = QuineLoss(config, predictions, targets)
+        if type(model) is Vanilla:
+            return quine_loss.sr_loss()
+        elif type(model) is Auxiliary:
+            return {"sr_loss": quine_loss.sr_loss(),
+                    "task_loss": quine_loss.task_loss(),
+                    "combined_loss": quine_loss.combined_loss()}
+    elif isinstance(model, Ouroboros):
+        pass
+    else:
+        raise NotImplementedError("The specified loss is not implemented for this class")

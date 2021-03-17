@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from utils.utilities import get_example_size
 from utils.reduction import Reduction
 from torch.utils.data import Dataset
+from utils.utilities import timed
 
 
 class Quine(ABC):
@@ -22,6 +23,55 @@ class Quine(ABC):
         self.param_names = []
         self.cum_params_arr = np.cumsum(np.array([np.prod(p.shape) for p in self.param_list]))
         self.num_params = int(self.cum_params_arr[-1])
+
+    def indexer(self) -> List:
+        """
+        Function that reaches into the model parameters to return their coordinates
+
+        Returns:
+            A list of the coordinates of the model parameters
+        """
+        coordinates = []
+        counter = 0
+        for i, params in enumerate(self.param_list):
+            try:
+                for n, param in enumerate(params):
+                    try:
+                        for d, p in enumerate(param):
+                            coordinates.append([i, n, d])
+                    except TypeError:
+                        coordinates.append([0, 0, 0])  # Sacrificing the first param
+                        counter += 1
+            except TypeError:
+                coordinates.append([0, 0, 0])  # Sacrificing the first param
+                counter += 1
+
+        logger.info(f"Regeneration will fail for {counter} parameters")
+
+        return coordinates
+
+    @timed
+    @torch.no_grad()
+    def regenerate(self):
+        """
+        The regenerate, implemented by following the original Quine paper.
+        Model parameters are kept in self.param_list and used for training and inference
+        Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter.
+        # TODO: Regenerate takes way too long on cpu; refactor to make faster
+        """
+        params_data = torch.eye(self.num_params, device=self.device)
+        index_list = list(range(self.num_params))
+        coordinates = self.indexer()
+        logger.info(f"Regenerating {len(coordinates)} parameters")
+        for param_idx, coo in zip(index_list, coordinates):
+            logger.info(f"Regenerating parameter {param_idx}")
+            with torch.no_grad():
+                idx_vector = torch.squeeze(params_data[param_idx])  # Pulling out the nested tensor
+                predicted_param, predicted_aux = self.forward(idx_vector, None).values()  # Forward output is dict
+                new_params = deepcopy(self.param_list)
+                new_params[coo[0]][coo[1]][coo[2]] = predicted_param
+                self.param_list = new_params
+        logger.info(f"Successfully regenerated weights")
 
     def reduction(self, data_size) -> Reduction:
         """
@@ -47,7 +97,7 @@ class Quine(ABC):
         return param.view(-1)[normalized_idx]
 
     @abstractmethod
-    def forward(self, x: torch.tensor):
+    def forward(self, x: torch.tensor, y: torch.tensor = None):
         pass
 
 
@@ -80,7 +130,7 @@ class Vanilla(Quine, torch.nn.Module):
         self.param_names.append("wp_layer{}_bias".format(0))
         return torch.nn.Sequential(*weight_predictor_layers)
 
-    def forward(self, x: torch.tensor):
+    def forward(self, x: torch.tensor, y: torch.tensor = None):
         x = self.van_input()(x)
         x = self.model(x)
         x = self.van_output()(x)
@@ -97,42 +147,6 @@ class Auxiliary(Vanilla, torch.nn.Module):
         self.device = device
         self.aux_input = self.aux_input()
         self.aux_output = self.aux_output()
-
-    @staticmethod
-    def indexer(model: torch.nn.Module):
-        coordinates = []
-        counter = 0
-        for i, params in enumerate(model.param_list):
-            try:
-                for n, param in enumerate(params):
-                    try:
-                        for d, p in enumerate(param):
-                            coordinates.append([i, n, d])
-                    except TypeError:
-                        coordinates.append([0, 0, 0])  # Sacrificing the first param
-                        counter += 1
-            except TypeError:
-                coordinates.append([0, 0, 0])  # Sacrificing the first param
-                counter += 1
-
-        logger.info(f"Regeneration failed for {counter} parameters")
-
-        return coordinates
-
-    def regenerate(self):
-        # Taken from the training pipeline
-        # TODO: Regenerate takes way too long on cpu; refactor to make faster
-        params_data = torch.eye(self.van_model.num_params, device=self.device)
-        index_list = list(range(self.van_model.num_params))
-        coordinates = self.indexer(self.van_model)
-        for param_idx, coo in zip(index_list, coordinates):
-            with torch.no_grad():
-                idx_vector = torch.squeeze(params_data[param_idx])  # Pulling out the nested tensor
-                predicted_param, predicted_aux = self.van_model(idx_vector, None)
-                new_params = deepcopy(self.van_model.param_list)
-                new_params[coo[0]][coo[1]][coo[2]] = predicted_param
-                self.van_model.param_list = new_params
-        logger.info(f"Successfully regenerated weights")
 
     def aux_input(self):
         rand_proj_layer = torch.nn.Linear(get_example_size(self.dataset),
@@ -173,7 +187,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
             output2 = self.aux_input()(y)
             new_output = torch.cat((new_output, output2))
         else:
-            new_output = torch.cat((new_output, torch.rand(20)))
+            new_output = torch.cat((new_output, torch.rand(self.model_aug_config["n_hidden"])))
 
         # run_logging.info("Input 1: ", output1)
         # run_logging.info("Input 2: ", output2)
