@@ -24,7 +24,13 @@ class Quine(ABC):
         self.cum_params_arr = np.cumsum(np.array([np.prod(p.shape) for p in self.param_list]))
         self.num_params = int(self.cum_params_arr[-1])
 
-    def indexer(self, model: torch.nn.Module):
+    def indexer(self) -> List:
+        """
+        Function that reaches into the model parameters to return their coordinates
+
+        Returns:
+            A list of the coordinates of the model parameters
+        """
         coordinates = []
         counter = 0
         for i, params in enumerate(self.param_list):
@@ -40,17 +46,23 @@ class Quine(ABC):
                 coordinates.append([0, 0, 0])  # Sacrificing the first param
                 counter += 1
 
-        logger.info(f"Regeneration failed for {counter} parameters")
+        logger.info(f"Regeneration will fail for {counter} parameters")
 
         return coordinates
 
     @timed
+    @torch.no_grad()
     def regenerate(self):
+        """
+        The regenerate, implemented by following the original Quine paper.
+        Model parameters are kept in self.param_list and used for training and inference
+        Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter.
         # TODO: Regenerate takes way too long on cpu; refactor to make faster
-        # XXX: Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter
+        """
         params_data = torch.eye(self.num_params, device=self.device)
         index_list = list(range(self.num_params))
-        coordinates = self.indexer(self.model)
+        coordinates = self.indexer()
+        logger.info(f"Regenerating {len(coordinates)} parameters")
         for param_idx, coo in zip(index_list, coordinates):
             logger.info(f"Regenerating parameter {param_idx}")
             with torch.no_grad():
