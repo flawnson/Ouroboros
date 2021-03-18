@@ -123,8 +123,9 @@ class ClassicalTrainer(AbstractTrainer):
 
 
 class VanillaTrainer(AbstractTrainer):
+    # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
     def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict, device: torch.device):
-        super(VanillaTrainer, self).__init__(config, model_wrapper, dataset, device)
+        super(VanillaTrainer, self).__init__(config, model_wrapper.model, dataset, device)
         self.config = config
         self.run_config = config["run_config"]
         self.wrapper = model_wrapper
@@ -133,10 +134,86 @@ class VanillaTrainer(AbstractTrainer):
         self.tb_logger = TBLogger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
         self.device = device
-        self.epoch_data = {"sr_loss": [0, 0],
-                           "task_loss": [0, 0],
-                           "combined_loss": [0, 0],
-                           "correct": [0, 0]}  # First position for training scores, second position for test scores
+        self.epoch_data = {"sr_loss": [0, 0]}  # First position for training scores, second position for test scores
+
+    def train(self, data, param_idx, batch_idx):
+        self.wrapper.model.train()
+        self.optimizer.zero_grad()
+
+        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
+        param = self.wrapper.model.get_param(param_idx)
+
+        predictions: Dict = self.wrapper.model(idx_vector)
+        targets = {"param": param}
+
+        loss = self.loss(predictions, targets)
+
+        #TODO: Set actual batch size in config
+        if ((batch_idx + 1) % 16) == 0:
+            loss["sr_loss"].backward()  # The combined loss is backpropagated right?
+            self.optimizer.step()
+            self.epoch_data["sr_loss"][0] = 0.0
+            self.optimizer.zero_grad()
+
+        self.epoch_data["sr_loss"][0] += loss["sr_loss"]
+        return predictions
+
+    @torch.no_grad()
+    def test(self, data, param_idx):
+        self.wrapper.model.eval()
+        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
+        param = self.wrapper.model.get_param(param_idx)
+        predictions = self.wrapper.model(idx_vector)
+        targets = {"param": param}
+
+        loss = self.loss(predictions, targets)
+
+        self.epoch_data["sr_loss"][1] += loss["sr_loss"]
+
+        return predictions, targets
+
+    def loss(self, predictions, targets):
+
+        return loss(self.config, self.wrapper.model, predictions, targets)
+
+    def score(self, predictions, targets):
+        return scores(self.config, self.dataset, self.epoch_data, self.device)
+
+    def write(self, epoch: int, scores: Dict):
+        logger.info(f"Scores: {scores}")
+
+        # Log values for training
+        self.tb_logger.scalar_summary('sr_loss (train)', self.epoch_data["sr_loss"][0], epoch)
+
+        # Log values for testing
+        self.tb_logger.scalar_summary('sr_loss (test)', self.epoch_data["sr_loss"][1], epoch)
+
+    @timed
+    def run_train(self):
+        if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
+            for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
+                logger.info(f"Epoch: {epoch}")
+
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
+                    logger.info(f"Running train batch: #{batch_idx}")
+                    predictions, targets = self.train(data, param_idx, batch_idx)
+
+                train_scores = self.score(predictions, targets)
+                logger.info(train_scores)
+
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
+                    logger.info(f"Running test batch: #{batch_idx}")
+                    predictions, targets = self.test(data, param_idx)
+
+                # Scores cumulated and calculated per epoch, as done in Quine
+                test_scores = self.score(predictions, targets)
+                logger.info(test_scores)
+
+                # Regeneration (per epoch) step if specified in config
+                if self.run_config["regenerate"]: self.wrapper.model.regenerate()
+
+            checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
+            self.write(epoch, train_scores)
 
 
 class AuxiliaryTrainer(AbstractTrainer):
@@ -204,15 +281,6 @@ class AuxiliaryTrainer(AbstractTrainer):
         return predictions, targets
 
     def loss(self, predictions, targets):
-
-        ##NOTE: in nn-quine we had this:
-        #in these fields, index 0 is training value, index 1 is validation value
-        #loss_combined, avg_relative_error, loss_sr, loss_task, total_loss_sr, total_loss_task, total_loss_combined = [[0.0, 0.0] for i in range(7)]
-
-        #Everything get's reset for the next epoch
-        #loss values are batch loss, total_loss are epoch loss
-        #Only total_loss values are logged to tensorboard
-        ####
         return loss(self.config, self.wrapper.model, predictions, targets)
 
     def score(self, predictions, targets):
@@ -272,12 +340,3 @@ def trainer(config, model, param_data, dataloaders, device):
         except Exception as e:
             logger.info(e)
             raise NotImplementedError(f"Model {model} has no trainer pipeline")
-
-
-
-
-
-
-
-
-

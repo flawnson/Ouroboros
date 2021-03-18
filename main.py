@@ -81,6 +81,8 @@ def main():
     param_data: Union[torch.utils.data.Dataset, List] = None
     if config["model_aug_config"]["model_augmentation"].casefold() == "classical":
         pass
+    if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
+        param_data = ModelParameters(config, aug_model, device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "auxiliary":
         param_data = ModelParameters(config, aug_model, device)
     else:
@@ -98,7 +100,7 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "mnist":
         dataloaders = MNISTSplit(config, datasets, param_data, device).partition()
         if param_data is not None:
-            if len(datasets) < len(param_data):
+            if len(datasets) < len(param_data): #if there's no enough MNIST data partition based on number of parameters
                 dataloaders = QuineSplit(config, param_data, device).partition()
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")

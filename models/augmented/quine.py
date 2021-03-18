@@ -134,7 +134,7 @@ class Vanilla(Quine, torch.nn.Module):
         x = self.van_input()(x)
         x = self.model(x)
         x = self.van_output()(x)
-        return {"pred_param": x}
+        return {"param": x}
 
 
 class Auxiliary(Vanilla, torch.nn.Module):
