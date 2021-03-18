@@ -55,7 +55,7 @@ def loss(config, model, predictions, targets) -> Union[Dict, float]:
     if isinstance(model, Quine):
         quine_loss = QuineLoss(config, predictions, targets)
         if type(model) is Vanilla:
-            return quine_loss.sr_loss()
+            return {"sr_loss": quine_loss.sr_loss()}
         elif type(model) is Auxiliary:
             return {"sr_loss": quine_loss.sr_loss(),
                     "task_loss": quine_loss.task_loss(),

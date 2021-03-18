@@ -3,7 +3,7 @@
   "seed": 42,
   "run_type": "demo",
   "logging": "logging.INFO",
-  "log_dir": "C:\\Users\\flawn\\Documents\\Projects\\Project Introversion\\Ouroboros\\logs",
+  "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs",
   "device": "cpu",
   "data_config":
   {
@@ -14,13 +14,13 @@
     "split_type": "holdout",
     "num_splits": 5,
     "shuffle": true,
-    "batch_size": 1
+    "batch_size": 16
   },
   "model_config":
   {
     "model_type": "linear",
     "dropout": 0.50,
-    "input_layer_size_2*model_aug_n_hidden": 80,
+    "input_layer_size_2*model_aug_n_hidden": 40,
     "layer_sizes": [40],
     "output_layer_size_model_aug_n_hidden": 40
   },
@@ -46,7 +46,7 @@
     "checkpoint_intervals": 100,
     "checkpoint_dir": "saves/checkpoints/",
     "lambda": 0.01,
-    "regenerate": true
+    "regenerate": false
   },
   "score_config": {
       "acc": null

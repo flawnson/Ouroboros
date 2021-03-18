@@ -76,8 +76,8 @@ class AbstractTrainer(ABC):
                 test_scores = self.score(predictions, targets)
                 logger.info(test_scores)
 
-            checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
-            self.write(epoch, train_scores)
+                checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
+                self.write(epoch, train_scores)
 
 
 class ClassicalTrainer(AbstractTrainer):
@@ -128,13 +128,15 @@ class VanillaTrainer(AbstractTrainer):
         super(VanillaTrainer, self).__init__(config, model_wrapper.model, dataset, device)
         self.config = config
         self.run_config = config["run_config"]
+        self.data_config = config["data_config"]
         self.wrapper = model_wrapper
         self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = TBLogger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
         self.device = device
-        self.epoch_data = {"sr_loss": [0, 0]}  # First position for training scores, second position for test scores
+        self.batch_data = {"sr_loss": [0, 0]}  # First position for training scores, second position for test scores
+        self.epoch_data = {"sr_loss": [0, 0]}
 
     def train(self, data, param_idx, batch_idx):
         self.wrapper.model.train()
@@ -148,18 +150,18 @@ class VanillaTrainer(AbstractTrainer):
 
         loss = self.loss(predictions, targets)
 
-        #TODO: Set actual batch size in config
-        if ((batch_idx + 1) % 16) == 0:
+        if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
             loss["sr_loss"].backward()  # The combined loss is backpropagated right?
             self.optimizer.step()
-            self.epoch_data["sr_loss"][0] = 0.0
+            self.epoch_data["sr_loss"][0] += self.batch_data["sr_loss"][0] #accumulate for epoch
+            self.batch_data["sr_loss"][0] = 0.0
             self.optimizer.zero_grad()
 
-        self.epoch_data["sr_loss"][0] += loss["sr_loss"]
-        return predictions
+        self.batch_data["sr_loss"][0] += loss["sr_loss"]
+        return predictions, targets
 
     @torch.no_grad()
-    def test(self, data, param_idx):
+    def test(self, data, param_idx, batch_idx):
         self.wrapper.model.eval()
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
@@ -168,8 +170,12 @@ class VanillaTrainer(AbstractTrainer):
 
         loss = self.loss(predictions, targets)
 
-        self.epoch_data["sr_loss"][1] += loss["sr_loss"]
+        if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
 
+            self.epoch_data["sr_loss"][1] += self.batch_data["sr_loss"][1] #accumulate for epoch
+            self.batch_data["sr_loss"][1] = 0.0
+
+        self.batch_data["sr_loss"][1] += loss["sr_loss"]
         return predictions, targets
 
     def loss(self, predictions, targets):
@@ -179,14 +185,15 @@ class VanillaTrainer(AbstractTrainer):
     def score(self, predictions, targets):
         return scores(self.config, self.dataset, self.epoch_data, self.device)
 
-    def write(self, epoch: int, scores: Dict):
-        logger.info(f"Scores: {scores}")
+    def write(self, epoch: int, train_epoch_length: int, test_epoch_length: int):
 
         # Log values for training
-        self.tb_logger.scalar_summary('sr_loss (train)', self.epoch_data["sr_loss"][0], epoch)
+        actual_train_loss = self.epoch_data["sr_loss"][0] / (train_epoch_length // self.data_config["batch_size"])
+        self.tb_logger.scalar_summary('sr_loss (train)', actual_train_loss, epoch)
 
         # Log values for testing
-        self.tb_logger.scalar_summary('sr_loss (test)', self.epoch_data["sr_loss"][1], epoch)
+        actual_test_loss = self.epoch_data["sr_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
+        self.tb_logger.scalar_summary('sr_loss (test)', actual_test_loss, epoch)
 
     @timed
     def run_train(self):
@@ -194,26 +201,31 @@ class VanillaTrainer(AbstractTrainer):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
 
+                train_epoch_length = len(self.dataset[list(self.dataset)[0]])
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
                     predictions, targets = self.train(data, param_idx, batch_idx)
 
-                train_scores = self.score(predictions, targets)
-                logger.info(train_scores)
+                #SCORING IS NOT DONE FOR VANILLA
+                #train_scores = self.score(predictions, targets)
+                #logger.info(train_scores)
 
+                test_epoch_length = len(self.dataset[list(self.dataset)[1]])
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    predictions, targets = self.test(data, param_idx)
+                    predictions, targets = self.test(data, param_idx, batch_idx)
 
+                #SCORING IS NOT DONE FOR VANILLA
                 # Scores cumulated and calculated per epoch, as done in Quine
-                test_scores = self.score(predictions, targets)
-                logger.info(test_scores)
+                #test_scores = self.score(predictions, targets)
+                #logger.info(test_scores)
 
                 # Regeneration (per epoch) step if specified in config
                 if self.run_config["regenerate"]: self.wrapper.model.regenerate()
 
-            checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
-            self.write(epoch, train_scores)
+                checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
+                self.write(epoch, train_epoch_length, test_epoch_length)
+
 
 
 class AuxiliaryTrainer(AbstractTrainer):
@@ -222,12 +234,17 @@ class AuxiliaryTrainer(AbstractTrainer):
         super(AuxiliaryTrainer, self).__init__(config, model_wrapper.model, dataset, device)
         self.config = config
         self.run_config = config["run_config"]
+        self.data_config = config["data_config"]
         self.wrapper = model_wrapper
         self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = TBLogger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
         self.device = device
+        self.batch_data = {"sr_loss": [0, 0],
+                           "task_loss": [0, 0],
+                           "combined_loss": [0, 0],
+                           "correct": [0, 0]}  # First position for training scores, second position for test scores
         self.epoch_data = {"sr_loss": [0, 0],
                            "task_loss": [0, 0],
                            "combined_loss": [0, 0],
@@ -247,23 +264,27 @@ class AuxiliaryTrainer(AbstractTrainer):
 
         loss = self.loss(predictions, targets)
 
-        if ((batch_idx + 1) % 16) == 0:
+        if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
             loss["combined_loss"].backward()  # The combined loss is backpropagated right?
             self.optimizer.step()
-            self.epoch_data["sr_loss"][0] = 0.0
-            self.epoch_data["task_loss"][0] = 0.0
-            self.epoch_data["combined_loss"][0] = 0.0
+            self.epoch_data["sr_loss"][0] += self.batch_data["sr_loss"][0] #accumulate for epoch
+            self.epoch_data["task_loss"][0] += self.batch_data["task_loss"][0] #accumulate for epoch
+            self.epoch_data["combined_loss"][0] += self.batch_data["combined_loss"][0] #accumulate for epoch
+
+            self.batch_data["sr_loss"][0] = 0.0
+            self.batch_data["task_loss"][0] = 0.0
+            self.batch_data["combined_loss"][0] = 0.0
             self.optimizer.zero_grad()
 
-        self.epoch_data["sr_loss"][0] += loss["sr_loss"]
-        self.epoch_data["task_loss"][0] += loss["task_loss"]
-        self.epoch_data["combined_loss"][0] += loss["combined_loss"]
+        self.batch_data["sr_loss"][0] += loss["sr_loss"]
+        self.batch_data["task_loss"][0] += loss["task_loss"]
+        self.batch_data["combined_loss"][0] += loss["combined_loss"]
         self.epoch_data["correct"][0] += aux_pred.eq(data[1].view_as(aux_pred)).sum().item()
 
         return predictions, targets
 
     @torch.no_grad()
-    def test(self, data, param_idx):
+    def test(self, data, param_idx, batch_idx):
         self.wrapper.model.eval()
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
@@ -273,9 +294,19 @@ class AuxiliaryTrainer(AbstractTrainer):
 
         loss = self.loss(predictions, targets)
 
-        self.epoch_data["sr_loss"][1] += loss["sr_loss"]
-        self.epoch_data["task_loss"][1] += loss["task_loss"]
-        self.epoch_data["combined_loss"][1] += loss["combined_loss"]
+        if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
+            self.epoch_data["sr_loss"][1] += self.batch_data["sr_loss"][1] #accumulate for epoch
+            self.epoch_data["task_loss"][1] += self.batch_data["task_loss"][1] #accumulate for epoch
+            self.epoch_data["combined_loss"][1] += self.batch_data["combined_loss"][1] #accumulate for epoch
+
+            self.batch_data["sr_loss"][1] = 0.0
+            self.batch_data["task_loss"][1] = 0.0
+            self.batch_data["combined_loss"][1] = 0.0
+            
+
+        self.batch_data["sr_loss"][1] += loss["sr_loss"]
+        self.batch_data["task_loss"][1] += loss["task_loss"]
+        self.batch_data["combined_loss"][1] += loss["combined_loss"]
         self.epoch_data["correct"][1] += aux_pred.eq(data[1].view_as(aux_pred)).sum().item()
 
         return predictions, targets
@@ -286,18 +317,24 @@ class AuxiliaryTrainer(AbstractTrainer):
     def score(self, predictions, targets):
         return scores(self.config, self.dataset, self.epoch_data, self.device)
 
-    def write(self, epoch: int, scores: Dict):
+    def write(self, epoch: int, scores: Dict, train_epoch_length: int, test_epoch_length: int):
         logger.info(f"Scores: {scores}")
 
         # Log values for training
-        self.tb_logger.scalar_summary('sr_loss (train)', self.epoch_data["sr_loss"][0], epoch)
-        self.tb_logger.scalar_summary('task_loss (train)', self.epoch_data["task_loss"][0], epoch)
-        self.tb_logger.scalar_summary('combined_loss (train)', self.epoch_data["combined_loss"][0], epoch)
+        actual_sr_train_loss = self.epoch_data["sr_loss"][0] / (train_epoch_length // self.data_config["batch_size"])
+        actual_task_train_loss = self.epoch_data["task_loss"][0] / (train_epoch_length // self.data_config["batch_size"])
+        actual_combined_train_loss = self.epoch_data["combined_loss"][0] / (train_epoch_length // self.data_config["batch_size"])
+        self.tb_logger.scalar_summary('sr_loss (train)', actual_sr_train_loss, epoch)
+        self.tb_logger.scalar_summary('task_loss (train)', actual_task_train_loss, epoch)
+        self.tb_logger.scalar_summary('combined_loss (train)', actual_combined_train_loss, epoch)
 
         # Log values for testing
-        self.tb_logger.scalar_summary('sr_loss (test)', self.epoch_data["sr_loss"][1], epoch)
-        self.tb_logger.scalar_summary('task_loss (test)', self.epoch_data["task_loss"][1], epoch)
-        self.tb_logger.scalar_summary('combined_loss (test)', self.epoch_data["combined_loss"][1], epoch)
+        actual_sr_test_loss = self.epoch_data["sr_loss"][1] / (train_epoch_length // self.data_config["batch_size"])
+        actual_task_test_loss = self.epoch_data["task_loss"][1] / (train_epoch_length // self.data_config["batch_size"])
+        actual_combined_test_loss = self.epoch_data["combined_loss"][1] / (train_epoch_length // self.data_config["batch_size"])
+        self.tb_logger.scalar_summary('sr_loss (test)', actual_sr_test_loss, epoch)
+        self.tb_logger.scalar_summary('task_loss (test)', actual_task_test_loss, epoch)
+        self.tb_logger.scalar_summary('combined_loss (test)', actual_combined_test_loss, epoch)
 
     @timed
     def run_train(self):
@@ -305,6 +342,7 @@ class AuxiliaryTrainer(AbstractTrainer):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
 
+                train_epoch_length = len(self.dataset[list(self.dataset)[0]])
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
                     predictions, targets = self.train(data, param_idx, batch_idx)
@@ -312,9 +350,10 @@ class AuxiliaryTrainer(AbstractTrainer):
                 train_scores = self.score(predictions, targets)
                 logger.info(train_scores)
 
+                test_epoch_length = len(self.dataset[list(self.dataset)[1]])
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    predictions, targets = self.test(data, param_idx)
+                    predictions, targets = self.test(data, param_idx, batch_idx)
 
                 # Scores cumulated and calculated per epoch, as done in Quine
                 test_scores = self.score(predictions, targets)
@@ -323,8 +362,8 @@ class AuxiliaryTrainer(AbstractTrainer):
                 # Regeneration (per epoch) step if specified in config
                 if self.run_config["regenerate"]: self.wrapper.model.regenerate()
 
-            checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
-            self.write(epoch, train_scores)
+                checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
+                self.write(epoch, train_scores, train_epoch_length, test_epoch_length)
 
 
 def trainer(config, model, param_data, dataloaders, device):
