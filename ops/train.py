@@ -56,7 +56,6 @@ class AbstractTrainer(ABC):
         logger.info(f"Running epoch: #{epoch}")
 
     @timed
-    @abstractmethod
     def run_train(self):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):

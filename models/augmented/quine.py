@@ -110,7 +110,7 @@ class Vanilla(Quine, torch.nn.Module):
         self.van_input = self.van_input()
         self.van_output = self.van_output()
 
-    def van_input(self):
+    def van_input(self) -> torch.nn.Sequential:
         rand_proj_layer = torch.nn.Linear(self.num_params,
                                           self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
                                           bias=False)  # Modify so there are half as many hidden units
@@ -119,7 +119,7 @@ class Vanilla(Quine, torch.nn.Module):
             p.requires_grad_(False)
         return torch.nn.Sequential(rand_proj_layer)
 
-    def van_output(self):
+    def van_output(self) -> torch.nn.Sequential:
         # TODO: Make cleaner
         weight_predictor_layers = []
         current_layer = torch.nn.Linear(self.model_aug_config["n_hidden"], 1, bias=True)
@@ -130,7 +130,7 @@ class Vanilla(Quine, torch.nn.Module):
         self.param_names.append("wp_layer{}_bias".format(0))
         return torch.nn.Sequential(*weight_predictor_layers)
 
-    def forward(self, x: torch.tensor, y: torch.tensor = None):
+    def forward(self, x: torch.tensor, y: torch.tensor = None) -> Dict:
         x = self.van_input()(x)
         x = self.model(x)
         x = self.van_output()(x)
@@ -148,7 +148,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
         self.aux_input = self.aux_input()
         self.aux_output = self.aux_output()
 
-    def aux_input(self):
+    def aux_input(self) -> torch.nn.Sequential:
         rand_proj_layer = torch.nn.Linear(get_example_size(self.dataset),
                                           self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
                                           bias=False)  # Modify so there are half as many hidden units
@@ -157,7 +157,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
             p.requires_grad_(False)
         return torch.nn.Sequential(rand_proj_layer)
 
-    def aux_output(self):
+    def aux_output(self) -> torch.nn.Sequential:
         # TODO: Make cleaner
         digit_predictor_layers = []
         current_layer = torch.nn.Linear(self.model_aug_config["n_hidden"], 10, bias=True)
@@ -170,7 +170,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
         self.param_names.append("dp_layer{}_bias".format(0))
         return torch.nn.Sequential(*digit_predictor_layers)
 
-    def forward(self, x: torch.tensor, y: torch.tensor = None):
+    def forward(self, x: torch.tensor, y: torch.tensor = None) -> Dict:
         """
         Forward method of augmented model
 
