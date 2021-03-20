@@ -20,19 +20,21 @@
   {
     "model_type": "linear",
     "dropout": 0.50,
-    "input_layer_size_2*model_aug_n_hidden": 80,
+    "input_layer_size_2*model_aug_n_hidden": 40,
     "layer_sizes": [40],
     "output_layer_size_model_aug_n_hidden": 40
   },
   "model_aug_config":
   {
-    "model_augmentation": "auxiliary",
+    "model_augmentation": "classical",
     "n_inputs": 2,
     "n_hidden": 40,
     "reduction_method": "random"
   },
   "optim_config":
   {
+    "loss_func": "nll_loss",
+    "loss_kwargs": {},
     "optimizer": "adam",
     "optim_kwargs": {},
     "scheduler": "cawr",

@@ -33,10 +33,24 @@ class Classical(Quine, torch.nn.Module):
             p.requires_grad_(False)
         return torch.nn.Sequential(rand_proj_layer)
 
+    def classical_output(self) -> torch.nn.Sequential:
+        # TODO: Make cleaner
+        digit_predictor_layers = []
+        current_layer = torch.nn.Linear(self.model_aug_config["n_hidden"], 10, bias=True)
+        logsoftmax = torch.nn.LogSoftmax(dim=0) #should have no learnable weights
+        digit_predictor_layers.append(current_layer)
+        digit_predictor_layers.append(logsoftmax)
+        self.param_list.append(current_layer.weight)
+        self.param_names.append("dp_layer{}_weight".format(0))
+        self.param_list.append(current_layer.bias)
+        self.param_names.append("dp_layer{}_bias".format(0))
+        return torch.nn.Sequential(*digit_predictor_layers)
+
     def forward(self, x: torch.tensor, y=None) -> torch.tensor:
         x = x.reshape(-1)  # Flatten MNIST input in place
         x = self.classical_input()(x)
         x = self.model(x)
+        x = self.classical_output()(x)
 
         return x
 

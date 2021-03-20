@@ -3,18 +3,12 @@
 import torch
 import torch.nn.functional as F
 
-from models.augmented.quine import Quine, Vanilla, Auxiliary
-from models.augmented.ouroboros import Ouroboros
-
 from typing import *
 from logzero import logger
+from torch.nn.functional import nll_loss, l1_loss, mse_loss, cross_entropy, binary_cross_entropy, kl_div
 
-
-class ClassicalLoss:
-    def __init__(self, config: Dict, predictions: torch.tensor, targets: torch.tensor):
-        self.config = config
-        self.predictions = predictions
-        self.targets = targets
+from models.augmented.quine import Quine, Vanilla, Auxiliary
+from models.augmented.ouroboros import Ouroboros
 
 
 class QuineLoss:
@@ -50,9 +44,11 @@ class QuineLoss:
 
 
 def loss(config, model, predictions, targets) -> Union[Dict, float]:
-    # if isinstance(model, torch.nn.Module):
-    #     classical_loss = ClassicalLoss(config, predictions, targets)
-    #     return classical_loss
+    optim_config = config["optim_config"]
+    if isinstance(model, torch.nn.Module) and config["model_aug_config"]["model_augmentation"] == "classical":
+        return eval(optim_config["loss_func"])(predictions.unsqueeze(dim=0),
+                                               targets,
+                                               **optim_config["loss_kwargs"])
     if isinstance(model, Quine):
         quine_loss = QuineLoss(config, predictions, targets)
         if type(model) is Vanilla:
