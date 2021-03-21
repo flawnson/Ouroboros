@@ -64,6 +64,7 @@ class AbstractTrainer(ABC):
                     logger.info(f"Running train batch: #{batch_idx}")
                     predictions, targets = self.train(data, param_idx, batch_idx)
 
+                # Scores cumulated and calculated per epoch, as done in Quine
                 train_scores = self.score(predictions, targets)
                 logger.info(train_scores)
 
@@ -91,18 +92,26 @@ class ClassicalTrainer(AbstractTrainer):
         self.tb_logger = TBLogger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
         self.device = device
+        self.epoch_data = {"nll_loss": [0, 0],
+                           "correct": [0, 0]}  # First position for training scores, second position for test scores
 
     def train(self, data, targets, batch_idx):
         self.model.train()
         self.optimizer.zero_grad()
 
-        predictions = self.model(data)
+        logits = self.model(data)
+        predictions = logits.argmax(keepdim=True)
         loss = self.loss(predictions, targets)
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
             loss.backward()
+            self.epoch_data["nll_loss"][0] = 0.0
             self.optimizer.step()
             self.optimizer.zero_grad()
+
+        self.epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
+
+        return predictions, targets
 
     @torch.no_grad()
     def test(self, data, targets):
@@ -111,11 +120,15 @@ class ClassicalTrainer(AbstractTrainer):
         predictions = self.model(data)
         loss = self.loss(predictions, targets)
 
+        self.epoch_data["nll_loss"][1] = 0.0
+
+        return predictions, targets
+
     def loss(self, predictions, targets):
         return loss(self.config, self.model, predictions, targets)
 
     def score(self, predictions, targets):
-        return scores(self.config, predictions, targets, self.device)
+        return scores(self.config, predictions, self.epoch_data["correct"], self.device)
 
     def write(self, epoch: int):
         self.tb_logger.scalar_summary('Loss (train)', 0, epoch)
@@ -133,7 +146,7 @@ class VanillaTrainer(AbstractTrainer):
         self.dataset = dataset
         self.device = device
         self.epoch_data = {"sr_loss": [0, 0],
-                           "task_loss": [0, 0],
+                           "task_loss": [0, 0],  # The aux loss, original implementation is nll_loss
                            "combined_loss": [0, 0],
                            "correct": [0, 0]}  # First position for training scores, second position for test scores
 
@@ -151,7 +164,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.dataset = dataset
         self.device = device
         self.epoch_data = {"sr_loss": [0, 0],
-                           "task_loss": [0, 0],
+                           "task_loss": [0, 0],  # The aux loss, original implementation is nll_loss
                            "combined_loss": [0, 0],
                            "correct": [0, 0]}  # First position for training scores, second position for test scores
 
@@ -215,7 +228,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         return loss(self.config, self.wrapper.model, predictions, targets)
 
     def score(self, predictions, targets):
-        return scores(self.config, self.dataset, self.epoch_data, self.device)
+        return scores(self.config, self.dataset, self.epoch_data["correct"], self.device)
 
     def write(self, epoch: int, scores: Dict):
         logger.info(f"Scores: {scores}")

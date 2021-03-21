@@ -1,18 +1,16 @@
 import json
 import torch
+import pytest
 import logzero
 import argparse
 import numpy as np
 
 from typing import *
 from logzero import logger
+from utils.scores import scores
 from utils.holdout import AbstractSplit
-
-
-def test_holdout(**kwargs):
-    dataset = []
-    output = AbstractSplit(config, dataset, device)
-    assert output == "test"
+from utils.utilities import timed
+from models.augmented.quine import Quine
 
 
 if __name__ == "__main__":
@@ -30,4 +28,27 @@ if __name__ == "__main__":
     # In json config file, provide the name of the testing function to execute and pass the compulsory kwargs arguments
     eval(config["test_type"])(config["test_params"])
 
+    @pytest.fixture
+    def output_logits():
+        return torch.randn(20, 20)
 
+
+    @timed
+    @pytest.mark.parametrize("test_config", config)
+    def test_holdout(test_config):
+        dataset = []
+        output = AbstractSplit(test_config, dataset, device)
+        assert output == "test"
+
+
+    @timed
+    @pytest.mark.parametrize("test_config", config)
+    def test_regenerate(test_config):
+        model = Quine(test_config, model, device)
+        model.regenerate()
+
+
+    @timed
+    @pytest.mark.parametrize("test_config", config)
+    def test_scores(test_config):
+        assert isinstance(scores(test_config, dataset, epoch_data["correct"], device), dict)

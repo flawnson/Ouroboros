@@ -22,9 +22,10 @@ class MLPScores:
         pass
 
     def accuracy(self):
+        """ Loops over each set correct number to calculate accuracy"""
         # pred = self.predictions.argmax(keepdim=True)  # get the index of the max log-probability
         # self.correct += pred.eq(self.targets.view_as(pred)).sum().item()
-        return [self.epoch_data["correct"][x] / len(self.dataset[list(self.dataset)[x]]) for x in range(len(self.epoch_data["correct"]))]
+        return [self.epoch_data[x] / len(self.dataset[list(self.dataset)[x]]) for x in range(len(self.epoch_data))]
 
     def get_scores(self) -> Dict[str, List[float]]:
         scoreset = {"acc": self.accuracy()}
@@ -102,14 +103,14 @@ class GraphScores:
         return {score_type: scoreset[score_type] for score_type in self.score_config.keys()}
 
 
-def scores(config: Dict, dataset, epoch_data: Dict, device: torch.device):
+def scores(config: Dict, dataset, correct, device: torch.device):
     """
     Function to call the correct score class
 
     Args:
         config: Configuration dict
         dataset: output from the model
-        epoch_data: labels from the dataset
+        correct: labels from the dataset
         device: torch.device
 
     Returns:
@@ -117,9 +118,9 @@ def scores(config: Dict, dataset, epoch_data: Dict, device: torch.device):
 
     """
     if config["model_config"]["model_type"] == "linear":
-        return MLPScores(config, dataset, epoch_data, device).get_scores()
+        return MLPScores(config, dataset, correct, device).get_scores()
     elif config["model_config"]["model_type"] == "graph":
-        return GraphScores(config, dataset, epoch_data, device).get_scores()
+        return GraphScores(config, dataset, correct, device).get_scores()
     elif config["model_config"]["model_type"] == "image":
         pass
     elif config["model_config"]["model_type"] == "language":
