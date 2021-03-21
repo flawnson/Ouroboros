@@ -50,28 +50,9 @@ class Quine(ABC):
 
         return coordinates
 
-    @timed
-    @torch.no_grad()
+    @abstractmethod
     def regenerate(self):
-        """
-        The regenerate, implemented by following the original Quine paper.
-        Model parameters are kept in self.param_list and used for training and inference
-        Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter.
-        # TODO: Regenerate takes way too long on cpu; refactor to make faster
-        """
-        params_data = torch.eye(self.num_params, device=self.device)
-        index_list = list(range(self.num_params))
-        coordinates = self.indexer()
-        logger.info(f"Regenerating {len(coordinates)} parameters")
-        for param_idx, coo in zip(index_list, coordinates):
-            logger.info(f"Regenerating parameter {param_idx}")
-            with torch.no_grad():
-                idx_vector = torch.squeeze(params_data[param_idx])  # Pulling out the nested tensor
-                predicted_param, predicted_aux = self.forward(idx_vector, None).values()  # Forward output is dict
-                new_params = deepcopy(self.param_list)
-                new_params[coo[0]][coo[1]][coo[2]] = predicted_param
-                self.param_list = new_params
-        logger.info(f"Successfully regenerated weights")
+        pass
 
     def reduction(self, data_size) -> Reduction:
         """
@@ -136,6 +117,29 @@ class Vanilla(Quine, torch.nn.Module):
         x = self.van_output()(x)
         return {"param": x}
 
+    @timed
+    @torch.no_grad()
+    def regenerate(self):
+        """
+        The regenerate, implemented by following the original Quine paper.
+        Model parameters are kept in self.param_list and used for training and inference
+        Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter.
+        # TODO: Regenerate takes way too long on cpu; refactor to make faster
+        """
+        params_data = torch.eye(self.num_params, device=self.device)
+        index_list = list(range(self.num_params))
+        coordinates = self.indexer()
+        logger.info(f"Regenerating {len(coordinates)} parameters")
+        for param_idx, coo in zip(index_list, coordinates):
+            logger.info(f"Regenerating parameter {param_idx}")
+            with torch.no_grad():
+                idx_vector = torch.squeeze(params_data[param_idx])  # Pulling out the nested tensor
+                predicted_param = self.forward(idx_vector, None).values()  # Forward output is dict
+                new_params = deepcopy(self.param_list)
+                new_params[coo[0]][coo[1]][coo[2]] = predicted_param
+                self.param_list = new_params
+        logger.info(f"Successfully regenerated weights")
+
 
 class Auxiliary(Vanilla, torch.nn.Module):
     def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dataset, device):
@@ -199,3 +203,26 @@ class Auxiliary(Vanilla, torch.nn.Module):
         aux_output = self.aux_output()(output3)  # Auxiliary prediction network
 
         return {"param": weight, "aux": aux_output}
+
+    @timed
+    @torch.no_grad()
+    def regenerate(self):
+        """
+        The regenerate, implemented by following the original Quine paper.
+        Model parameters are kept in self.param_list and used for training and inference
+        Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter.
+        # TODO: Regenerate takes way too long on cpu; refactor to make faster
+        """
+        params_data = torch.eye(self.num_params, device=self.device)
+        index_list = list(range(self.num_params))
+        coordinates = self.indexer()
+        logger.info(f"Regenerating {len(coordinates)} parameters")
+        for param_idx, coo in zip(index_list, coordinates):
+            logger.info(f"Regenerating parameter {param_idx}")
+            with torch.no_grad():
+                idx_vector = torch.squeeze(params_data[param_idx])  # Pulling out the nested tensor
+                predicted_param, predicted_aux = self.forward(idx_vector, None).values()  # Forward output is dict
+                new_params = deepcopy(self.param_list)
+                new_params[coo[0]][coo[1]][coo[2]] = predicted_param
+                self.param_list = new_params
+        logger.info(f"Successfully regenerated weights")
