@@ -59,11 +59,11 @@ class AbstractSplit(ABC):
     def get_dataloaders(self, samplers: List[torch.utils.data.Sampler]) -> List:
         if self.config["model_aug_config"]["model_augmentation"] == "auxiliary":
             return [DataLoader(CombineDataset(self.dataset, self.param_data),
-                                      batch_size=self.data_config["batch_size"],
+                                      batch_size=1,
                                       sampler=sampler) for sampler in samplers]
         else:
             return [DataLoader(self.dataset,
-                               batch_size=self.data_config["batch_size"],
+                               batch_size=1,
                                sampler=sampler) for sampler in samplers]
 
     def partition(self):
