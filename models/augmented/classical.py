@@ -46,6 +46,10 @@ class Classical(Quine, torch.nn.Module):
         self.param_names.append("dp_layer{}_bias".format(0))
         return torch.nn.Sequential(*digit_predictor_layers)
 
+    def regenerate(self):
+        # Exists to satisfy Quine abstractmethod
+        pass
+
     def forward(self, x: torch.tensor, y=None) -> torch.tensor:
         x = x.reshape(-1)  # Flatten MNIST input in place
         x = self.classical_input()(x)

@@ -8,6 +8,7 @@ from logzero import logger
 from torch.nn.functional import nll_loss, l1_loss, mse_loss, cross_entropy, binary_cross_entropy, kl_div
 
 from models.augmented.quine import Quine, Vanilla, Auxiliary
+from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
 
 
@@ -43,14 +44,14 @@ class QuineLoss:
         return loss_combined
 
 
-def loss(config, model, predictions, targets) -> Union[Dict, float]:
+def loss(config: Dict, model: torch.nn.Module, logits, targets) -> Union[Dict, float]:
     optim_config = config["optim_config"]
-    if isinstance(model, torch.nn.Module) and config["model_aug_config"]["model_augmentation"] == "classical":
-        return eval(optim_config["loss_func"])(predictions.unsqueeze(dim=0),
-                                               targets,
-                                               **optim_config["loss_kwargs"])
+    if type(model) == Classical:
+        return {"loss": eval(optim_config["loss_func"])(logits["aux"].unsqueeze(dim=0),
+                                                         targets,
+                                                         **optim_config["loss_kwargs"])}
     if isinstance(model, Quine):
-        quine_loss = QuineLoss(config, predictions, targets)
+        quine_loss = QuineLoss(config, logits, targets)
         if type(model) is Vanilla:
             return {"sr_loss": quine_loss.sr_loss()}
         elif type(model) is Auxiliary:

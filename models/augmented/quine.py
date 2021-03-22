@@ -115,7 +115,7 @@ class Vanilla(Quine, torch.nn.Module):
         x = self.van_input()(x)
         x = self.model(x)
         x = self.van_output()(x)
-        return {"param": x}
+        return x
 
     @timed
     @torch.no_grad()
@@ -174,7 +174,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
         self.param_names.append("dp_layer{}_bias".format(0))
         return torch.nn.Sequential(*digit_predictor_layers)
 
-    def forward(self, x: torch.tensor, y: torch.tensor = None) -> Dict:
+    def forward(self, x: torch.tensor, y: torch.tensor = None) -> Tuple[torch.tensor, torch.tensor]:
         """
         Forward method of augmented model
 
@@ -202,7 +202,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
         weight = self.van_output()(output3)  # Weight prediction network
         aux_output = self.aux_output()(output3)  # Auxiliary prediction network
 
-        return {"param": weight, "aux": aux_output}
+        return weight, aux_output
 
     @timed
     @torch.no_grad()

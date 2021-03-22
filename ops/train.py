@@ -83,8 +83,10 @@ class AbstractTrainer(ABC):
 class ClassicalTrainer(AbstractTrainer):
 
     def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dict, device: torch.device):
+        # TODO: Potentially unecessary usage of dictionary in the return of loss function
         super(ClassicalTrainer, self).__init__(config, model, dataset, device)
         self.config = config
+        self.data_config = config["data_config"]
         self.run_config = config["run_config"]
         self.model = model
         self.optimizer = OptimizerObj(config, self.model).optim_obj
@@ -92,39 +94,46 @@ class ClassicalTrainer(AbstractTrainer):
         self.tb_logger = TBLogger(self.config["log_dir"] + "/" + self.config["run_name"])
         self.dataset = dataset
         self.device = device
-        self.epoch_data = {"nll_loss": [0, 0],
+        self.batch_data = {"loss": [0, 0],
+                           "correct": [0, 0]}  # First position for training scores, second position for test scores
+        self.epoch_data = {"loss": [0, 0],
                            "correct": [0, 0]}  # First position for training scores, second position for test scores
 
     def train(self, data, targets, batch_idx):
         self.model.train()
         self.optimizer.zero_grad()
 
-        logits = self.model(data)
-        predictions = logits.argmax(keepdim=True)
+        logits = {"aux": self.model(data)}
+        predictions = logits["aux"].argmax(keepdim=True)
         loss = self.loss(logits, targets)
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
-            loss.backward()
-            self.epoch_data["nll_loss"][0] = 0.0
+            loss["loss"].backward()
             self.optimizer.step()
+            self.epoch_data["loss"][0] = 0.0
+            self.batch_data["loss"][0] = 0.0
             self.optimizer.zero_grad()
 
         self.epoch_data["correct"][0] += predictions.eq(targets.view_as(predictions)).sum().item()
 
+        self.batch_data["loss"][0] += loss["loss"]
         return predictions, targets
 
     @torch.no_grad()
-    def test(self, data, targets):
+    def test(self, data, targets, batch_idx):
         self.model.eval()
 
         predictions = self.model(data)
         loss = self.loss(predictions, targets)
 
-        self.epoch_data["nll_loss"][1] = 0.0
+        if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
+            self.epoch_data["nll_loss"][1] = 0.0
+            self.batch_data["nll_loss"][1] = 0.0
 
+        self.batch_data["nll_loss"][1] += loss["nll_loss"]
         return predictions, targets
 
-    def loss(self, predictions, targets):
+    def loss(self, predictions, targets) -> Dict:
         return loss(self.config, self.model, predictions, targets)
 
     def score(self, predictions, targets):
@@ -157,7 +166,7 @@ class VanillaTrainer(AbstractTrainer):
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
 
-        predictions: Dict = self.wrapper.model(idx_vector)
+        predictions = {"param": self.wrapper.model(idx_vector)}
         targets = {"param": param}
 
         loss = self.loss(predictions, targets)
@@ -177,13 +186,12 @@ class VanillaTrainer(AbstractTrainer):
         self.wrapper.model.eval()
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
-        predictions = self.wrapper.model(idx_vector)
+        predictions = {"param": self.wrapper.model(idx_vector)}
         targets = {"param": param}
 
         loss = self.loss(predictions, targets)
 
         if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
-
             self.epoch_data["sr_loss"][1] += self.batch_data["sr_loss"][1] #accumulate for epoch
             self.batch_data["sr_loss"][1] = 0.0
 
@@ -191,11 +199,12 @@ class VanillaTrainer(AbstractTrainer):
         return predictions, targets
 
     def loss(self, predictions, targets):
-
         return loss(self.config, self.wrapper.model, predictions, targets)
 
     def score(self, predictions, targets):
-        return scores(self.config, self.dataset, self.epoch_data, self.device)
+        # Vanilla doesn't have any scores yet
+        # return scores(self.config, self.dataset, self.epoch_data, self.device)
+        pass
 
     def write(self, epoch: int, train_epoch_length: int, test_epoch_length: int):
 
@@ -239,7 +248,6 @@ class VanillaTrainer(AbstractTrainer):
                 self.write(epoch, train_epoch_length, test_epoch_length)
 
 
-
 class AuxiliaryTrainer(AbstractTrainer):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
     def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict, device: torch.device):
@@ -269,10 +277,11 @@ class AuxiliaryTrainer(AbstractTrainer):
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
 
-        #Both predictions and targets will be dictionaries that hold two elements
-        predictions: Dict = self.wrapper.model(idx_vector, data[0].to(self.device))
+        # Both predictions and targets will be dictionaries that hold two elements
+        predictions = {"param": self.wrapper.model(idx_vector, data[0].to(self.device))[0],
+                       "aux": self.wrapper.model(idx_vector, data[0].to(self.device))[1]}
         aux_pred = predictions["aux"].argmax(keepdim=True)  # get the index of the max log-probability
-        targets = {"aux": data[-1].to(self.device), "param": param}
+        targets = {"param": param, "aux": data[-1].to(self.device)}
 
         loss = self.loss(predictions, targets)
 
@@ -300,7 +309,8 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.wrapper.model.eval()
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
-        predictions = self.wrapper.model(idx_vector, data[0])
+        predictions = {"param": self.wrapper.model(idx_vector, data[0].to(self.device))[0],
+                       "aux": self.wrapper.model(idx_vector, data[0].to(self.device))[1]}
         aux_pred = predictions["aux"].argmax(keepdim=True)  # get the index of the max log-probability
         targets = {"aux": data[-1], "param": param}
 
@@ -360,7 +370,7 @@ class AuxiliaryTrainer(AbstractTrainer):
                     predictions, targets = self.train(data, param_idx, batch_idx)
 
                 train_scores = self.score(predictions, targets)
-                logger.info(train_scores)
+                logger.info(f"Train scores: {train_scores}")
 
                 test_epoch_length = len(self.dataset[list(self.dataset)[1]])
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
@@ -369,9 +379,10 @@ class AuxiliaryTrainer(AbstractTrainer):
 
                 # Scores cumulated and calculated per epoch, as done in Quine
                 test_scores = self.score(predictions, targets)
-                logger.info(test_scores)
+                logger.info(f"Test scores: {test_scores}")
 
                 # Regeneration (per epoch) step if specified in config
+                # XXX: Problem with regenerate; number of params to regenerate is incorrect (blows up)
                 if self.run_config["regenerate"]: self.wrapper.model.regenerate()
 
                 checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)

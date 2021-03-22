@@ -81,7 +81,7 @@ def main():
     param_data: Union[torch.utils.data.Dataset, List] = None
     if config["model_aug_config"]["model_augmentation"].casefold() == "classical":
         pass
-    if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
+    elif config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
         param_data = ModelParameters(config, aug_model, device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "auxiliary":
         param_data = ModelParameters(config, aug_model, device)

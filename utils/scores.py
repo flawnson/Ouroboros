@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from sklearn.metrics import f1_score, precision_score, recall_score, jaccard_score, confusion_matrix
 
 
-class MLPScores:
+class MNISTScores:
     def __init__(self, config: Dict, dataset, correct, device: torch.device):
         self.score_config = config["score_config"]
         self.dataset = dataset
@@ -23,8 +23,6 @@ class MLPScores:
 
     def accuracy(self):
         """ Loops over each set correct number to calculate accuracy"""
-        # pred = self.predictions.argmax(keepdim=True)  # get the index of the max log-probability
-        # self.correct += pred.eq(self.targets.view_as(pred)).sum().item()
         return [self.correct[x] / len(self.dataset[list(self.dataset)[x]]) for x in range(len(self.correct))]
 
     def get_scores(self) -> Dict[str, List[float]]:
@@ -103,7 +101,7 @@ class GraphScores:
         return {score_type: scoreset[score_type] for score_type in self.score_config.keys()}
 
 
-def scores(config: Dict, dataset, correct, device: torch.device):
+def scores(config: Dict, dataset, correct, device: torch.device) -> Dict:
     """
     Function to call the correct score class
 
@@ -117,15 +115,11 @@ def scores(config: Dict, dataset, correct, device: torch.device):
         Score object corresponding to the type of data (which then returns a dictionary of scores)
 
     """
-    if config["model_config"]["model_type"] == "linear":
-        return MLPScores(config, dataset, correct, device).get_scores()
-    elif config["model_config"]["model_type"] == "graph":
+    if config["data_config"]["dataset"] == "mnist":
+        return MNISTScores(config, dataset, correct, device).get_scores()
+    elif config["data_config"]["dataset"] == "cora":
         return GraphScores(config, dataset, correct, device).get_scores()
-    elif config["model_config"]["model_type"] == "image":
-        pass
-    elif config["model_config"]["model_type"] == "language":
-        pass
     else:
-        raise NotImplementedError(f"{config['model_config']['model_type']} is not a model type")
+        raise NotImplementedError(f"{config['data_config']['dataset']} is not a model type")
 
 
