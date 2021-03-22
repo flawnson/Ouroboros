@@ -52,3 +52,7 @@ if __name__ == "__main__":
     @pytest.mark.parametrize("test_config", config)
     def test_scores(test_config):
         assert isinstance(scores(test_config, dataset, epoch_data["correct"], device), dict)
+
+
+    def test_logging():
+        pass

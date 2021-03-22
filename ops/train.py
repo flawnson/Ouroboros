@@ -101,7 +101,7 @@ class ClassicalTrainer(AbstractTrainer):
 
         logits = self.model(data)
         predictions = logits.argmax(keepdim=True)
-        loss = self.loss(predictions, targets)
+        loss = self.loss(logits, targets)
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
             loss.backward()
@@ -109,7 +109,7 @@ class ClassicalTrainer(AbstractTrainer):
             self.optimizer.step()
             self.optimizer.zero_grad()
 
-        self.epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
+        self.epoch_data["correct"][0] += predictions.eq(targets.view_as(predictions)).sum().item()
 
         return predictions, targets
 

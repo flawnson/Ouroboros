@@ -9,10 +9,10 @@ from sklearn.metrics import f1_score, precision_score, recall_score, jaccard_sco
 
 
 class MLPScores:
-    def __init__(self, config: Dict, dataset, epoch_data, device: torch.device):
+    def __init__(self, config: Dict, dataset, correct, device: torch.device):
         self.score_config = config["score_config"]
         self.dataset = dataset
-        self.epoch_data = epoch_data
+        self.correct = correct
         self.device = device
 
     def relative_error(self):
@@ -25,7 +25,7 @@ class MLPScores:
         """ Loops over each set correct number to calculate accuracy"""
         # pred = self.predictions.argmax(keepdim=True)  # get the index of the max log-probability
         # self.correct += pred.eq(self.targets.view_as(pred)).sum().item()
-        return [self.epoch_data[x] / len(self.dataset[list(self.dataset)[x]]) for x in range(len(self.epoch_data))]
+        return [self.correct[x] / len(self.dataset[list(self.dataset)[x]]) for x in range(len(self.correct))]
 
     def get_scores(self) -> Dict[str, List[float]]:
         scoreset = {"acc": self.accuracy()}
