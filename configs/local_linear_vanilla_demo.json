@@ -14,7 +14,8 @@
     "split_type": "holdout",
     "num_splits": 5,
     "shuffle": true,
-    "batch_size": 16
+    "batch_size": 16,
+    "subset": 100
   },
   "model_config":
   {

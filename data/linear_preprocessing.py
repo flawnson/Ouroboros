@@ -6,7 +6,7 @@ import torchvision as tv
 
 from logzero import logger
 from typing import Dict, List
-from torch.utils.data import Dataset, ConcatDataset
+from torch.utils.data import Dataset, ConcatDataset, Subset
 
 
 class HousingDataset(Dataset):
@@ -38,12 +38,30 @@ def get_aux_data(config: Dict) -> ConcatDataset:
     """
     logger.info(f"Downloading MNIST data to {config['data_config']['data_dir']}")
     transform = tv.transforms.Compose([tv.transforms.ToTensor()])
-    dataset = ConcatDataset([tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']),
-                             train=x,
-                             download=True,
-                             transform=transform) for x in [True, False]])
-    dataset.targets = torch.cat([tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']),
-                                 train=x,
-                                 download=True,
-                                 transform=transform).targets for x in [True, False]])
+
+    #If specified, select only a subset for faster running
+    subset = config["data_config"]["subset"]
+    subset_indices = []
+    if subset.isdigit():
+        subset_indices = list(range(subset))
+
+    to_concat = []
+    for x in [True, False]:
+        if subset.isdigit():
+            print("Data Subset")
+            to_concat.append(Subset(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform),
+                                    subset_indices))
+        else:
+            to_concat.append(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform),
+                                    subset_indices)
+    dataset = ConcatDataset(to_concat)
+    dataset.targets = torch.cat([d.targets for d in to_concat])
+    # dataset = ConcatDataset([tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']),
+    #                          train=x,
+    #                          download=True,
+    #                          transform=transform) for x in [True, False]])
+    # dataset.targets = torch.cat([tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']),
+    #                              train=x,
+    #                              download=True,
+    #                              transform=transform).targets for x in [True, False]])
     return dataset

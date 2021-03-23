@@ -24,11 +24,14 @@ class ModelParameters(object):
         """
         self.config = config
         self.model = model
-        #self._params = model.parameters()  # Default to PyTorch's parameters
         self.num_params = self.model.num_params
         self.params = torch.tensor(list(range(self.num_params)), device=device) #indices of all params: [1, 2, ......, num_params - 1]
-        # logger.info("Model Structure: ")
-        # logger.info(self.model)
+        #if subset is specified, select only a small portion of model params
+        subset = config["data_config"]["subset"]
+        if subset.isdigit():
+            self.params = torch.tensor(list(range(subset)), device=device) #indices of all params: [1, 2, ......, subset]
+        print("Param size: ", self.params.size())
+
         self.device = device
 
     def to_onehot(self, idxs: torch.tensor):
@@ -57,4 +60,3 @@ class ModelParameters(object):
             The number of parameters in the model (num_params).
         """
         return self.num_params
-
