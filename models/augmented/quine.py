@@ -88,10 +88,10 @@ class Vanilla(Quine, torch.nn.Module):
         self.model_aug_config = config["model_aug_config"]
         self.model = model
         self.device = device
-        self.van_input = self.van_input()
-        self.van_output = self.van_output()
+        self.van_input = self.build_van_input()
+        self.van_output = self.build_van_output()
 
-    def van_input(self) -> torch.nn.Sequential:
+    def build_van_input(self) -> torch.nn.Sequential:
         rand_proj_layer = torch.nn.Linear(self.num_params,
                                           self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
                                           bias=False)  # Modify so there are half as many hidden units
@@ -100,7 +100,7 @@ class Vanilla(Quine, torch.nn.Module):
             p.requires_grad_(False)
         return torch.nn.Sequential(rand_proj_layer)
 
-    def van_output(self) -> torch.nn.Sequential:
+    def build_van_output(self) -> torch.nn.Sequential:
         # TODO: Make cleaner
         weight_predictor_layers = []
         current_layer = torch.nn.Linear(self.model_aug_config["n_hidden"], 1, bias=True)
@@ -112,9 +112,9 @@ class Vanilla(Quine, torch.nn.Module):
         return torch.nn.Sequential(*weight_predictor_layers)
 
     def forward(self, x: torch.tensor, y: torch.tensor = None) -> Dict:
-        x = self.van_input()(x)
+        x = self.van_input(x)
         x = self.model(x)
-        x = self.van_output()(x)
+        x = self.van_output(x)
         return x
 
     @timed
@@ -149,10 +149,10 @@ class Auxiliary(Vanilla, torch.nn.Module):
         self.model = model
         self.dataset = dataset
         self.device = device
-        self.aux_input = self.aux_input()
-        self.aux_output = self.aux_output()
+        self.aux_input = self.build_aux_input()
+        self.aux_output = self.build_aux_output()
 
-    def aux_input(self) -> torch.nn.Sequential:
+    def build_aux_input(self) -> torch.nn.Sequential:
         rand_proj_layer = torch.nn.Linear(get_example_size(self.dataset),
                                           self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
                                           bias=False)  # Modify so there are half as many hidden units
@@ -161,7 +161,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
             p.requires_grad_(False)
         return torch.nn.Sequential(rand_proj_layer)
 
-    def aux_output(self) -> torch.nn.Sequential:
+    def build_aux_output(self) -> torch.nn.Sequential:
         # TODO: Make cleaner
         digit_predictor_layers = []
         current_layer = torch.nn.Linear(self.model_aug_config["n_hidden"], 10, bias=True)
@@ -185,10 +185,10 @@ class Auxiliary(Vanilla, torch.nn.Module):
         Returns:
             torch.tensor output
         """
-        new_output = self.van_input()(x)
+        new_output = self.van_input(x)
         if y is not None:
             y = y.reshape(-1)  # Flatten MNIST input in place
-            output2 = self.aux_input()(y)
+            output2 = self.aux_input(y)
             new_output = torch.cat((new_output, output2))
         else:
             new_output = torch.cat((new_output, torch.rand(self.model_aug_config["n_hidden"])))
@@ -199,8 +199,8 @@ class Auxiliary(Vanilla, torch.nn.Module):
         #concatenate and feed both into main Network
         output3 = self.model(new_output)
 
-        weight = self.van_output()(output3)  # Weight prediction network
-        aux_output = self.aux_output()(output3)  # Auxiliary prediction network
+        weight = self.van_output(output3)  # Weight prediction network
+        aux_output = self.aux_output(output3)  # Auxiliary prediction network
 
         return weight, aux_output
 
@@ -221,7 +221,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
             logger.info(f"Regenerating parameter {param_idx}")
             with torch.no_grad():
                 idx_vector = torch.squeeze(params_data[param_idx])  # Pulling out the nested tensor
-                predicted_param, predicted_aux = self.forward(idx_vector, None).values()  # Forward output is dict
+                predicted_param, predicted_aux = self.forward(idx_vector, None)  # Forward output is dict
                 new_params = deepcopy(self.param_list)
                 new_params[coo[0]][coo[1]][coo[2]] = predicted_param
                 self.param_list = new_params

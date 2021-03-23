@@ -24,7 +24,7 @@ from utils.utilities import timed
 
 class AbstractTrainer(ABC):
 
-    def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dict, device: torch.device):
+    def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dict[str, DataLoader], device: torch.device):
         self.config = config
         self.run_config = config["run_config"]
         self.model = model
@@ -62,18 +62,18 @@ class AbstractTrainer(ABC):
                 logger.info(f"Epoch: {epoch}")
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    predictions, targets = self.train(data, param_idx, batch_idx)
+                    logits, targets = self.train(data, param_idx, batch_idx)
 
                 # Scores cumulated and calculated per epoch, as done in Quine
-                train_scores = self.score(predictions, targets)
+                train_scores = self.score(logits, targets)
                 logger.info(train_scores)
 
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    predictions, targets = self.test(data, param_idx)
+                    logits, targets = self.test(data, param_idx, batch_idx)
 
                 # Scores cumulated and calculated per epoch, as done in Quine
-                test_scores = self.score(predictions, targets)
+                test_scores = self.score(logits, targets)
                 logger.info(test_scores)
 
                 checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
@@ -82,7 +82,7 @@ class AbstractTrainer(ABC):
 
 class ClassicalTrainer(AbstractTrainer):
 
-    def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dict, device: torch.device):
+    def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dict[str, DataLoader], device: torch.device):
         # TODO: Potentially unecessary usage of dictionary in the return of loss function
         super(ClassicalTrainer, self).__init__(config, model, dataset, device)
         self.config = config
@@ -117,27 +117,28 @@ class ClassicalTrainer(AbstractTrainer):
         self.epoch_data["correct"][0] += predictions.eq(targets.view_as(predictions)).sum().item()
 
         self.batch_data["loss"][0] += loss["loss"]
-        return predictions, targets
+        return logits, targets
 
     @torch.no_grad()
     def test(self, data, targets, batch_idx):
         self.model.eval()
 
-        predictions = self.model(data)
-        loss = self.loss(predictions, targets)
+        logits = {"aux": self.model(data)}
+        predictions = logits["aux"].argmax(keepdim=True)
+        loss = self.loss(logits, targets)
 
         if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
-            self.epoch_data["nll_loss"][1] = 0.0
-            self.batch_data["nll_loss"][1] = 0.0
+            self.epoch_data["loss"][1] = 0.0
+            self.batch_data["loss"][1] = 0.0
 
-        self.batch_data["nll_loss"][1] += loss["nll_loss"]
-        return predictions, targets
+        self.batch_data["loss"][1] += loss["loss"]
+        return logits, targets
 
     def loss(self, predictions, targets) -> Dict:
         return loss(self.config, self.model, predictions, targets)
 
-    def score(self, predictions, targets):
-        return scores(self.config, predictions, self.epoch_data["correct"], self.device)
+    def score(self, predictions, targets) -> Dict:
+        return scores(self.config, self.dataset, self.epoch_data["correct"], self.device)
 
     def write(self, epoch: int):
         self.tb_logger.scalar_summary('Loss (train)', 0, epoch)
@@ -145,7 +146,7 @@ class ClassicalTrainer(AbstractTrainer):
 
 class VanillaTrainer(AbstractTrainer):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
-    def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict, device: torch.device):
+    def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict[str, DataLoader], device: torch.device):
         super(VanillaTrainer, self).__init__(config, model_wrapper.model, dataset, device)
         self.config = config
         self.run_config = config["run_config"]
@@ -201,7 +202,7 @@ class VanillaTrainer(AbstractTrainer):
     def loss(self, predictions, targets):
         return loss(self.config, self.wrapper.model, predictions, targets)
 
-    def score(self, predictions, targets):
+    def score(self):
         # Vanilla doesn't have any scores yet
         # return scores(self.config, self.dataset, self.epoch_data, self.device)
         pass
@@ -227,10 +228,6 @@ class VanillaTrainer(AbstractTrainer):
                     logger.info(f"Running train batch: #{batch_idx}")
                     predictions, targets = self.train(data, param_idx, batch_idx)
 
-                #SCORING IS NOT DONE FOR VANILLA
-                #train_scores = self.score(predictions, targets)
-                #logger.info(train_scores)
-
                 test_epoch_length = len(self.dataset[list(self.dataset)[1]])
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
@@ -250,7 +247,7 @@ class VanillaTrainer(AbstractTrainer):
 
 class AuxiliaryTrainer(AbstractTrainer):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
-    def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict, device: torch.device):
+    def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict[str, DataLoader], device: torch.device):
         super(AuxiliaryTrainer, self).__init__(config, model_wrapper.model, dataset, device)
         self.config = config
         self.run_config = config["run_config"]
@@ -309,12 +306,12 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.wrapper.model.eval()
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
-        predictions = {"param": self.wrapper.model(idx_vector, data[0].to(self.device))[0],
-                       "aux": self.wrapper.model(idx_vector, data[0].to(self.device))[1]}
-        aux_pred = predictions["aux"].argmax(keepdim=True)  # get the index of the max log-probability
+        outputs = {"param": self.wrapper.model(idx_vector, data[0].to(self.device))[0],
+                   "aux": self.wrapper.model(idx_vector, data[0].to(self.device))[1]}
+        aux_pred = outputs["aux"].argmax(keepdim=True)  # get the index of the max log-probability
         targets = {"aux": data[-1], "param": param}
 
-        loss = self.loss(predictions, targets)
+        loss = self.loss(outputs, targets)
 
         if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
             self.epoch_data["sr_loss"][1] += self.batch_data["sr_loss"][1] #accumulate for epoch
@@ -325,18 +322,17 @@ class AuxiliaryTrainer(AbstractTrainer):
             self.batch_data["task_loss"][1] = 0.0
             self.batch_data["combined_loss"][1] = 0.0
 
-
         self.batch_data["sr_loss"][1] += loss["sr_loss"]
         self.batch_data["task_loss"][1] += loss["task_loss"]
         self.batch_data["combined_loss"][1] += loss["combined_loss"]
         self.epoch_data["correct"][1] += aux_pred.eq(data[1].view_as(aux_pred)).sum().item()
 
-        return predictions, targets
+        return outputs, targets
 
     def loss(self, predictions, targets):
         return loss(self.config, self.wrapper.model, predictions, targets)
 
-    def score(self, predictions, targets):
+    def score(self):
         return scores(self.config, self.dataset, self.epoch_data["correct"], self.device)
 
     def write(self, epoch: int, scores: Dict, train_epoch_length: int, test_epoch_length: int):
@@ -367,26 +363,23 @@ class AuxiliaryTrainer(AbstractTrainer):
                 train_epoch_length = len(self.dataset[list(self.dataset)[0]])
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    predictions, targets = self.train(data, param_idx, batch_idx)
-
-                train_scores = self.score(predictions, targets)
-                logger.info(f"Train scores: {train_scores}")
+                    outputs, targets = self.train(data, param_idx, batch_idx)
 
                 test_epoch_length = len(self.dataset[list(self.dataset)[1]])
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    predictions, targets = self.test(data, param_idx, batch_idx)
+                    outputs, targets = self.test(data, param_idx, batch_idx)
 
                 # Scores cumulated and calculated per epoch, as done in Quine
-                test_scores = self.score(predictions, targets)
-                logger.info(f"Test scores: {test_scores}")
+                epoch_scores = self.score()
+                logger.info(f"Train scores, Test scores: {epoch_scores}")
 
                 # Regeneration (per epoch) step if specified in config
                 # XXX: Problem with regenerate; number of params to regenerate is incorrect (blows up)
                 if self.run_config["regenerate"]: self.wrapper.model.regenerate()
 
                 checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
-                self.write(epoch, train_scores, train_epoch_length, test_epoch_length)
+                self.write(epoch, epoch_scores, train_epoch_length, test_epoch_length)
 
 
 def trainer(config, model, param_data, dataloaders, device):
