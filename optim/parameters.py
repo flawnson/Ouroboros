@@ -28,13 +28,16 @@ class ModelParameters(object):
         self.params = torch.tensor(list(range(self.num_params)), device=device) #indices of all params: [1, 2, ......, num_params - 1]
         #if subset is specified, select only a small portion of model params
         subset = config["data_config"]["subset"]
-        if subset.isdigit():
+        if isinstance(subset, int):
+            self.num_params = subset
             self.params = torch.tensor(list(range(subset)), device=device) #indices of all params: [1, 2, ......, subset]
-        print("Param size: ", self.params.size())
+            print("Param size: ", self.params.size())
+            print("Num params: ", self.num_params)
 
         self.device = device
 
     def to_onehot(self, idxs: torch.tensor):
+        print("to onehot: ", idxs)
         onehot = torch.zeros(self.num_params, device=self.device)
         onehot[idxs.item()] = 1
         # onehots = [torch.zeros(self.num_params, device=self.device)[idx.item()] for idx in idxs]  # Was testing different batch sizes
@@ -51,6 +54,12 @@ class ModelParameters(object):
             A parameter at index idx as a torch tensor.
         """
         return self.model.get_param(idx)
+
+    def __getitem__(self, idx):
+        """
+        For enumeration purposes
+        """
+        return self.params[idx]
 
     def __len__(self):
         """

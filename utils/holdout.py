@@ -18,9 +18,10 @@ DEFAULT_SPLIT = 0.70
 
 
 class AbstractSplit(ABC):
-    def __init__(self, config, dataset, device):
+    def __init__(self, config, dataset, param_data, device):
         self.data_config = config["data_config"]
         self.dataset = dataset
+        self.param_data = param_data
         self.device = device
 
     @abstractmethod
@@ -61,6 +62,10 @@ class AbstractSplit(ABC):
             return [DataLoader(CombineDataset(self.dataset, self.param_data),
                                       batch_size=1,
                                       sampler=sampler) for sampler in samplers]
+        elif self.config["model_aug_config"]["model_augmentation"] == "vanilla":
+            return [DataLoader(self.param_data,
+                               batch_size=1,
+                               sampler=sampler) for sampler in samplers]
         else:
             return [DataLoader(self.dataset,
                                batch_size=1,
@@ -78,7 +83,7 @@ class AbstractSplit(ABC):
 
 class MNISTSplit(AbstractSplit):
     def __init__(self, config, dataset, param_data, device):
-        super(MNISTSplit, self).__init__(config, dataset, device)
+        super(MNISTSplit, self).__init__(config, dataset, param_data, device)
         self.config = config
         self.data_config = config["data_config"]
         self.dataset = dataset
@@ -146,10 +151,12 @@ class GraphSplit(AbstractSplit):
 
 
 class QuineSplit(AbstractSplit):
-    def __init__(self, config, dataset, device):
-        super(QuineSplit, self).__init__(config, dataset, device)
+    def __init__(self, config, dataset, param_data, device):
+        super(QuineSplit, self).__init__(config, dataset, param_data, device)
+        self.config = config
         self.data_config = config["data_config"]
         self.dataset = dataset
+        self.param_data = param_data  # Needed for Aux models
         self.device = device
 
     def holdout(self):
@@ -163,7 +170,9 @@ class QuineSplit(AbstractSplit):
             logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_SPLIT}")
 
         # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])
-        split_idx = list(ShuffleSplit(n_splits=1, train_size=split_size, random_state=self.config["seed"]).split(self.dataset, self.dataset.targets))
+        split_idx = list(ShuffleSplit(n_splits=1, train_size=split_size, random_state=self.config["seed"]).split(self.param_data.params))
+        split_idx = split_idx[0]
+        print("split idx: ", split_idx)
         samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx]
         dataloaders = self.get_dataloaders(samplers)
 

@@ -23,6 +23,10 @@ class Quine(ABC):
         self.param_names = []
         self.cum_params_arr = np.cumsum(np.array([np.prod(p.shape) for p in self.param_list]))
         self.num_params = int(self.cum_params_arr[-1])
+        #if we specify a smaller subset, use that amount instead
+        subset = config["data_config"]["subset"]
+        if isinstance(subset, int):
+            self.num_params = subset
 
     def indexer(self) -> List:
         """
@@ -134,7 +138,7 @@ class Vanilla(Quine, torch.nn.Module):
             logger.info(f"Regenerating parameter {param_idx}")
             with torch.no_grad():
                 idx_vector = torch.squeeze(params_data[param_idx])  # Pulling out the nested tensor
-                predicted_param = self.forward(idx_vector, None).values()  # Forward output is dict
+                predicted_param = self.forward(idx_vector, None)
                 new_params = deepcopy(self.param_list)
                 new_params[coo[0]][coo[1]][coo[2]] = predicted_param
                 self.param_list = new_params
@@ -221,7 +225,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
             logger.info(f"Regenerating parameter {param_idx}")
             with torch.no_grad():
                 idx_vector = torch.squeeze(params_data[param_idx])  # Pulling out the nested tensor
-                predicted_param, predicted_aux = self.forward(idx_vector, None).values()  # Forward output is dict
+                predicted_param, predicted_aux = self.forward(idx_vector, None)
                 new_params = deepcopy(self.param_list)
                 new_params[coo[0]][coo[1]][coo[2]] = predicted_param
                 self.param_list = new_params

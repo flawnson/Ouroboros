@@ -42,20 +42,28 @@ def get_aux_data(config: Dict) -> ConcatDataset:
     #If specified, select only a subset for faster running
     subset = config["data_config"]["subset"]
     subset_indices = []
-    if subset.isdigit():
+    if isinstance(subset, int):
         subset_indices = list(range(subset))
 
     to_concat = []
+
     for x in [True, False]:
-        if subset.isdigit():
+        if isinstance(subset, int):
             print("Data Subset")
             to_concat.append(Subset(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform),
                                     subset_indices))
         else:
-            to_concat.append(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform),
-                                    subset_indices)
+            to_concat.append(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform))
     dataset = ConcatDataset(to_concat)
-    dataset.targets = torch.cat([d.targets for d in to_concat])
+
+    to_concat_targets = []
+    for x in [True, False]:
+        if isinstance(subset, int):
+            print("Data Subset Target")
+            to_concat_targets.append(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform).targets[:subset])
+        else:
+            to_concat_targets.append(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform).targets)
+    dataset.targets = torch.cat(to_concat_targets)
     # dataset = ConcatDataset([tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']),
     #                          train=x,
     #                          download=True,

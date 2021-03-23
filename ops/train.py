@@ -159,7 +159,7 @@ class VanillaTrainer(AbstractTrainer):
         self.batch_data = {"sr_loss": [0, 0]}  # First position for training scores, second position for test scores
         self.epoch_data = {"sr_loss": [0, 0]}
 
-    def train(self, data, param_idx, batch_idx):
+    def train(self, param_idx, batch_idx):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
 
@@ -182,7 +182,7 @@ class VanillaTrainer(AbstractTrainer):
         return predictions, targets
 
     @torch.no_grad()
-    def test(self, data, param_idx, batch_idx):
+    def test(self, param_idx, batch_idx):
         self.wrapper.model.eval()
         idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
@@ -223,18 +223,18 @@ class VanillaTrainer(AbstractTrainer):
                 logger.info(f"Epoch: {epoch}")
 
                 train_epoch_length = len(self.dataset[list(self.dataset)[0]])
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
+                for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    predictions, targets = self.train(data, param_idx, batch_idx)
+                    predictions, targets = self.train(param_idx, batch_idx)
 
                 #SCORING IS NOT DONE FOR VANILLA
                 #train_scores = self.score(predictions, targets)
                 #logger.info(train_scores)
 
                 test_epoch_length = len(self.dataset[list(self.dataset)[1]])
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
+                for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    predictions, targets = self.test(data, param_idx, batch_idx)
+                    predictions, targets = self.test(param_idx, batch_idx)
 
                 #SCORING IS NOT DONE FOR VANILLA
                 # Scores cumulated and calculated per epoch, as done in Quine

@@ -3,7 +3,7 @@
   "seed": 42,
   "run_type": "demo",
   "logging": "logging.INFO",
-  "log_dir": "C:\\Users\\flawn\\Documents\\Projects\\Project Introversion\\Ouroboros\\logs",
+  "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs",
   "device": "cpu",
   "data_config":
   {
@@ -14,7 +14,8 @@
     "split_type": "holdout",
     "num_splits": 5,
     "shuffle": true,
-    "batch_size": 16
+    "batch_size": 16,
+    "subset": 100
   },
   "model_config":
   {
