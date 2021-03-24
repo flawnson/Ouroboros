@@ -116,7 +116,7 @@ class ClassicalTrainer(AbstractTrainer):
 
         self.epoch_data["correct"][0] += predictions.eq(targets.view_as(predictions)).sum().item()
 
-        self.batch_data["loss"][0] += loss["loss"]
+        self.batch_data["loss"][0] += loss["loss"].item()
         return logits, targets
 
     @torch.no_grad()
@@ -131,7 +131,7 @@ class ClassicalTrainer(AbstractTrainer):
             self.epoch_data["loss"][1] = 0.0
             self.batch_data["loss"][1] = 0.0
 
-        self.batch_data["loss"][1] += loss["loss"]
+        self.batch_data["loss"][1] += loss["loss"].item()
         return logits, targets
 
     def loss(self, predictions, targets) -> Dict:
@@ -179,7 +179,7 @@ class VanillaTrainer(AbstractTrainer):
             self.batch_data["sr_loss"][0] = 0.0
             self.optimizer.zero_grad()
 
-        self.batch_data["sr_loss"][0] += loss["sr_loss"]
+        self.batch_data["sr_loss"][0] += loss["sr_loss"].item()
         return predictions, targets
 
     @torch.no_grad()
@@ -196,7 +196,7 @@ class VanillaTrainer(AbstractTrainer):
             self.epoch_data["sr_loss"][1] += self.batch_data["sr_loss"][1] #accumulate for epoch
             self.batch_data["sr_loss"][1] = 0.0
 
-        self.batch_data["sr_loss"][1] += loss["sr_loss"]
+        self.batch_data["sr_loss"][1] += loss["sr_loss"].item()
         return predictions, targets
 
     def loss(self, predictions, targets):
@@ -239,7 +239,7 @@ class VanillaTrainer(AbstractTrainer):
                 #logger.info(test_scores)
 
                 # Regeneration (per epoch) step if specified in config
-                if self.run_config["regenerate"]: self.wrapper.model.regenerate()
+                # if self.run_config["regenerate"]: self.wrapper.model.regenerate()
 
                 checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
                 self.write(epoch, train_epoch_length, test_epoch_length)
@@ -294,9 +294,9 @@ class AuxiliaryTrainer(AbstractTrainer):
             self.batch_data["combined_loss"][0] = 0.0
             self.optimizer.zero_grad()
 
-        self.batch_data["sr_loss"][0] += loss["sr_loss"]
-        self.batch_data["task_loss"][0] += loss["task_loss"]
-        self.batch_data["combined_loss"][0] += loss["combined_loss"]
+        self.batch_data["sr_loss"][0] += loss["sr_loss"].item()
+        self.batch_data["task_loss"][0] += loss["task_loss"].item()
+        self.batch_data["combined_loss"][0] += loss["combined_loss"].item()
         self.epoch_data["correct"][0] += aux_pred.eq(data[1].view_as(aux_pred)).sum().item()
 
         return predictions, targets
@@ -322,9 +322,9 @@ class AuxiliaryTrainer(AbstractTrainer):
             self.batch_data["task_loss"][1] = 0.0
             self.batch_data["combined_loss"][1] = 0.0
 
-        self.batch_data["sr_loss"][1] += loss["sr_loss"]
-        self.batch_data["task_loss"][1] += loss["task_loss"]
-        self.batch_data["combined_loss"][1] += loss["combined_loss"]
+        self.batch_data["sr_loss"][1] += loss["sr_loss"].item()
+        self.batch_data["task_loss"][1] += loss["task_loss"].item()
+        self.batch_data["combined_loss"][1] += loss["combined_loss"].item()
         self.epoch_data["correct"][1] += aux_pred.eq(data[1].view_as(aux_pred)).sum().item()
 
         return outputs, targets
@@ -375,7 +375,6 @@ class AuxiliaryTrainer(AbstractTrainer):
                 logger.info(f"Train scores, Test scores: {epoch_scores}")
 
                 # Regeneration (per epoch) step if specified in config
-                # XXX: Problem with regenerate; number of params to regenerate is incorrect (blows up)
                 if self.run_config["regenerate"]: self.wrapper.model.regenerate()
 
                 checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
