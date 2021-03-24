@@ -21,6 +21,9 @@ from optim.parameters import ModelParameters
 from ops.train import trainer
 from ops.tune import Tuner
 from ops.benchmark import Benchmarker
+import random
+import numpy as np
+import torch
 
 
 def main():
@@ -34,6 +37,13 @@ def main():
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
     logzero.loglevel(eval(config["logging"]))
     logger.info(f"Successfully retrieved config json. Running {config['run_name']} on {device}.")
+
+    #Set seeds
+    seed = config["seed"]
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
 
     ### Aux Data preprocessing ###
     datasets: Union[torch.utils.data.Dataset, List] = None
@@ -99,9 +109,12 @@ def main():
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
         dataloaders = MNISTSplit(config, datasets, param_data, device).partition()
-        if param_data is not None:
-            if len(datasets) < len(param_data): #if there's no enough MNIST data partition based on number of parameters
-                dataloaders = QuineSplit(config, param_data, device).partition()
+        if (param_data is not None) and (len(datasets) < len(param_data)): #if there's not enough MNIST data partition based on number of parameters
+            dataloaders = QuineSplit(config, datasets, param_data, device).partition()
+        #For a Vanilla Quine, force it to use Quine Split
+        if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
+            print("Using QuineSplit for Vanilla")
+            dataloaders = QuineSplit(config, datasets, param_data, device).partition()
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")
     logger.info(f"Successfully split dataset and parameters")

@@ -24,14 +24,20 @@ class ModelParameters(object):
         """
         self.config = config
         self.model = model
-        #self._params = model.parameters()  # Default to PyTorch's parameters
         self.num_params = self.model.num_params
         self.params = torch.tensor(list(range(self.num_params)), device=device) #indices of all params: [1, 2, ......, num_params - 1]
-        # logger.info("Model Structure: ")
-        # logger.info(self.model)
+        #if subset is specified, select only a small portion of model params
+        subset = config["data_config"]["subset"]
+        if isinstance(subset, int):
+            self.num_params = subset
+            self.params = torch.tensor(list(range(subset)), device=device) #indices of all params: [1, 2, ......, subset]
+            print("Param size: ", self.params.size())
+            print("Num params: ", self.num_params)
+
         self.device = device
 
     def to_onehot(self, idxs: torch.tensor):
+        print("to onehot: ", idxs)
         onehot = torch.zeros(self.num_params, device=self.device)
         onehot[idxs.item()] = 1
         # onehots = [torch.zeros(self.num_params, device=self.device)[idx.item()] for idx in idxs]  # Was testing different batch sizes
@@ -49,6 +55,12 @@ class ModelParameters(object):
         """
         return self.model.get_param(idx)
 
+    def __getitem__(self, idx):
+        """
+        For enumeration purposes
+        """
+        return self.params[idx]
+
     def __len__(self):
         """
         Gets the number of parameters in the model.
@@ -57,4 +69,3 @@ class ModelParameters(object):
             The number of parameters in the model (num_params).
         """
         return self.num_params
-
