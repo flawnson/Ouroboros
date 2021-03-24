@@ -362,12 +362,12 @@ class AuxiliaryTrainer(AbstractTrainer):
 
                 train_epoch_length = len(self.dataset[list(self.dataset)[0]])
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
-                    # logger.info(f"Running train batch: #{batch_idx}")
+                    logger.info(f"Running train batch: #{batch_idx}")
                     outputs, targets = self.train(data, param_idx, batch_idx)
 
                 test_epoch_length = len(self.dataset[list(self.dataset)[1]])
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
-                    # logger.info(f"Running test batch: #{batch_idx}")
+                    logger.info(f"Running test batch: #{batch_idx}")
                     outputs, targets = self.test(data, param_idx, batch_idx)
 
                 # Scores cumulated and calculated per epoch, as done in Quine
