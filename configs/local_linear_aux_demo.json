@@ -3,6 +3,7 @@
   "seed": 42,
   "run_type": "demo",
   "logging": "logging.INFO",
+  "clean_log_dir": true,
   "log_dir": "C:\\Users\\flawn\\Documents\\Projects\\Project Introversion\\Ouroboros\\logs",
   "device": "cpu",
   "data_config":

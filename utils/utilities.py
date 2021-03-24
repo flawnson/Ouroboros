@@ -72,7 +72,7 @@ def make_clean_directories(beta, root_folder, iteration):
         os.makedirs(data_dir)
     else:
         if len(os.listdir(data_dir)) > 0:
-            os.system("rm -r %s/*" % (data_dir))
+            os.system("rm -r %s/*" % data_dir)
 
     return data_dir
 
