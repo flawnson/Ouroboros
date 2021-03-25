@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 from models.standard.graph_model import GNNModel
 from models.standard.mlp_model import MLPModel
 from models.augmented.quine import Auxiliary, Vanilla
+from models.augmented.hypernetwork import MLPHyperNetwork, CNNHyperNetwork
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
@@ -83,12 +84,17 @@ def main():
         aug_model = Auxiliary(config, model, datasets, device).to(device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
         aug_model = Vanilla(config, model, device).to(device)
+    elif config["model_aug_config"]["model_augmentation"].casefold() == "hypernetwork":
+        if config["model_config"]["model_type"].casefold() == "linear":
+            aug_model = MLPHyperNetwork(config, model, device).to(device)
+        if config["model_config"]["model_type"].casefold() == "image":
+            aug_model = CNNHyperNetwork(config, model, device).to(device)
     else:
         raise NotImplementedError(f"{config['model_aug_config']['model_augmentation']} is not a model augmentation")
     logger.info(f"Successfully built the {config['model_aug_config']['model_augmentation']} augmentation")
 
     ### Param data preprocessing ###
-    param_data: Union[torch.utils.data.Dataset, List] = None
+    param_data: ModelParameters = None
     if config["model_aug_config"]["model_augmentation"].casefold() == "classical":
         pass
     elif config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
@@ -96,7 +102,7 @@ def main():
     elif config["model_aug_config"]["model_augmentation"].casefold() == "auxiliary":
         param_data = ModelParameters(config, aug_model, device)
     else:
-        raise NotImplementedError(f"{config['model_aug_config']['model_augmentation']} does not require param data")
+        logger.info(f"{config['model_aug_config']['model_augmentation']} does not require param data")
     logger.info(f"Successfully generated parameter data")
 
     ### Splitting dataset and parameters ###
@@ -109,11 +115,10 @@ def main():
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
         dataloaders = MNISTSplit(config, datasets, param_data, device).partition()
-        if (param_data is not None) and (len(datasets) < len(param_data)): #if there's not enough MNIST data partition based on number of parameters
-            dataloaders = QuineSplit(config, datasets, param_data, device).partition()
-        #For a Vanilla Quine, force it to use Quine Split
         if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
-            print("Using QuineSplit for Vanilla")
+            logger.info("Using QuineSplit for Vanilla")
+            dataloaders = QuineSplit(config, datasets, param_data, device).partition()
+        if (param_data is not None) and (len(datasets) < len(param_data)): #if there's not enough MNIST data partition based on number of parameters
             dataloaders = QuineSplit(config, datasets, param_data, device).partition()
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")
