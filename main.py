@@ -63,7 +63,7 @@ def main():
     ### Model preparation ###
     model: torch.nn.Module = None
     if config["model_config"]["model_type"].casefold() == "linear":
-        model = MLPModel(config, datasets, device).to(device)
+        model = MLPModel(config, device).to(device)
     elif config["model_config"]["model_type"].casefold() == "graph":
         model = GNNModel(config, datasets, device).to(device)
     elif config["model_config"]["model_type"].casefold() == "vision":

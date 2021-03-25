@@ -48,8 +48,7 @@ class MLPModel(AbstractMLPModel, ABC):
     # Provide pooling arguments as kwargs (only needed for GlobalAttentionPooling and Set2Set (forward parameters should
     # be provided in the forward function of the model)
     # TODO: implement and test pooling
-    def __init__(self, config: Dict, data: torch.tensor, device: torch.device, pooling: str = None, **kwargs):
-        self.data = data
+    def __init__(self, config: Dict, device: torch.device, pooling: str = None, **kwargs):
         self.model_config = config["model_config"]
         self.layer_sizes = [self.model_config["input_layer_size_2*model_aug_n_hidden"]] + \
                             self.model_config["layer_sizes"] + \

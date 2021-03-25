@@ -5,6 +5,8 @@ from typing import *
 from logzero import logger
 from abc import ABC, abstractmethod
 
+from models.standard.mlp_model import MLPModel
+
 
 class AbstractHyperNetwork(ABC, torch.nn.Module):
     def __init__(self, config, model, device):
@@ -34,14 +36,21 @@ class CNNHyperNetwork(AbstractHyperNetwork):
         self.hypernet = self.build_hypernetwork()
 
     def build_hypernetwork(self):
-        return torch.nn.Sequential()
+        """
+        Build and return an MLP as the HyperNetwork
+
+        Returns: Sequential object with MLP model
+
+        """
+        return torch.nn.Sequential(MLPModel(self.config, self.device).to(self.device))
 
     def forward(self, x):
-        h_in = torch.matmul(x, self.w2) + self.b2
-        h_in = h_in.view(self.in_size, self.z_dim)
-
-        h_final = torch.matmul(h_in, self.w1) + self.b1
-        kernel = h_final.view(self.out_size, self.in_size, self.f_size, self.f_size)
+        # h_in = torch.matmul(x, self.w2) + self.b2
+        # h_in = h_in.view(self.in_size, self.z_dim)
+        #
+        # h_final = torch.matmul(h_in, self.w1) + self.b1
+        # kernel = h_final.view(self.out_size, self.in_size, self.f_size, self.f_size)
+        kernel = self.hypernet(x)
         return kernel
 
 
