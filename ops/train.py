@@ -210,11 +210,11 @@ class VanillaTrainer(AbstractTrainer):
     def write(self, epoch: int, train_epoch_length: int, test_epoch_length: int):
 
         # Log values for training
-        actual_train_loss = self.epoch_data["sr_loss"][0].item() / (train_epoch_length // self.data_config["batch_size"])
+        actual_train_loss = self.epoch_data["sr_loss"][0] / (train_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('sr_loss (train)', actual_train_loss, epoch)
 
         # Log values for testing
-        actual_test_loss = self.epoch_data["sr_loss"][1].item() / (test_epoch_length // self.data_config["batch_size"])
+        actual_test_loss = self.epoch_data["sr_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('sr_loss (test)', actual_test_loss, epoch)
 
     @timed
@@ -339,17 +339,17 @@ class AuxiliaryTrainer(AbstractTrainer):
         logger.info(f"Scores: {scores}")
 
         # Log values for training
-        actual_sr_train_loss = self.epoch_data["sr_loss"][0].item() / (train_epoch_length // self.data_config["batch_size"])
-        actual_task_train_loss = self.epoch_data["task_loss"][0].item() / (train_epoch_length // self.data_config["batch_size"])
-        actual_combined_train_loss = self.epoch_data["combined_loss"][0].item() / (train_epoch_length // self.data_config["batch_size"])
+        actual_sr_train_loss = self.epoch_data["sr_loss"][0] / (train_epoch_length // self.data_config["batch_size"])
+        actual_task_train_loss = self.epoch_data["task_loss"][0] / (train_epoch_length // self.data_config["batch_size"])
+        actual_combined_train_loss = self.epoch_data["combined_loss"][0] / (train_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('sr_loss (train)', actual_sr_train_loss, epoch)
         self.tb_logger.scalar_summary('task_loss (train)', actual_task_train_loss, epoch)
         self.tb_logger.scalar_summary('combined_loss (train)', actual_combined_train_loss, epoch)
 
         # Log values for testing
-        actual_sr_test_loss = self.epoch_data["sr_loss"][1].item() / (train_epoch_length // self.data_config["batch_size"])
-        actual_task_test_loss = self.epoch_data["task_loss"][1].item() / (train_epoch_length // self.data_config["batch_size"])
-        actual_combined_test_loss = self.epoch_data["combined_loss"][1].item() / (train_epoch_length // self.data_config["batch_size"])
+        actual_sr_test_loss = self.epoch_data["sr_loss"][1] / (train_epoch_length // self.data_config["batch_size"])
+        actual_task_test_loss = self.epoch_data["task_loss"][1] / (train_epoch_length // self.data_config["batch_size"])
+        actual_combined_test_loss = self.epoch_data["combined_loss"][1] / (train_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('sr_loss (test)', actual_sr_test_loss, epoch)
         self.tb_logger.scalar_summary('task_loss (test)', actual_task_test_loss, epoch)
         self.tb_logger.scalar_summary('combined_loss (test)', actual_combined_test_loss, epoch)
