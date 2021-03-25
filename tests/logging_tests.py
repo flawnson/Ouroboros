@@ -10,7 +10,7 @@ import numpy as np
 from typing import *
 from logzero import logger
 from utils.utilities import timed
-from utils.logging import TBLogger
+from utils.logging import TFTBLogger
 
 ### Configuring ###
 
@@ -27,7 +27,7 @@ def config():
 
 
 def test_tb_logging(config):
-    tb_logger = TBLogger(os.path.join(config["log_dir"], config["run_name"]))
+    tb_logger = TFTBLogger(os.path.join(config["log_dir"], config["run_name"]))
     for idx in range(0, 100):
         tb_logger.scalar_summary('Some metric', np.random.randint(0, 1000), idx)
         tb_logger.scalar_summary('Some other metric', np.random.randint(0, 1000), idx)

@@ -18,7 +18,7 @@ from optim.losses import loss
 from optim.parameters import ModelParameters
 from utils.scores import scores
 from utils.checkpoint import checkpoint
-from utils.logging import TBLogger
+from utils.logging import TFTBLogger, PTTBLogger
 from utils.utilities import timed
 
 
@@ -30,7 +30,7 @@ class AbstractTrainer(ABC):
         self.model = model
         self.optimizer = OptimizerObj(config, model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-        self.tb_logger = TBLogger(config)
+        self.tb_logger = TFTBLogger(config)
         self.dataset = dataset
         self.device = device
 
@@ -91,7 +91,7 @@ class ClassicalTrainer(AbstractTrainer):
         self.model = model
         self.optimizer = OptimizerObj(config, self.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-        self.tb_logger = TBLogger(config)
+        self.tb_logger = TFTBLogger(config)
         self.dataset = dataset
         self.device = device
         self.batch_data = {"loss": [0, 0],
@@ -154,7 +154,7 @@ class VanillaTrainer(AbstractTrainer):
         self.wrapper = model_wrapper
         self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-        self.tb_logger = TBLogger(config)
+        self.tb_logger = TFTBLogger(config)
         self.dataset = dataset
         self.device = device
         self.batch_data = {"sr_loss": [0, 0]}  # First position for training scores, second position for test scores
@@ -255,7 +255,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.wrapper = model_wrapper
         self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-        self.tb_logger = TBLogger(config)
+        self.tb_logger = TFTBLogger(config)
         self.dataset = dataset
         self.device = device
         self.batch_data = {"sr_loss": [0, 0],

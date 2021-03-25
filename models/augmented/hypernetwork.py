@@ -45,6 +45,7 @@ class CNNHyperNetwork(AbstractHyperNetwork):
         return torch.nn.Sequential(MLPModel(self.config, self.device).to(self.device))
 
     def forward(self, x):
+        """Manually built in original implementation, attempting automatic build"""
         # h_in = torch.matmul(x, self.w2) + self.b2
         # h_in = h_in.view(self.in_size, self.z_dim)
         #
