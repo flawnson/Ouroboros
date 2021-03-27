@@ -34,6 +34,11 @@ class CNNHyperNetwork(AbstractHyperNetwork):
         self.model = model
         self.device = device
         self.hypernet = self.build_hypernetwork()
+        self.embedding = self.build_embedding()
+
+    def build_embedding(self):
+        layer_embeddings
+        return torch.nn.Embedding()
 
     def build_hypernetwork(self):
         """
@@ -51,7 +56,7 @@ class CNNHyperNetwork(AbstractHyperNetwork):
         #
         # h_final = torch.matmul(h_in, self.w1) + self.b1
         # kernel = h_final.view(self.out_size, self.in_size, self.f_size, self.f_size)
-        kernel = self.hypernet(x)
+        kernel = self.hypernet(self.embedding)
         return kernel
 
 

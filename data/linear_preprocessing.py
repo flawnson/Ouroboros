@@ -49,7 +49,6 @@ def get_aux_data(config: Dict) -> ConcatDataset:
 
     for x in [True, False]:
         if isinstance(subset, int):
-            print("Data Subset")
             to_concat.append(Subset(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform),
                                     subset_indices))
         else:
@@ -59,7 +58,6 @@ def get_aux_data(config: Dict) -> ConcatDataset:
     to_concat_targets = []
     for x in [True, False]:
         if isinstance(subset, int):
-            print("Data Subset Target")
             to_concat_targets.append(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform).targets[:subset])
         else:
             to_concat_targets.append(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform).targets)
