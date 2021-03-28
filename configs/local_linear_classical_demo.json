@@ -1,10 +1,10 @@
 {
-  "run_name": "Linear_MNST_auxiliary",
+  "run_name": "Linear_MNST_classical",
   "seed": 42,
   "run_type": "demo",
   "logging": "logging.INFO",
   "clean_log_dir": true,
-  "log_dir": "C:\\Users\\flawn\\Documents\\Projects\\Project_Introversion\\Ouroboros\\saves\\logs",
+  "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs",
   "device": "cpu",
   "data_config":
   {
@@ -15,7 +15,8 @@
     "split_type": "holdout",
     "num_splits": 5,
     "shuffle": true,
-    "batch_size": 1
+    "batch_size": 16,
+    "subset": 100
   },
   "model_config":
   {
