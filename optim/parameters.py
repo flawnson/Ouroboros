@@ -37,7 +37,6 @@ class ModelParameters(object):
         self.device = device
 
     def to_onehot(self, idxs: torch.tensor):
-        print("to onehot: ", idxs)
         onehot = torch.zeros(self.num_params, device=self.device)
         onehot[idxs.item()] = 1
         # onehots = [torch.zeros(self.num_params, device=self.device)[idx.item()] for idx in idxs]  # Was testing different batch sizes

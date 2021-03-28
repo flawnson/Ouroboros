@@ -77,7 +77,7 @@ class AbstractTrainer(ABC):
                 logger.info(test_scores)
 
                 checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
-                self.write(epoch, train_scores)
+                self.write(epoch)
 
 
 class ClassicalTrainer(AbstractTrainer):
