@@ -99,49 +99,100 @@ class ClassicalTrainer(AbstractTrainer):
         self.epoch_data = {"loss": [0, 0],
                            "correct": [0, 0]}  # First position for training scores, second position for test scores
 
-    def train(self, data, targets, batch_idx):
+    def train(self, data, batch_idx):
         self.model.train()
         self.optimizer.zero_grad()
 
-        logits = {"aux": self.model(data)}
+        logits = {"aux": self.model(data[0])}
         predictions = logits["aux"].argmax(keepdim=True)
-        loss = self.loss(logits, targets)
+        loss = self.loss(logits, data[1])
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
             loss["loss"].backward()
             self.optimizer.step()
-            self.epoch_data["loss"][0] = 0.0
+            self.epoch_data["loss"][0] += self.batch_data["loss"][0]
             self.batch_data["loss"][0] = 0.0
             self.optimizer.zero_grad()
 
-        self.epoch_data["correct"][0] += predictions.eq(targets.view_as(predictions)).sum().item()
+        self.epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
 
         self.batch_data["loss"][0] += loss["loss"].item()
-        return logits, targets
+        return logits, data[1]
 
     @torch.no_grad()
-    def test(self, data, targets, batch_idx):
+    def test(self, data, batch_idx):
         self.model.eval()
 
-        logits = {"aux": self.model(data)}
+        logits = {"aux": self.model(data[0])}
         predictions = logits["aux"].argmax(keepdim=True)
-        loss = self.loss(logits, targets)
+        loss = self.loss(logits, data[1])
 
         if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
-            self.epoch_data["loss"][1] = 0.0
+            self.epoch_data["loss"][1] += self.batch_data["loss"][1]
             self.batch_data["loss"][1] = 0.0
 
+        #logger.info(f"Data: {data}")
+
+        #self.epoch_data["correct"][1] += predictions.eq(data[1].view_as(predictions)).sum().item()
         self.batch_data["loss"][1] += loss["loss"].item()
-        return logits, targets
+        return logits, data[1]
 
     def loss(self, predictions, targets) -> Dict:
         return loss(self.config, self.model, predictions, targets)
 
-    def score(self, predictions, targets) -> Dict:
+    def score(self) -> Dict:
         return scores(self.config, self.dataset, self.epoch_data["correct"], self.device)
 
-    def write(self, epoch: int):
-        self.tb_logger.scalar_summary('Loss (train)', 0, epoch)
+    def write(self, epoch: int, epoch_scores: Dict, train_epoch_length: int, test_epoch_length: int):
+        logger.info(f"Epoch Scores: {epoch_scores}")
+        logger.info(f"Total Loss value: {self.epoch_data['loss'][0]}")
+        logger.info(f"Train epoch length: {train_epoch_length}")
+        logger.info(f"Test epoch length: {test_epoch_length}")
+        logger.info(f"Batch size: {self.data_config['batch_size']}")
+
+        # Log values for training
+        #PRINT STATEMENTS DON'T WORK???
+        print("Loss value: ", self.epoch_data["loss"][0])
+        print("Train epoch length: ", train_epoch_length)
+        print("Batch size: ", self.data_config["batch_size"])
+        train_loss = self.epoch_data["loss"][0] / (train_epoch_length // self.data_config["batch_size"])
+        self.tb_logger.scalar_summary('loss (train)', train_loss, epoch)
+
+        # Log values for testing
+        test_loss = self.epoch_data["loss"][1] / (test_epoch_length // self.data_config["batch_size"])
+        self.tb_logger.scalar_summary('loss (test)', test_loss, epoch)
+
+
+    @timed
+    def run_train(self):
+        if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
+            for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
+                logger.info(f"Epoch: {epoch}")
+
+                train_epoch_length = len(self.dataset[list(self.dataset)[0]])
+                for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]]):
+                    logger.info(f"Running train batch: #{batch_idx}")
+                    logits, targets = self.train(data, batch_idx)
+
+                # Scores cumulated and calculated per epoch, as done in Quine
+                # train_scores = self.score(logits, targets)
+                # logger.info(train_scores)
+
+                test_epoch_length = len(self.dataset[list(self.dataset)[1]])
+                for batch_idx, data in enumerate(self.dataset[list(self.dataset)[1]]):
+                    logger.info(f"Running test batch: #{batch_idx}")
+                    logits, targets = self.test(data, batch_idx)
+
+                # Scores cumulated and calculated per epoch, as done in Quine
+                # test_scores = self.score(logits, targets)
+                # logger.info(test_scores)
+
+                checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
+
+                #TODO: Train and Test scores logged separatedly or together???
+                #once per epoch
+                epoch_scores = self.score()
+                self.write(epoch, epoch_scores, train_epoch_length, test_epoch_length)
 
 
 class VanillaTrainer(AbstractTrainer):
@@ -347,9 +398,9 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('combined_loss (train)', actual_combined_train_loss, epoch)
 
         # Log values for testing
-        actual_sr_test_loss = self.epoch_data["sr_loss"][1] / (train_epoch_length // self.data_config["batch_size"])
-        actual_task_test_loss = self.epoch_data["task_loss"][1] / (train_epoch_length // self.data_config["batch_size"])
-        actual_combined_test_loss = self.epoch_data["combined_loss"][1] / (train_epoch_length // self.data_config["batch_size"])
+        actual_sr_test_loss = self.epoch_data["sr_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
+        actual_task_test_loss = self.epoch_data["task_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
+        actual_combined_test_loss = self.epoch_data["combined_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('sr_loss (test)', actual_sr_test_loss, epoch)
         self.tb_logger.scalar_summary('task_loss (test)', actual_task_test_loss, epoch)
         self.tb_logger.scalar_summary('combined_loss (test)', actual_combined_test_loss, epoch)
