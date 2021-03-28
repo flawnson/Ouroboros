@@ -255,7 +255,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.wrapper = model_wrapper
         self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-        self.tb_logger = TFTBLogger(config)
+        self.tb_logger = PTTBLogger(config)
         self.dataset = dataset
         self.device = device
         self.batch_data = {"sr_loss": [0, 0],
@@ -379,6 +379,83 @@ class AuxiliaryTrainer(AbstractTrainer):
 
                 checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
                 self.write(epoch, epoch_scores, train_epoch_length, test_epoch_length)
+
+
+class HypernetworkTrainer(AbstractTrainer):
+    def __init__(self, config, model, dataset, device):
+        super(HypernetworkTrainer, self).__init__(config, model, dataset, device)
+        self.config = config
+        self.model = model
+        self.dataset = dataset
+        self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
+        self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
+        self.tb_logger = PTTBLogger(config)
+        self.device = device
+
+    def train(self):
+        pass
+
+    def test(self):
+        pass
+
+    def loss(self):
+        pass
+
+    def score(self):
+        pass
+
+    def write(self):
+        pass
+
+    def run_train(self):
+        while total_iter < max_iter:
+            running_loss = 0.0
+            for i, data in enumerate(self.dataset, 0):
+
+                inputs, labels = data
+                inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+
+                self.optimizer.zero_grad()
+
+                outputs = self.model(inputs)
+                loss = loss(outputs, labels)
+                loss.backward()
+
+                self.optimizer.step()
+                self.scheduler.step()
+
+                running_loss += loss.data[0]
+                if i % print_freq == (print_freq - 1):
+                    print("[Epoch %d, Total Iterations %6d] Loss: %.4f" % (
+                    epochs + 1, total_iter + 1, running_loss / print_freq))
+                    running_loss = 0.0
+
+                total_iter += 1
+
+            epochs += 1
+
+            correct = 0.
+            total = 0.
+            for tdata in testloader:
+                timages, tlabels = tdata
+                toutputs = net(Variable(timages.cuda()))
+                _, predicted = torch.max(toutputs.cpu().data, 1)
+                total += tlabels.size(0)
+                correct += (predicted == tlabels).sum()
+
+            accuracy = (100. * correct) / total
+            print('After epoch %d, accuracy: %.4f %%' % (epochs, accuracy))
+
+            if accuracy > best_accuracy:
+                print('Saving model...')
+                state = {
+                    'net': net.state_dict(),
+                    'acc': accuracy
+                }
+                torch.save(state, './hypernetworks_cifar_paper.pth')
+                best_accuracy = accuracy
+
+        print('Finished Training')
 
 
 def trainer(config, model, param_data, dataloaders, device):

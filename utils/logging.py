@@ -8,6 +8,7 @@ import pathlib
 import tensorflow as tf
 
 from logzero import logger
+from torch.utils.tensorboard import SummaryWriter
 
 
 class TFTBLogger(object):
@@ -57,7 +58,7 @@ class PTTBLogger(object):
                 except Exception as e:
                     logger.info(e)
                     logger.info("Continuing run without deleting some files from log directory")
-        self.writer = torch.utils.tensorboard.SummaryWriter()
+        self.writer = SummaryWriter()  # For some reason I need to import it directly...
 
     def scalar_summary(self, tag, value, step):
         """Log a scalar variable."""

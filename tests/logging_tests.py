@@ -10,7 +10,7 @@ import numpy as np
 from typing import *
 from logzero import logger
 from utils.utilities import timed
-from utils.logging import TFTBLogger
+from utils.logging import TFTBLogger, PTTBLogger
 
 ### Configuring ###
 
@@ -35,4 +35,13 @@ def test_tb_logging(config):
     assert os.path.exists(config["log_dir"])
     assert len(os.listdir(config["log_dir"])) > 0
 
+
+def test_pt_logging(config):
+    pt_logger = PTTBLogger(os.path.join(config["log_dir"], config["run_name"]))
+    for idx in range(0, 100):
+        pt_logger.scalar_summary('Some metric', np.random.randint(0, 1000), idx)
+        pt_logger.scalar_summary('Some other metric', np.random.randint(0, 1000), idx)
+
+    assert os.path.exists(config["log_dir"])
+    assert len(os.listdir(config["log_dir"])) > 0
 
