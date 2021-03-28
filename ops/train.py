@@ -13,6 +13,7 @@ from torch.nn import Module
 
 from models.augmented.quine import Quine, Auxiliary, Vanilla
 from models.augmented.classical import Classical
+from models.augmented.hypernetwork import PrimaryNetwork
 from optim.algos import OptimizerObj, LRScheduler
 from optim.losses import loss
 from optim.parameters import ModelParameters
@@ -43,11 +44,9 @@ class AbstractTrainer(ABC):
     def test(self):
         pass
 
-    @abstractmethod
     def loss(self, predictions, targets):
         return loss(self.config, self.model, predictions, targets)
 
-    @abstractmethod
     def score(self, predictions, targets):
         return scores(self.config, predictions, targets, self.device)
 
@@ -347,9 +346,9 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('combined_loss (train)', actual_combined_train_loss, epoch)
 
         # Log values for testing
-        actual_sr_test_loss = self.epoch_data["sr_loss"][1] / (train_epoch_length // self.data_config["batch_size"])
-        actual_task_test_loss = self.epoch_data["task_loss"][1] / (train_epoch_length // self.data_config["batch_size"])
-        actual_combined_test_loss = self.epoch_data["combined_loss"][1] / (train_epoch_length // self.data_config["batch_size"])
+        actual_sr_test_loss = self.epoch_data["sr_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
+        actual_task_test_loss = self.epoch_data["task_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
+        actual_combined_test_loss = self.epoch_data["combined_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('sr_loss (test)', actual_sr_test_loss, epoch)
         self.tb_logger.scalar_summary('task_loss (test)', actual_task_test_loss, epoch)
         self.tb_logger.scalar_summary('combined_loss (test)', actual_combined_test_loss, epoch)
@@ -390,72 +389,52 @@ class HypernetworkTrainer(AbstractTrainer):
         self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = PTTBLogger(config)
+        self.epoch_data = {"running_loss": 0}
         self.device = device
 
-    def train(self):
-        pass
+    def train(self, data):
+        inputs, labels = data
+        inputs, labels = torch.autograd.Variable(inputs.cuda()), torch.autograd.Variable(labels.cuda())
+
+        self.optimizer.zero_grad()
+
+        outputs = self.model(inputs)
+        loss = self.loss(outputs, labels)
+        loss.backward()
+
+        self.optimizer.step()
+        self.scheduler.step()
+
+        self.epoch_data["running_loss"] += loss.data[0]
 
     def test(self):
         pass
 
-    def loss(self):
-        pass
-
     def score(self):
-        pass
+        return
 
     def write(self):
         pass
 
     def run_train(self):
-        while total_iter < max_iter:
-            running_loss = 0.0
-            for i, data in enumerate(self.dataset, 0):
+        if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
+            for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
+                for i, data in enumerate(self.dataset, 0):
+                    self.train(data)
 
-                inputs, labels = data
-                inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+                correct = 0.
+                total = 0.
+                for tdata in self.dataset:
+                    timages, tlabels = tdata
+                    toutputs = self.model(torch.autograd.Variable(timages.cuda()))
+                    _, predicted = torch.max(toutputs.cpu().data, 1)
+                    total += tlabels.size(0)
+                    correct += (predicted == tlabels).sum()
 
-                self.optimizer.zero_grad()
+                accuracy = (100. * correct) / total
+                print('After epoch %d, accuracy: %.4f %%' % (epoch, accuracy))
 
-                outputs = self.model(inputs)
-                loss = loss(outputs, labels)
-                loss.backward()
-
-                self.optimizer.step()
-                self.scheduler.step()
-
-                running_loss += loss.data[0]
-                if i % print_freq == (print_freq - 1):
-                    print("[Epoch %d, Total Iterations %6d] Loss: %.4f" % (
-                    epochs + 1, total_iter + 1, running_loss / print_freq))
-                    running_loss = 0.0
-
-                total_iter += 1
-
-            epochs += 1
-
-            correct = 0.
-            total = 0.
-            for tdata in testloader:
-                timages, tlabels = tdata
-                toutputs = net(Variable(timages.cuda()))
-                _, predicted = torch.max(toutputs.cpu().data, 1)
-                total += tlabels.size(0)
-                correct += (predicted == tlabels).sum()
-
-            accuracy = (100. * correct) / total
-            print('After epoch %d, accuracy: %.4f %%' % (epochs, accuracy))
-
-            if accuracy > best_accuracy:
-                print('Saving model...')
-                state = {
-                    'net': net.state_dict(),
-                    'acc': accuracy
-                }
-                torch.save(state, './hypernetworks_cifar_paper.pth')
-                best_accuracy = accuracy
-
-        print('Finished Training')
+            print('Finished Training')
 
 
 def trainer(config, model, param_data, dataloaders, device):
@@ -465,6 +444,8 @@ def trainer(config, model, param_data, dataloaders, device):
         return AuxiliaryTrainer(config, param_data, dataloaders, device).run_train()
     elif isinstance(model, Vanilla):
         return VanillaTrainer(config, param_data, dataloaders, device).run_train()
+    elif isinstance(model, PrimaryNetwork):
+        return HypernetworkTrainer(config, model, dataloaders, device).run_train()
     else:
         try:
             return AbstractTrainer(config, model, dataloaders, device).run_train()
