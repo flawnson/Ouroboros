@@ -414,6 +414,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('sr_loss (train)', actual_sr_train_loss, epoch)
         self.tb_logger.scalar_summary('task_loss (train)', actual_task_train_loss, epoch)
         self.tb_logger.scalar_summary('combined_loss (train)', actual_combined_train_loss, epoch)
+        self.tb_logger.scalar_summary('scores (train)', scores["acc"][0], epoch)
 
         # Log values for testing
         actual_sr_test_loss = self.epoch_data["sr_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
@@ -422,6 +423,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('sr_loss (test)', actual_sr_test_loss, epoch)
         self.tb_logger.scalar_summary('task_loss (test)', actual_task_test_loss, epoch)
         self.tb_logger.scalar_summary('combined_loss (test)', actual_combined_test_loss, epoch)
+        self.tb_logger.scalar_summary('scores (train)', scores["acc"][1], epoch)
 
     def reset(self):
         self.epoch_data["sr_loss"][0] = 0

@@ -31,7 +31,7 @@ def main():
     ### Configuring ###
     parser = argparse.ArgumentParser(description="Config file parser")
     parser.add_argument("-c", "--config", help="json config file", type=str)
-    parser.add_argument("-s", "--scheme", help="json scheme file", type=str)
+    parser.add_argument("-s", "--scheme", help="json schema file", type=str)
     args = parser.parse_args()
 
     config: Dict = json.load(open(args.config))
