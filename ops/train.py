@@ -55,29 +55,30 @@ class AbstractTrainer(ABC):
     def write(self, epoch: int):
         logger.info(f"Running epoch: #{epoch}")
 
+    @abstractmethod
+    def reset(self):
+        logger.info("States successfully reset for new epoch")
+
     @timed
     def run_train(self):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
+                for batch_idx, (principal_data, complimentary_data) in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    logits, targets = self.train(data, param_idx, batch_idx)
+                    logits, targets = self.train(principal_data, complimentary_data, batch_idx)
 
-                # Scores cumulated and calculated per epoch, as done in Quine
-                train_scores = self.score(logits, targets)
-                logger.info(train_scores)
-
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
+                for batch_idx, (principal_data, complimentary_data) in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    logits, targets = self.test(data, param_idx, batch_idx)
+                    logits, targets = self.test(principal_data, complimentary_data, batch_idx)
 
-                # Scores cumulated and calculated per epoch, as done in Quine
+                # Scores cumulated and calculated once per epoch, as done in Quine
                 test_scores = self.score(logits, targets)
                 logger.info(test_scores)
 
                 checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
                 self.write(epoch)
+                self.reset()
 
 
 class ClassicalTrainer(AbstractTrainer):
@@ -143,8 +144,9 @@ class ClassicalTrainer(AbstractTrainer):
     def score(self) -> Dict:
         return scores(self.config, self.dataset, self.epoch_data["correct"], self.device)
 
-    def write(self, epoch: int, epoch_scores: Dict, train_epoch_length: int, test_epoch_length: int):
-        logger.info(f"Epoch Scores: {epoch_scores}")
+    def write(self, epoch: int, scores: Dict, train_epoch_length: int, test_epoch_length: int):
+        logger.info(f"Train scores, Test scores: {scores}")
+
         logger.info(f"Total Loss value: {self.epoch_data['loss'][0]}")
         logger.info(f"Train epoch length: {train_epoch_length}")
         logger.info(f"Test epoch length: {test_epoch_length}")
@@ -162,6 +164,14 @@ class ClassicalTrainer(AbstractTrainer):
         test_loss = self.epoch_data["loss"][1] / (test_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('loss (test)', test_loss, epoch)
 
+    def reset(self):
+        self.epoch_data["loss"][0] = 0
+        self.epoch_data["correct"][0] = 0
+
+        self.epoch_data["loss"][1] = 0
+        self.epoch_data["correct"][1] = 0
+
+        logger.info("States successfully reset for new epoch")
 
     @timed
     def run_train(self):
@@ -193,6 +203,7 @@ class ClassicalTrainer(AbstractTrainer):
                 #once per epoch
                 epoch_scores = self.score()
                 self.write(epoch, epoch_scores, train_epoch_length, test_epoch_length)
+                self.reset()
 
 
 class VanillaTrainer(AbstractTrainer):
@@ -268,6 +279,13 @@ class VanillaTrainer(AbstractTrainer):
         actual_test_loss = self.epoch_data["sr_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('sr_loss (test)', actual_test_loss, epoch)
 
+    def reset(self):
+        self.epoch_data["sr_loss"][0] = 0
+
+        self.epoch_data["sr_loss"][1] = 0
+
+        logger.info("States successfully reset for new epoch")
+
     @timed
     def run_train(self):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
@@ -294,6 +312,7 @@ class VanillaTrainer(AbstractTrainer):
 
                 checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
                 self.write(epoch, train_epoch_length, test_epoch_length)
+                self.reset()
 
 
 class AuxiliaryTrainer(AbstractTrainer):
@@ -387,7 +406,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         return scores(self.config, self.dataset, self.epoch_data["correct"], self.device)
 
     def write(self, epoch: int, scores: Dict, train_epoch_length: int, test_epoch_length: int):
-        logger.info(f"Scores: {scores}")
+        logger.info(f"Train scores, Test scores: {scores}")
 
         # Log values for training
         actual_sr_train_loss = self.epoch_data["sr_loss"][0] / (train_epoch_length // self.data_config["batch_size"])
@@ -404,6 +423,19 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('sr_loss (test)', actual_sr_test_loss, epoch)
         self.tb_logger.scalar_summary('task_loss (test)', actual_task_test_loss, epoch)
         self.tb_logger.scalar_summary('combined_loss (test)', actual_combined_test_loss, epoch)
+
+    def reset(self):
+        self.epoch_data["sr_loss"][0] = 0
+        self.epoch_data["task_loss"][0] = 0
+        self.epoch_data["combined_loss"][0] = 0
+        self.epoch_data["correct"][0] = 0
+
+        self.epoch_data["sr_loss"][1] = 0
+        self.epoch_data["task_loss"][1] = 0
+        self.epoch_data["combined_loss"][1] = 0
+        self.epoch_data["correct"][1] = 0
+
+        logger.info("States successfully reset for new epoch")
 
     @timed
     def run_train(self):
@@ -423,13 +455,13 @@ class AuxiliaryTrainer(AbstractTrainer):
 
                 # Scores cumulated and calculated per epoch, as done in Quine
                 epoch_scores = self.score()
-                logger.info(f"Train scores, Test scores: {epoch_scores}")
 
                 # Regeneration (per epoch) step if specified in config
                 if self.run_config["regenerate"]: self.wrapper.model.regenerate()
 
                 checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
                 self.write(epoch, epoch_scores, train_epoch_length, test_epoch_length)
+                self.reset()
 
 
 def trainer(config, model, param_data, dataloaders, device):

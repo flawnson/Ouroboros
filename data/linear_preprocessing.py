@@ -39,7 +39,7 @@ def get_aux_data(config: Dict) -> ConcatDataset:
     logger.info(f"Downloading MNIST data to {config['data_config']['data_dir']}")
     transform = tv.transforms.Compose([tv.transforms.ToTensor()])
 
-    #If specified, select only a subset for faster running
+    #If specified, select only a subset for faster running (TAKES DOUBLE THE NUMBER IN CONFIG)
     subset = config["data_config"]["subset"]
     subset_indices = []
     if isinstance(subset, int):
