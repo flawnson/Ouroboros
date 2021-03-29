@@ -5,6 +5,9 @@ import torch
 import json
 import dgl
 
+import torch
+import random
+import numpy as np
 from typing import *
 from logzero import logger
 from torch.utils.data import DataLoader
@@ -12,19 +15,16 @@ from torch.utils.data import DataLoader
 from models.standard.graph_model import GNNModel
 from models.standard.mlp_model import MLPModel
 from models.augmented.quine import Auxiliary, Vanilla
-from models.augmented.hypernetwork import MLPHyperNetwork, CNNHyperNetwork
+from models.augmented.hypernetwork import MLPHyperNetwork, CNNHyperNetwork, PrimaryNetwork
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
-from data.linear_preprocessing import HousingDataset, get_aux_data
+from data.linear_preprocessing import HousingDataset, get_data
 from utils.holdout import MNISTSplit, QuineSplit
 from optim.parameters import ModelParameters
 from ops.train import trainer
 from ops.tune import Tuner
 from ops.benchmark import Benchmarker
-import random
-import numpy as np
-import torch
 
 
 def main():
@@ -38,6 +38,7 @@ def main():
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
     logzero.loglevel(eval(config["logging"]))
     logger.info(f"Successfully retrieved config json. Running {config['run_name']} on {device}.")
+    logger.info(f"Using PyTorch version: {torch.__version__}")
 
     #Set seeds
     seed = config["seed"]
@@ -55,7 +56,9 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         datasets = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        datasets = get_aux_data(config)
+        datasets = get_data(config)
+    elif config["data_config"]["dataset"].casefold() == "cifar":
+        datasets = get_data(config)
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")
     logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
@@ -69,6 +72,8 @@ def main():
     elif config["model_config"]["model_type"].casefold() == "vision":
         pass
     elif config["model_config"]["model_type"].casefold() == "language":
+        pass
+    elif config["model_config"]["model_type"].casefold() == "hypernetwork":
         pass
     else:
         raise NotImplementedError(f"{config['model_config']['model_type']} is not a model type")
@@ -85,6 +90,8 @@ def main():
     elif config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
         aug_model = Vanilla(config, model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "hypernetwork":
+        if config["model_config"]["model_type"].casefold() == "hypernetwork":
+            aug_model = PrimaryNetwork().to(device)
         if config["model_config"]["model_type"].casefold() == "linear":
             aug_model = MLPHyperNetwork(config, model, device).to(device)
         if config["model_config"]["model_type"].casefold() == "image":
@@ -120,6 +127,8 @@ def main():
             dataloaders = QuineSplit(config, datasets, param_data, device).partition()
         if (param_data is not None) and (len(datasets) < len(param_data)): #if there's not enough MNIST data partition based on number of parameters
             dataloaders = QuineSplit(config, datasets, param_data, device).partition()
+    elif config["data_config"]["dataset"].casefold() == "cifar":
+        dataloaders = datasets
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")
     logger.info(f"Successfully split dataset and parameters")

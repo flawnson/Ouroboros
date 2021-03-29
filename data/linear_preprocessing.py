@@ -25,7 +25,7 @@ class HousingDataset(Dataset):
         return None
 
 
-def get_aux_data(config: Dict) -> ConcatDataset:
+def get_data(config: Dict) -> ConcatDataset:
     """
     Load torchvision data, both training and tuning, and return a concatenated Dataset object.
     Splitting occurs further downstream (in holdout class methods)
