@@ -471,7 +471,7 @@ class HypernetworkTrainer(AbstractTrainer):
         self.config = config
         self.model = model
         self.dataset = dataset
-        self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
+        self.optimizer = OptimizerObj(config, self.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = PTTBLogger(config)
         self.epoch_data = {"running_loss": 0}
@@ -479,7 +479,7 @@ class HypernetworkTrainer(AbstractTrainer):
 
     def train(self, data):
         inputs, labels = data
-        inputs, labels = torch.autograd.Variable(inputs.cuda()), torch.autograd.Variable(labels.cuda())
+        inputs, labels = torch.autograd.Variable(inputs.to(self.device)), torch.autograd.Variable(labels.to(self.device))
 
         self.optimizer.zero_grad()
 
@@ -501,18 +501,21 @@ class HypernetworkTrainer(AbstractTrainer):
     def write(self):
         pass
 
+    def reset(self):
+        pass
+
     def run_train(self):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
-                for i, data in enumerate(self.dataset, 0):
+                for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]]):
                     self.train(data)
 
                 correct = 0.
                 total = 0.
                 for tdata in self.dataset:
                     timages, tlabels = tdata
-                    toutputs = self.model(torch.autograd.Variable(timages.cuda()))
-                    _, predicted = torch.max(toutputs.cpu().data, 1)
+                    toutputs = self.model(torch.autograd.Variable(timages.to(device)))
+                    _, predicted = torch.max(toutputs.to(device).data, 1)
                     total += tlabels.size(0)
                     correct += (predicted == tlabels).sum()
 

@@ -1,16 +1,16 @@
 {
-  "run_name": "Linear_MNST_auxiliary",
+  "run_name": "Linear_CIFAR_hypernetwork",
   "seed": 42,
   "run_type": "demo",
   "logging": "logging.INFO",
   "clean_log_dir": true,
-  "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs",
+  "log_dir": "saves\\logs",
   "device": "cpu",
   "data_config":
   {
-    "dataset": "mnist",
+    "dataset": "cifar",
     "concat": true,
-    "data_dir": "data/datafiles/mnist",
+    "data_dir": "data/datafiles/cifar",
     "data_path": "data/datafiles/housing_prices/train.csv",
     "split_type": "holdout",
     "num_splits": 5,
@@ -20,7 +20,7 @@
   },
   "model_config":
   {
-    "model_type": "linear",
+    "model_type": "hypernetwork",
     "dropout": 0.50,
     "input_layer_size_2*model_aug_n_hidden": 80,
     "layer_sizes": [40],
@@ -28,14 +28,14 @@
   },
   "model_aug_config":
   {
-    "model_augmentation": "auxiliary",
+    "model_augmentation": "hypernetwork",
     "n_inputs": 2,
     "n_hidden": 40,
     "reduction_method": "random"
   },
   "optim_config":
   {
-    "loss_func": "nll_loss",
+    "loss_func": "cross_entropy",
     "loss_kwargs": {},
     "optimizer": "adam",
     "optim_kwargs": {},
@@ -53,7 +53,7 @@
     "regenerate": true
   },
   "score_config": {
-      "acc": null
+    "acc": null
   },
   "tuning_config": {
 

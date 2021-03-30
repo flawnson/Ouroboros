@@ -10,6 +10,7 @@ from torch.nn.functional import nll_loss, l1_loss, mse_loss, cross_entropy, bina
 from models.augmented.quine import Quine, Vanilla, Auxiliary
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
+from models.augmented.hypernetwork import PrimaryNetwork
 
 
 class QuineLoss:
@@ -60,5 +61,9 @@ def loss(config: Dict, model: torch.nn.Module, logits, targets) -> Union[Dict, f
                     "combined_loss": quine_loss.combined_loss()}
     elif isinstance(model, Ouroboros):
         pass
+    elif type(model) == PrimaryNetwork:
+        return {"loss": eval(optim_config["loss_func"])(logits.unsqueeze(dim=0),
+                                                        targets,
+                                                        **optim_config["loss_kwargs"])}
     else:
         raise NotImplementedError("The specified loss is not implemented for this class")
