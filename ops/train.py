@@ -469,28 +469,35 @@ class HypernetworkTrainer(AbstractTrainer):
     def __init__(self, config, model, dataset, device):
         super(HypernetworkTrainer, self).__init__(config, model, dataset, device)
         self.config = config
+        self.data_config = config["data_config"]
         self.model = model
         self.dataset = dataset
         self.optimizer = OptimizerObj(config, self.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = PTTBLogger(config)
-        self.epoch_data = {"running_loss": 0}
+        self.batch_data = {"running_loss": [0, 0]}
+        self.epoch_data = {"running_loss": [0, 0]}
         self.device = device
 
-    def train(self, data):
+    def train(self, data, batch_idx):
         inputs, labels = data
         inputs, labels = torch.autograd.Variable(inputs.to(self.device)), torch.autograd.Variable(labels.to(self.device))
 
-        self.optimizer.zero_grad()
-
         outputs = self.model(inputs)
         loss = self.loss(outputs, labels)
-        loss.backward()
 
-        self.optimizer.step()
-        self.scheduler.step()
+        if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
+            loss["loss"].backward()
+            self.optimizer.step()
+            self.scheduler.step()
+            self.epoch_data["running_loss"][0] += loss["loss"]
 
-        self.epoch_data["running_loss"] += loss.data[0]
+            self.batch_data["running_loss"][0] = 0.0
+            self.optimizer.zero_grad()
+
+            self.epoch_data["running_loss"][1] += self.batch_data["running_loss"][1]  # accumulate for epoch
+
+        self.batch_data["running_loss"][0] += loss["loss"]
 
     def test(self):
         pass
@@ -507,15 +514,18 @@ class HypernetworkTrainer(AbstractTrainer):
     def run_train(self):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
+                logger.info(f"Epoch: {epoch}")
+
                 for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]]):
-                    self.train(data)
+                    logger.info(f"Running train batch: #{batch_idx}")
+                    self.train(data, batch_idx)
 
                 correct = 0.
                 total = 0.
                 for tdata in self.dataset:
                     timages, tlabels = tdata
-                    toutputs = self.model(torch.autograd.Variable(timages.to(device)))
-                    _, predicted = torch.max(toutputs.to(device).data, 1)
+                    toutputs = self.model(torch.autograd.Variable(timages.to(self.device)))
+                    _, predicted = torch.max(toutputs.to(self.device).data, 1)
                     total += tlabels.size(0)
                     correct += (predicted == tlabels).sum()
 

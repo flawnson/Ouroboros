@@ -49,8 +49,8 @@ def loss(config: Dict, model: torch.nn.Module, logits, targets) -> Union[Dict, f
     optim_config = config["optim_config"]
     if type(model) == Classical:
         return {"loss": eval(optim_config["loss_func"])(logits["aux"].unsqueeze(dim=0),
-                                                         targets,
-                                                         **optim_config["loss_kwargs"])}
+                                                        targets,
+                                                        **optim_config["loss_kwargs"])}
     if isinstance(model, Quine):
         quine_loss = QuineLoss(config, logits, targets)
         if type(model) is Vanilla:
@@ -62,8 +62,6 @@ def loss(config: Dict, model: torch.nn.Module, logits, targets) -> Union[Dict, f
     elif isinstance(model, Ouroboros):
         pass
     elif type(model) == PrimaryNetwork:
-        return {"loss": eval(optim_config["loss_func"])(logits.unsqueeze(dim=0),
-                                                        targets,
-                                                        **optim_config["loss_kwargs"])}
+        return {"loss": eval(optim_config["loss_func"])(logits, targets, **optim_config["loss_kwargs"])}
     else:
         raise NotImplementedError("The specified loss is not implemented for this class")

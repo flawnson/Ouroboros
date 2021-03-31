@@ -35,6 +35,7 @@
   },
   "optim_config":
   {
+    "output_size": 10,
     "loss_func": "cross_entropy",
     "loss_kwargs": {},
     "optimizer": "adam",
