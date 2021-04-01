@@ -21,6 +21,7 @@ from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset, get_data
 from utils.holdout import MNISTSplit, QuineSplit
+from utils.checkpoint import load
 from optim.parameters import ModelParameters
 from ops.train import trainer
 from ops.tune import Tuner
@@ -75,6 +76,8 @@ def main():
         pass
     elif config["model_config"]["model_type"].casefold() == "hypernetwork":
         pass
+    elif config["model_config"]["load_dir"]:
+        model = load(config["model_config"]["load_model"])
     else:
         raise NotImplementedError(f"{config['model_config']['model_type']} is not a model type")
     logger.info(f"Successfully built the {config['model_config']['model_type']} model type")

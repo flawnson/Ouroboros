@@ -20,6 +20,7 @@
   },
   "model_config":
   {
+    "model_dir": null,
     "model_type": "hypernetwork",
     "dropout": 0.50,
     "input_layer_size_2*model_aug_n_hidden": 80,
