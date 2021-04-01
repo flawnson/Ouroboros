@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from sklearn.metrics import f1_score, precision_score, recall_score, jaccard_score, confusion_matrix
 
 
-class MNISTScores:
+class GeneralScores:
     def __init__(self, config: Dict, dataset, correct, device: torch.device):
         self.score_config = config["score_config"]
         self.dataset = dataset
@@ -115,11 +115,11 @@ def scores(config: Dict, dataset, correct, device: torch.device) -> Dict:
         Score object corresponding to the type of data (which then returns a dictionary of scores)
 
     """
-    if config["data_config"]["dataset"] == "mnist":
-        return MNISTScores(config, dataset, correct, device).get_scores()
-    elif config["data_config"]["dataset"] == "cora":
+    if config["data_config"]["dataset"].casefold() == "mnist" or "cifar" or "cifar10":
+        return GeneralScores(config, dataset, correct, device).get_scores()
+    elif config["data_config"]["dataset"].casefold() == "cora":
         return GraphScores(config, dataset, correct, device).get_scores()
     else:
-        raise NotImplementedError(f"{config['data_config']['dataset']} is not a model type")
+        raise NotImplementedError(f"{config['data_config']['dataset']} is not a data type")
 
 

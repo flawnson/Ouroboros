@@ -74,18 +74,18 @@ class MLPHyperNetwork(AbstractHyperNetwork):
 
 class HyperNetwork(torch.nn.Module):
 
-    def __init__(self, f_size = 3, z_dim = 64, out_size=16, in_size=16):
+    def __init__(self, f_size = 3, z_dim = 64, out_size=16, in_size=16, device="cpu"):
         super(HyperNetwork, self).__init__()
         self.z_dim = z_dim
         self.f_size = f_size
         self.out_size = out_size
         self.in_size = in_size
 
-        self.w1 = torch.nn.Parameter(torch.fmod(torch.randn((self.z_dim, self.out_size*self.f_size*self.f_size)).cuda(),2))
-        self.b1 = torch.nn.Parameter(torch.fmod(torch.randn((self.out_size*self.f_size*self.f_size)).cuda(),2))
+        self.w1 = torch.nn.Parameter(torch.fmod(torch.randn((self.z_dim, self.out_size*self.f_size*self.f_size)).to(device),2))
+        self.b1 = torch.nn.Parameter(torch.fmod(torch.randn((self.out_size*self.f_size*self.f_size)).to(device),2))
 
-        self.w2 = torch.nn.Parameter(torch.fmod(torch.randn((self.z_dim, self.in_size*self.z_dim)).cuda(),2))
-        self.b2 = torch.nn.Parameter(torch.fmod(torch.randn((self.in_size*self.z_dim)).cuda(),2))
+        self.w2 = torch.nn.Parameter(torch.fmod(torch.randn((self.z_dim, self.in_size*self.z_dim)).to(device),2))
+        self.b2 = torch.nn.Parameter(torch.fmod(torch.randn((self.in_size*self.z_dim)).to(device),2))
 
     def forward(self, z):
 
@@ -135,7 +135,7 @@ class ResNetBlock(torch.nn.Module):
 
 class Embedding(torch.nn.Module):
 
-    def __init__(self, z_num, z_dim):
+    def __init__(self, z_num, z_dim, device):
         super(Embedding, self).__init__()
 
         self.z_list = torch.nn.ParameterList()
@@ -146,7 +146,7 @@ class Embedding(torch.nn.Module):
 
         for i in range(h):
             for j in range(k):
-                self.z_list.append(torch.nn.Parameter(torch.fmod(torch.randn(self.z_dim).cuda(), 2)))
+                self.z_list.append(torch.nn.Parameter(torch.fmod(torch.randn(self.z_dim).to(device), 2)))
 
     def forward(self, hyper_net):
         ww = []
@@ -161,13 +161,13 @@ class Embedding(torch.nn.Module):
 
 class PrimaryNetwork(torch.nn.Module):
 
-    def __init__(self, z_dim=64):
+    def __init__(self, z_dim=64, device="cpu"):
         super(PrimaryNetwork, self).__init__()
         self.conv1 = torch.nn.Conv2d(3, 16, 3, padding=1)
         self.bn1 = torch.nn.BatchNorm2d(16)
 
         self.z_dim = z_dim
-        self.hope = HyperNetwork(z_dim=self.z_dim)
+        self.hope = HyperNetwork(z_dim=self.z_dim, device=device)
 
         self.zs_size = [[1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1],
                         [2, 1], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2],
@@ -187,7 +187,7 @@ class PrimaryNetwork(torch.nn.Module):
         self.zs = torch.nn.ModuleList()
 
         for i in range(36):
-            self.zs.append(Embedding(self.zs_size[i], self.z_dim))
+            self.zs.append(Embedding(self.zs_size[i], self.z_dim, device))
 
         self.global_avg = torch.nn.AvgPool2d(8)
         self.final = torch.nn.Linear(64,10)

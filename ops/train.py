@@ -469,57 +469,86 @@ class HypernetworkTrainer(AbstractTrainer):
     def __init__(self, config, model, dataset, device):
         super(HypernetworkTrainer, self).__init__(config, model, dataset, device)
         self.config = config
+        self.data_config = config["data_config"]
         self.model = model
         self.dataset = dataset
-        self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
+        self.optimizer = OptimizerObj(config, self.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = PTTBLogger(config)
-        self.epoch_data = {"running_loss": 0}
+        self.batch_data = {"running_loss": [0, 0],
+                           "correct": [0, 0]}
+        self.epoch_data = {"running_loss": [0, 0],
+                           "correct": [0, 0],}
         self.device = device
 
-    def train(self, data):
+    def train(self, data, batch_idx):
         inputs, labels = data
-        inputs, labels = torch.autograd.Variable(inputs.cuda()), torch.autograd.Variable(labels.cuda())
-
-        self.optimizer.zero_grad()
+        inputs, labels = torch.autograd.Variable(inputs.to(self.device)), torch.autograd.Variable(labels.to(self.device))
 
         outputs = self.model(inputs)
         loss = self.loss(outputs, labels)
-        loss.backward()
 
-        self.optimizer.step()
-        self.scheduler.step()
+        if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
+            loss["loss"].backward()
+            self.optimizer.step()
+            self.scheduler.step()
+            self.epoch_data["running_loss"][0] += loss["loss"]
 
-        self.epoch_data["running_loss"] += loss.data[0]
+            self.batch_data["running_loss"][0] = 0.0
+            self.optimizer.zero_grad()
 
-    def test(self):
-        pass
+            self.epoch_data["running_loss"][1] += self.batch_data["running_loss"][1]  # accumulate for epoch
+
+        self.batch_data["running_loss"][0] += loss["loss"]
+
+    def test(self, data, batch_idx):
+        total = 0
+        images, labels = data
+        outputs = self.model(torch.autograd.Variable(images.to(self.device)))
+        _, predicted = torch.max(outputs.to(self.device).data, 1)
+        total += labels.size(0)
+        self.batch_data["correct"][1] += (predicted == labels).sum()
+        # self.epoch_data["accuracy"][1] = (100. * self.batch_data["correct"][1]) / total
 
     def score(self):
-        return
+        return scores(self.config, self.dataset, self.epoch_data["correct"], self.device)
 
-    def write(self):
-        pass
+    def write(self, epoch, epoch_scores):
+        logger.info(f"Total Loss value: {epoch_scores['acc'][0]}")
+        logger.info(f"Total Loss value: {self.epoch_data['running_loss'][0]}")
+
+        self.tb_logger.scalar_summary('accuracy (train)', epoch_scores["acc"][0], epoch)
+        self.tb_logger.scalar_summary('loss (train)', self.epoch_data["running_loss"][0], epoch)
+
+        self.tb_logger.scalar_summary('accuracy (train)', epoch_scores["acc"][1], epoch)
+        self.tb_logger.scalar_summary('loss (train)', self.epoch_data["running_loss"][1], epoch)
+
+    def reset(self):
+        self.epoch_data["running_loss"][0] = 0
+        self.epoch_data["correct"][0] = 0
+
+        self.epoch_data["running_loss"][1] = 0
+        self.epoch_data["correct"][1] = 0
 
     def run_train(self):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
-                for i, data in enumerate(self.dataset, 0):
-                    self.train(data)
+                logger.info(f"Epoch: {epoch}")
 
-                correct = 0.
-                total = 0.
-                for tdata in self.dataset:
-                    timages, tlabels = tdata
-                    toutputs = self.model(torch.autograd.Variable(timages.cuda()))
-                    _, predicted = torch.max(toutputs.cpu().data, 1)
-                    total += tlabels.size(0)
-                    correct += (predicted == tlabels).sum()
+                for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]]):
+                    logger.info(f"Running train batch: #{batch_idx}")
+                    self.train(data, batch_idx)
 
-                accuracy = (100. * correct) / total
-                print('After epoch %d, accuracy: %.4f %%' % (epoch, accuracy))
+                for batch_idx, data in enumerate(self.dataset[list(self.dataset)[1]]):
+                    logger.info(f"Running test batch: #{batch_idx}")
+                    self.test(data, batch_idx)
 
-            print('Finished Training')
+                # Scores cumulated and calculated per epoch, as done in Quine
+                epoch_scores = self.score()
+
+                checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
+                self.write(epoch, epoch_scores)
+                self.reset()
 
 
 def trainer(config, model, param_data, dataloaders, device):

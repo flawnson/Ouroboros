@@ -36,39 +36,55 @@ def get_data(config: Dict) -> ConcatDataset:
     Returns:
         torch.utils.data.Datasets
     """
-    logger.info(f"Downloading MNIST data to {config['data_config']['data_dir']}")
+    logger.info(f"Downloading {config['data_config']['dataset']} data to {config['data_config']['data_dir']}")
     transform = tv.transforms.Compose([tv.transforms.ToTensor()])
 
     #If specified, select only a subset for faster running (TAKES DOUBLE THE NUMBER IN CONFIG)
     subset = config["data_config"].get("subset", None)
-    subset_indices = []
     if isinstance(subset, int):
         subset_indices = list(range(subset))
         logger.info(f"Using a subset of the dataset sized: {subset}")
+    else:
+        subset_indices = []
+
+    if config["data_config"]["dataset"].casefold() == "mnist":
+        tv_dataset = tv.datasets.MNIST
+    elif config["data_config"]["dataset"].casefold() == "cifar":
+        tv_dataset = tv.datasets.CIFAR10
+    else:
+        raise NotImplementedError(f"{config['dataset']} is not a dataset")
 
     to_concat = []
-
     for x in [True, False]:
         if isinstance(subset, int):
-            to_concat.append(Subset(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform),
+            to_concat.append(Subset(tv_dataset(os.path.join(config['data_config']['data_dir']),
+                                               train=x,
+                                               download=True,
+                                               transform=transform),
                                     subset_indices))
         else:
-            to_concat.append(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform))
+            to_concat.append(tv_dataset(os.path.join(config['data_config']['data_dir']),
+                                        train=x,
+                                        download=True,
+                                        transform=transform))
     dataset = ConcatDataset(to_concat)
 
     to_concat_targets = []
     for x in [True, False]:
         if isinstance(subset, int):
-            to_concat_targets.append(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform).targets[:subset])
+            to_concat_targets.append(tv_dataset(os.path.join(config['data_config']['data_dir']),
+                                                train=x,
+                                                download=True,
+                                                transform=transform).targets[:subset])
         else:
-            to_concat_targets.append(tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']), train=x, download=True, transform=transform).targets)
+            to_concat_targets.append(tv_dataset(os.path.join(config['data_config']['data_dir']),
+                                                train=x,
+                                                download=True,
+                                                transform=transform).targets)
+
+    # In case targets are not a tensor (like in CIFAR10)
+    to_concat_targets = [torch.tensor(x) for x in to_concat_targets]
+
     dataset.targets = torch.cat(to_concat_targets)
-    # dataset = ConcatDataset([tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']),
-    #                          train=x,
-    #                          download=True,
-    #                          transform=transform) for x in [True, False]])
-    # dataset.targets = torch.cat([tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']),
-    #                              train=x,
-    #                              download=True,
-    #                              transform=transform).targets for x in [True, False]])
+
     return dataset

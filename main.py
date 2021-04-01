@@ -57,7 +57,7 @@ def main():
         datasets = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
     elif config["data_config"]["dataset"].casefold() == "mnist":
         datasets = get_data(config)
-    elif config["data_config"]["dataset"].casefold() == "cifar":
+    elif config["data_config"]["dataset"].casefold() == "cifar" or "cifar10":
         datasets = get_data(config)
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")
@@ -91,7 +91,7 @@ def main():
         aug_model = Vanilla(config, model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "hypernetwork":
         if config["model_config"]["model_type"].casefold() == "hypernetwork":
-            aug_model = PrimaryNetwork().to(device)
+            aug_model = PrimaryNetwork(device=device).to(device)
         if config["model_config"]["model_type"].casefold() == "linear":
             aug_model = MLPHyperNetwork(config, model, device).to(device)
         if config["model_config"]["model_type"].casefold() == "image":
@@ -128,7 +128,7 @@ def main():
         if (param_data is not None) and (len(datasets) < len(param_data)): #if there's not enough MNIST data partition based on number of parameters
             dataloaders = QuineSplit(config, datasets, param_data, device).partition()
     elif config["data_config"]["dataset"].casefold() == "cifar":
-        dataloaders = datasets
+        dataloaders = MNISTSplit(config, datasets, param_data, device).partition()  # MNIST split appears to work fine with CIFAR
     else:
         raise NotImplementedError(f"{config['dataset']} is not a valid split")
     logger.info(f"Successfully split dataset and parameters")
