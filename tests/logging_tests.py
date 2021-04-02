@@ -27,7 +27,7 @@ def config():
 
 
 def test_tb_logging(config):
-    tb_logger = TFTBLogger(os.path.join(config["log_dir"], config["run_name"]))
+    tb_logger = TFTBLogger(config)
     for idx in range(0, 100):
         tb_logger.scalar_summary('Some metric', np.random.randint(0, 1000), idx)
         tb_logger.scalar_summary('Some other metric', np.random.randint(0, 1000), idx)
@@ -37,7 +37,7 @@ def test_tb_logging(config):
 
 
 def test_pt_logging(config):
-    pt_logger = PTTBLogger(os.path.join(config["log_dir"], config["run_name"]))
+    pt_logger = PTTBLogger(config)
     for idx in range(0, 100):
         pt_logger.scalar_summary('Some metric', np.random.randint(0, 1000), idx)
         pt_logger.scalar_summary('Some other metric', np.random.randint(0, 1000), idx)
