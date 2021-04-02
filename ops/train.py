@@ -12,14 +12,15 @@ from torch.utils.data import DataLoader
 from torch.nn import Module
 
 from models.augmented.quine import Quine, Auxiliary, Vanilla
+from models.augmented.ouroboros import Godel
 from models.augmented.classical import Classical
-from models.augmented.hypernetwork import PrimaryNetwork, DualHyperNetwork
+from models.augmented.hypernetwork import PrimaryNetwork
 from optim.algos import OptimizerObj, LRScheduler
 from optim.losses import loss
 from optim.parameters import ModelParameters
 from utils.scores import scores
 from utils.checkpoint import checkpoint
-from utils.logging import TFTBLogger, PTTBLogger
+from utils.logging import PTTBLogger
 from utils.utilities import timed
 
 
@@ -31,7 +32,7 @@ class AbstractTrainer(ABC):
         self.model = model
         self.optimizer = OptimizerObj(config, model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-        self.tb_logger = TFTBLogger(config)
+        self.tb_logger = PTTBLogger(config)
         self.dataset = dataset
         self.device = device
 
@@ -91,7 +92,7 @@ class ClassicalTrainer(AbstractTrainer):
         self.model = model
         self.optimizer = OptimizerObj(config, self.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-        self.tb_logger = TFTBLogger(config)
+        self.tb_logger = PTTBLogger(config)
         self.dataset = dataset
         self.device = device
         self.batch_data = {"loss": [0, 0],
@@ -163,6 +164,8 @@ class ClassicalTrainer(AbstractTrainer):
         test_loss = self.epoch_data["loss"][1] / (test_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('loss (test)', test_loss, epoch)
 
+        logger.info("Successfully wrote logs to tensorboard")
+
     def reset(self):
         self.epoch_data["loss"][0] = 0
         self.epoch_data["correct"][0] = 0
@@ -215,7 +218,7 @@ class VanillaTrainer(AbstractTrainer):
         self.wrapper = model_wrapper
         self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
-        self.tb_logger = TFTBLogger(config)
+        self.tb_logger = PTTBLogger(config)
         self.dataset = dataset
         self.device = device
         self.batch_data = {"sr_loss": [0, 0]}  # First position for training scores, second position for test scores
@@ -277,6 +280,8 @@ class VanillaTrainer(AbstractTrainer):
         # Log values for testing
         actual_test_loss = self.epoch_data["sr_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('sr_loss (test)', actual_test_loss, epoch)
+
+        logger.info("Successfully wrote logs to tensorboard")
 
     def reset(self):
         self.epoch_data["sr_loss"][0] = 0
@@ -425,6 +430,8 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('combined_loss (test)', actual_combined_test_loss, epoch)
         self.tb_logger.scalar_summary('scores (train)', scores["acc"][1], epoch)
 
+        logger.info("Successfully wrote logs to tensorboard")
+
     def reset(self):
         self.epoch_data["sr_loss"][0] = 0
         self.epoch_data["task_loss"][0] = 0
@@ -523,12 +530,16 @@ class HyperNetworkTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('accuracy (train)', epoch_scores["acc"][1], epoch)
         self.tb_logger.scalar_summary('loss (train)', self.epoch_data["running_loss"][1], epoch)
 
+        logger.info("Successfully wrote logs to tensorboard")
+
     def reset(self):
         self.epoch_data["running_loss"][0] = 0
         self.epoch_data["correct"][0] = 0
 
         self.epoch_data["running_loss"][1] = 0
         self.epoch_data["correct"][1] = 0
+
+        logger.info("States successfully reset for new epoch")
 
     def run_train(self):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
@@ -646,7 +657,7 @@ def trainer(config: Dict, model: torch.nn.Module, param_data: torch.nn.Module, d
         return VanillaTrainer(config, param_data, dataloaders, device).run_train()
     elif isinstance(model, PrimaryNetwork):
         return HyperNetworkTrainer(config, model, dataloaders, device).run_train()
-    elif isinstance(model, DualHyperNetwork):
+    elif isinstance(model, Godel):
         return DualHyperNetworkTrainer(config, model, dataloaders, device).run_train()
     else:
         try:
