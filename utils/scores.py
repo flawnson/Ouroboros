@@ -15,11 +15,14 @@ class GeneralScores:
         self.correct = correct
         self.device = device
 
-    def relative_error(self):
-        # x = predicted param
-        # y = actual param
-        # return abs(x - y) / max(abs(x), abs(y))
-        pass
+    @staticmethod
+    def calculate_relative_difference(x, y):
+        return abs(x - y) / max(abs(x), abs(y))
+
+    def relative_difference(self) -> float:
+        rel_diff = self.calculate_relative_difference(self.predictions["param"].item(), self.targets["param"].item())
+
+        return rel_diff
 
     def accuracy(self):
         """ Loops over each set correct number to calculate accuracy"""

@@ -20,16 +20,7 @@ class QuineLoss:
         self.predictions = predictions
         self.targets = targets
 
-    @staticmethod
-    def calculate_relative_difference(x, y):
-        return abs(x-y)/max(abs(x), abs(y))
-
-    def relative_difference(self) -> float:
-        rel_diff = relative_difference(self.predictions["param"].item(), self.targets["param"].item())
-        return rel_diff
-
     def sr_loss(self) -> float:
-
         loss_sr = (torch.linalg.norm(self.predictions["param"] - self.targets["param"], ord=2)) ** 2
 
         return loss_sr
