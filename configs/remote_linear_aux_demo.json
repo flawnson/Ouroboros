@@ -4,7 +4,7 @@
   "run_type": "demo",
   "logging": "logging.INFO",
   "clean_log_dir": true,
-  "log_dir": "/datadrive/covert/Ouroboros/saves/logs/",
+  "log_dir": "/datadrive/covert/Ouroboros/saves/logs/auxiliary",
   "device": "gpu",
   "data_config":
   {

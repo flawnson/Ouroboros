@@ -18,7 +18,7 @@ class TFTBLogger(object):
         """Create a summary writer logging to log_dir."""
         self.config = config
         self.log_dir = os.path.join(config["log_dir"],
-                                    datetime.date.today().strftime('%d_%m_%Y') + "_TB_" + config["run_name"])
+                                    "_TB_" + config["run_name"] + datetime.date.today().strftime('%d_%m_%Y'))
         pathlib.Path(self.log_dir).mkdir(parents=True, exist_ok=True)
         if config["clean_log_dir"] and len(os.listdir(self.log_dir)) > 0:  # Clears dir of old event files if True
             for f in os.listdir(self.log_dir):
@@ -51,7 +51,7 @@ class PTTBLogger(object):
         """Create a summary writer logging to log_dir."""
         self.config = config
         self.log_dir = os.path.join(config["log_dir"],
-                                    datetime.date.today().strftime('%d_%m_%Y') + "_TB_" + config["run_name"])
+                                    "_TB_" + config["run_name"] + datetime.date.today().strftime('%d_%m_%Y'))
         pathlib.Path(self.log_dir).mkdir(parents=True, exist_ok=True)
         if config["clean_log_dir"] and len(os.listdir(self.log_dir)) > 0:  # Clears dir of old event files if True
             for f in os.listdir(self.log_dir):

@@ -4,7 +4,7 @@
   "run_type": "demo",
   "logging": "logging.INFO",
   "clean_log_dir": true,
-  "log_dir": "C:\\Users\\flawn\\Documents\\Projects\\Project_Introversion\\Ouroboros\\saves\\logs\\auxiliary",
+  "log_dir": "C:\\Users\\flawn\\Documents\\Projects\\Project_Introversion\\Ouroboros\\saves\\logs\\classical",
   "device": "cpu",
   "data_config":
   {
