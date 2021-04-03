@@ -4,7 +4,7 @@
   "run_type": "demo",
   "logging": "logging.INFO",
   "clean_log_dir": true,
-  "log_dir": "saves/logs",
+  "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs",
   "device": "cpu",
   "data_config":
   {
