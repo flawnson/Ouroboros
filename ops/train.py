@@ -159,10 +159,12 @@ class ClassicalTrainer(AbstractTrainer):
         print("Batch size: ", self.data_config["batch_size"])
         train_loss = self.epoch_data["loss"][0] / (train_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('loss (train)', train_loss, epoch)
+        self.tb_logger.scalar_summary('scores (train)', scores["acc"][0], epoch)
 
         # Log values for testing
         test_loss = self.epoch_data["loss"][1] / (test_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('loss (test)', test_loss, epoch)
+        self.tb_logger.scalar_summary('scores (test)', scores["acc"][1], epoch)
 
         logger.info("Successfully wrote logs to tensorboard")
 
@@ -428,7 +430,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('sr_loss (test)', actual_sr_test_loss, epoch)
         self.tb_logger.scalar_summary('task_loss (test)', actual_task_test_loss, epoch)
         self.tb_logger.scalar_summary('combined_loss (test)', actual_combined_test_loss, epoch)
-        self.tb_logger.scalar_summary('scores (train)', scores["acc"][1], epoch)
+        self.tb_logger.scalar_summary('scores (test)', scores["acc"][1], epoch)
 
         logger.info("Successfully wrote logs to tensorboard")
 
