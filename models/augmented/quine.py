@@ -128,7 +128,6 @@ class Vanilla(Quine, torch.nn.Module):
         The regenerate, implemented by following the original Quine paper.
         Model parameters are kept in self.param_list and used for training and inference
         Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter.
-        # TODO: Regenerate takes way too long on cpu; refactor to make faster
         """
         params_data = torch.eye(self.num_params, device=self.device)
         index_list = list(range(self.num_params))
@@ -215,7 +214,6 @@ class Auxiliary(Vanilla, torch.nn.Module):
         The regenerate, implemented by following the original Quine paper.
         Model parameters are kept in self.param_list and used for training and inference
         Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter.
-        # TODO: Regenerate takes way too long on cpu; refactor to make faster
         """
         params_data = torch.eye(self.num_params, device=self.device)
         index_list = list(range(self.num_params))
@@ -230,3 +228,15 @@ class Auxiliary(Vanilla, torch.nn.Module):
                 new_params[coo[0]][coo[1]][coo[2]] = predicted_param
                 self.param_list = new_params
         logger.info(f"Successfully regenerated weights")
+
+    def multiregenerate(self):
+        """
+        Regenerate, inspired by hypernetworks and quines.
+        This method is meant to regenerate entire layers or models at a time rather than individual weights.
+        """
+        pass
+
+
+
+
+

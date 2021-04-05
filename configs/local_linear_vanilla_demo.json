@@ -21,7 +21,13 @@
   "model_config":
   {
     "model_dir": null,
-    "model_type": "linear",
+    "model_type": "hypernetwork",
+    "pooling": null,
+    "pooling_params": null,
+    "normalize": "torch.nn.functional.layer_norm",
+    "normalize_params": {
+      "normalized_shape": [40]
+    },
     "dropout": 0.50,
     "input_layer_size_2*model_aug_n_hidden": 40,
     "layer_sizes": [40],
