@@ -5,7 +5,7 @@
   "logging": "logging.INFO",
   "clean_log_dir": true,
   "log_dir": "/datadrive/covert/Ouroboros/saves/logs/classical",
-  "device": "cpu",
+  "device": "gpu",
   "data_config":
   {
     "dataset": "mnist",
@@ -16,7 +16,7 @@
     "num_splits": 5,
     "shuffle": true,
     "batch_size": 16,
-    "subset": 100
+    "subset": null
   },
   "model_config":
   {

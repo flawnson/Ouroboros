@@ -4,7 +4,7 @@
   "run_type": "demo",
   "logging": "logging.INFO",
   "clean_log_dir": true,
-  "log_dir": "saves/logs",
+  "log_dir": "saves/logs/hypernetwork",
   "device": "cpu",
   "data_config":
   {
