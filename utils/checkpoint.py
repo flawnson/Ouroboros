@@ -29,7 +29,7 @@ def checkpoint(config: Dict, epoch: int, model: torch.nn.Module, loss: float, op
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': loss,
-            }, osp.join(config["run_config"]['checkpoint_dir'],
+            }, osp.join(config["run_config"].get(['checkpoint_dir'], osp.join("saves", "checkpoints")),
                         f"{config['run_name']}_{config['model_config']['model_type']}_{config['run_type']}_{config['data_config']['dataset']}_epoch_{str(epoch)}.pt"))
             logging.info(f"Successfully saved model checkpoint at epoch{epoch}. File saved at {config['run_config']['checkpoint_dir']}")
         except:
