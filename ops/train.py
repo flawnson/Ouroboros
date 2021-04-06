@@ -132,9 +132,7 @@ class ClassicalTrainer(AbstractTrainer):
             self.epoch_data["loss"][1] += self.batch_data["loss"][1]
             self.batch_data["loss"][1] = 0.0
 
-        #logger.info(f"Data: {data}")
-
-        #self.epoch_data["correct"][1] += predictions.eq(data[1].view_as(predictions)).sum().item()
+        self.epoch_data["correct"][1] += predictions.eq(data[1].view_as(predictions)).sum().item()
         self.batch_data["loss"][1] += loss["loss"].item()
         return logits, data[1]
 
@@ -159,10 +157,12 @@ class ClassicalTrainer(AbstractTrainer):
         print("Batch size: ", self.data_config["batch_size"])
         train_loss = self.epoch_data["loss"][0] / (train_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('loss (train)', train_loss, epoch)
+        self.tb_logger.scalar_summary('scores (train)', scores["acc"][0], epoch)
 
         # Log values for testing
         test_loss = self.epoch_data["loss"][1] / (test_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('loss (test)', test_loss, epoch)
+        self.tb_logger.scalar_summary('scores (test)', scores["acc"][1], epoch)
 
         logger.info("Successfully wrote logs to tensorboard")
 
@@ -186,30 +186,19 @@ class ClassicalTrainer(AbstractTrainer):
                     logger.info(f"Running train batch: #{batch_idx}")
                     logits, targets = self.train(data, batch_idx)
 
-                # Scores cumulated and calculated per epoch, as done in Quine
-                # train_scores = self.score(logits, targets)
-                # logger.info(train_scores)
-
                 test_epoch_length = len(self.dataset[list(self.dataset)[1]])
                 for batch_idx, data in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
                     logits, targets = self.test(data, batch_idx)
 
-                # Scores cumulated and calculated per epoch, as done in Quine
-                # test_scores = self.score(logits, targets)
-                # logger.info(test_scores)
-
                 checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
 
-                #TODO: Train and Test scores logged separatedly or together???
-                #once per epoch
                 epoch_scores = self.score()
                 self.write(epoch, epoch_scores, train_epoch_length, test_epoch_length)
                 self.reset()
 
 
 class VanillaTrainer(AbstractTrainer):
-    # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
     def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict[str, DataLoader], device: torch.device):
         super(VanillaTrainer, self).__init__(config, model_wrapper.model, dataset, device)
         self.config = config
@@ -428,7 +417,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('sr_loss (test)', actual_sr_test_loss, epoch)
         self.tb_logger.scalar_summary('task_loss (test)', actual_task_test_loss, epoch)
         self.tb_logger.scalar_summary('combined_loss (test)', actual_combined_test_loss, epoch)
-        self.tb_logger.scalar_summary('scores (train)', scores["acc"][1], epoch)
+        self.tb_logger.scalar_summary('scores (test)', scores["acc"][1], epoch)
 
         logger.info("Successfully wrote logs to tensorboard")
 
@@ -524,11 +513,11 @@ class HyperNetworkTrainer(AbstractTrainer):
         logger.info(f"Total Loss value: {epoch_scores['acc'][0]}")
         logger.info(f"Total Loss value: {self.epoch_data['running_loss'][0]}")
 
-        self.tb_logger.scalar_summary('accuracy (train)', epoch_scores["acc"][0], epoch)
         self.tb_logger.scalar_summary('loss (train)', self.epoch_data["running_loss"][0], epoch)
+        self.tb_logger.scalar_summary('accuracy (train)', epoch_scores["acc"][0], epoch)
 
-        self.tb_logger.scalar_summary('accuracy (train)', epoch_scores["acc"][1], epoch)
-        self.tb_logger.scalar_summary('loss (train)', self.epoch_data["running_loss"][1], epoch)
+        self.tb_logger.scalar_summary('loss (test)', self.epoch_data["running_loss"][1], epoch)
+        self.tb_logger.scalar_summary('accuracy (test)', epoch_scores["acc"][1], epoch)
 
         logger.info("Successfully wrote logs to tensorboard")
 

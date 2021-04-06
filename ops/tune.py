@@ -17,6 +17,7 @@ except ModuleNotFoundError:
 
 
 class Tuner(AbstractTrainer):
+    # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
     def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], device: torch.device):
         super(Tuner, self).__init__(config, model, dataset, device)
         self.tuning_config = config["tuning_config"]

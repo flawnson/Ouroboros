@@ -5,7 +5,7 @@
   "logging": "logging.INFO",
   "clean_log_dir": true,
   "log_dir": "/datadrive/covert/Ouroboros/saves/logs/classical",
-  "device": "cpu",
+  "device": "gpu",
   "data_config":
   {
     "dataset": "mnist",
@@ -16,12 +16,17 @@
     "num_splits": 5,
     "shuffle": true,
     "batch_size": 16,
-    "subset": 100
+    "subset": null
   },
   "model_config":
   {
     "model_dir": null,
     "model_type": "linear",
+    "pooling_params": null,
+    "normalize": "torch.nn.functional.layer_norm",
+    "normalize_params": {
+      "normalized_shape": [40]
+    },
     "dropout": 0.50,
     "input_layer_size_2*model_aug_n_hidden": 40,
     "layer_sizes": [40],
