@@ -30,7 +30,7 @@
     },
     "dropout": 0.50,
     "input_layer_size_2*model_aug_n_hidden": 40,
-    "layer_sizes": [40],
+    "layer_sizes": [80, 40, 40],
     "output_layer_size_model_aug_n_hidden": 40
   },
   "model_aug_config":

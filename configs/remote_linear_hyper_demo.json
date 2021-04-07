@@ -20,18 +20,16 @@
   },
   "model_config":
   {
+    "model_dir": null,
     "model_type": "hypernetwork",
     "dropout": 0.50,
-    "input_layer_size_2*model_aug_n_hidden": 80,
-    "layer_sizes": [40],
-    "output_layer_size_model_aug_n_hidden": 40
+    "layer_sizes": [40]
   },
   "model_aug_config":
   {
     "model_augmentation": "hypernetwork",
     "n_inputs": 2,
-    "n_hidden": 40,
-    "reduction_method": "random"
+    "n_hidden": 40
   },
   "optim_config":
   {
@@ -50,7 +48,6 @@
     "num_epochs": 1000,
     "checkpoint_intervals": 100,
     "checkpoint_dir": "saves/checkpoints/",
-    "lambda": 0.01,
     "regenerate": true
   },
   "score_config": {

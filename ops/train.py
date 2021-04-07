@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 from torch.utils.data import DataLoader
 from torch.nn import Module
 
+from models.standard.mlp_model import MLPModel
 from models.augmented.quine import Quine, Auxiliary, Vanilla
 from models.augmented.ouroboros import Godel
 from models.augmented.classical import Classical
@@ -638,7 +639,7 @@ class DualHyperNetworkTrainer(AbstractTrainer):
 
 
 def trainer(config: Dict, model: torch.nn.Module, param_data: torch.nn.Module, dataloaders: List[torch.utils.data.DataLoader], device: torch.device):
-    if isinstance(model, Classical):
+    if isinstance(model, (Classical, MLPModel)):
         return ClassicalTrainer(config, model, dataloaders, device).run_train()
     elif isinstance(model, Auxiliary):
         return AuxiliaryTrainer(config, param_data, dataloaders, device).run_train()

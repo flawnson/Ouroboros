@@ -2,7 +2,6 @@
 logs/
 output/
 *.sh
-datafiles/mnist/
 *.csv
 *.ipynb
 *.pkl
@@ -10,6 +9,10 @@ datafiles/mnist/
 *.gz
 *.v2
 *.pyc
+datafiles/mnist/
+datafiles/cifar/
+saves/
+runs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -38,6 +38,8 @@
     "model_augmentation": "auxiliary",
     "n_inputs": 2,
     "n_hidden": 40,
+    "van_outputs": 1,
+    "aux_outputs": 10,
     "reduction_method": "random"
   },
   "optim_config":
