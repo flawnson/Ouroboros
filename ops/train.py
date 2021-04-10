@@ -105,8 +105,8 @@ class ClassicalTrainer(AbstractTrainer):
         self.model.train()
         self.optimizer.zero_grad()
 
-        logits = {"aux": self.model(data[0])}
-        predictions = logits["aux"].argmax(keepdim=True)
+        logits = self.model(data[0])
+        predictions = logits.argmax(keepdim=True)
         loss = self.loss(logits, data[1])
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
@@ -125,8 +125,8 @@ class ClassicalTrainer(AbstractTrainer):
     def test(self, data, batch_idx):
         self.model.eval()
 
-        logits = {"aux": self.model(data[0])}
-        predictions = logits["aux"].argmax(keepdim=True)
+        logits = self.model(data[0])
+        predictions = logits.argmax(keepdim=True)
         loss = self.loss(logits, data[1])
 
         if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
