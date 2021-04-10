@@ -20,7 +20,14 @@
   },
   "model_config":
   {
+    "model_dir": null,
     "model_type": "hypernetwork",
+    "pooling": null,
+    "pooling_params": null,
+    "normalize": "torch.nn.functional.layer_norm",
+    "normalize_params": {
+      "normalized_shape": [40]
+    },
     "dropout": 0.50,
     "input_layer_size_2*model_aug_n_hidden": 80,
     "layer_sizes": [40],
@@ -49,9 +56,7 @@
   {
     "num_epochs": 1000,
     "checkpoint_intervals": 100,
-    "checkpoint_dir": "saves/checkpoints/",
-    "lambda": 0.01,
-    "regenerate": true
+    "checkpoint_dir": "saves/checkpoints/hypernetwork/"
   },
   "score_config": {
     "acc": null

@@ -3,7 +3,6 @@ Logging class/functions, inspired/copied from:
 https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/04-utils/tensorboard/logger.py
 """
 import os
-import torch
 import pathlib
 import datetime
 import tensorflow as tf

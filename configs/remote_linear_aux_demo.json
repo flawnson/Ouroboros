@@ -4,7 +4,7 @@
   "run_type": "demo",
   "logging": "logging.INFO",
   "clean_log_dir": true,
-  "log_dir": "/datadrive/covert/Ouroboros/saves/logs/auxiliary",
+  "log_dir": "saves/logs/auxiliary",
   "device": "gpu",
   "data_config":
   {
@@ -53,7 +53,7 @@
   {
     "num_epochs": 1000,
     "checkpoint_intervals": 100,
-    "checkpoint_dir": "saves/checkpoints/",
+    "checkpoint_dir": "saves/checkpoints/auxiliary/",
     "lambda": 0.01,
     "regenerate": true
   },
