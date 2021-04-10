@@ -4,7 +4,7 @@
   "run_type": "demo",
   "logging": "logging.INFO",
   "clean_log_dir": true,
-  "log_dir": "C:\\Users\\flawn\\Documents\\Projects\\Project_Introversion\\Ouroboros\\saves\\logs\\classical",
+  "log_dir": "/saves/logs/classical",
   "device": "cpu",
   "data_config":
   {
@@ -53,9 +53,7 @@
   {
     "num_epochs": 1000,
     "checkpoint_intervals": 100,
-    "checkpoint_dir": "saves/checkpoints/",
-    "lambda": 0.01,
-    "regenerate": true
+    "checkpoint_dir": "saves/checkpoints/classical/"
   },
   "score_config": {
       "acc": null

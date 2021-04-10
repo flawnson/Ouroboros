@@ -21,7 +21,7 @@
   "model_config":
   {
     "model_dir": null,
-    "model_type": "hypernetwork",
+    "model_type": "linear",
     "pooling": null,
     "pooling_params": null,
     "normalize": "torch.nn.functional.layer_norm",
@@ -55,7 +55,7 @@
   {
     "num_epochs": 1000,
     "checkpoint_intervals": 100,
-    "checkpoint_dir": "saves/checkpoints/",
+    "checkpoint_dir": "saves/checkpoints/vanilla/",
     "lambda": 0.01,
     "regenerate": false
   },

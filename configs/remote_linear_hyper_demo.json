@@ -20,16 +20,11 @@
   },
   "model_config":
   {
-    "model_dir": null,
-    "model_type": "hypernetwork",
-    "dropout": 0.50,
-    "layer_sizes": [40]
+    "model_type": "hypernetwork"
   },
   "model_aug_config":
   {
-    "model_augmentation": "hypernetwork",
-    "n_inputs": 2,
-    "n_hidden": 40
+    "model_augmentation": "hypernetwork"
   },
   "optim_config":
   {
@@ -47,7 +42,7 @@
   {
     "num_epochs": 1000,
     "checkpoint_intervals": 100,
-    "checkpoint_dir": "saves/checkpoints/",
+    "checkpoint_dir": "saves/checkpoints/hypernetwork/",
     "regenerate": true
   },
   "score_config": {
