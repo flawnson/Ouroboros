@@ -52,7 +52,7 @@ class Classical(Quine, torch.nn.Module):
 
     def forward(self, x: torch.tensor, y=None) -> torch.tensor:
         x = x.reshape(-1)  # Flatten MNIST input in place
-        x = self.classical_input()(x)
+        # x = self.classical_input()(x)
         x = self.model(x)
         x = self.classical_output()(x)
 
