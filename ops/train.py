@@ -117,7 +117,6 @@ class ClassicalTrainer(AbstractTrainer):
             self.optimizer.zero_grad()
 
         self.epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
-
         self.batch_data["loss"][0] += loss["loss"].item()
         return logits, data[1]
 
