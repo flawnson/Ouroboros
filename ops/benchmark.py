@@ -3,11 +3,10 @@ import torch
 from torch.nn import Module
 from torch.utils.data import DataLoader
 
-from ops.train import AuxiliaryTrainer
+from ops.trainers.trainer import AuxiliaryTrainer
 from ops.tune import Tuner
 
 from typing import *
-from logzero import logger
 
 
 class Benchmarker:

@@ -1,7 +1,6 @@
 import argparse
-import logging
 import logzero
-import torch
+import logging
 import json
 import dgl
 
@@ -23,7 +22,7 @@ from data.linear_preprocessing import HousingDataset, get_data
 from utils.holdout import MNISTSplit, QuineSplit
 from utils.checkpoint import load
 from optim.parameters import ModelParameters
-from ops.train import trainer
+from ops.trainers.trainer import trainer
 from ops.tune import Tuner
 from ops.benchmark import Benchmarker
 

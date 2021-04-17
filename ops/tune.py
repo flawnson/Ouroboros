@@ -6,7 +6,7 @@ from typing import *
 from logzero import logger
 from torch.utils.data import DataLoader
 
-from ops.train import AbstractTrainer
+from ops.trainers.trainer import AbstractTrainer
 from torch.nn import Module
 
 try:
