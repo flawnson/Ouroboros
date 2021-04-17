@@ -56,4 +56,9 @@ def loss(config: Dict, model: torch.nn.Module, logits, targets) -> Union[Dict, f
     elif type(model) == PrimaryNetwork:
         return {"loss": eval(optim_config["loss_func"])(logits, targets, **optim_config["loss_kwargs"])}
     else:
-        raise NotImplementedError("The specified loss is not implemented for this class")
+        try:
+            return {"loss": eval(optim_config["loss_func"])(logits.unsqueeze(dim=0),
+                                                            targets,
+                                                            **optim_config["loss_kwargs"])}
+        except Exception:
+            raise NotImplementedError("The specified loss is not implemented for this class")

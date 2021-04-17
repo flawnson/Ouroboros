@@ -7,8 +7,10 @@ import torch.nn.functional as F
 
 from typing import *
 from logzero import logger
+from optim.losses import loss as loss_fun
 from data.linear_preprocessing import get_data
 from optim.algos import OptimizerObj, LRScheduler
+from utils.holdout import MNISTSplit
 
 
 class Model(torch.nn.Module):
@@ -54,22 +56,21 @@ def run():
 
     model = Model(config, device)
     datasets = get_data(config)
+    dataloaders = MNISTSplit(config, datasets, None, device).partition()  # MNIST split appears to work fine with CIFAR
     optimizer = OptimizerObj(config, model).optim_obj
     scheduler = LRScheduler(config, optimizer).schedule_obj
 
-    epoch_data = {"loss": [0, 0]}
-    for epoch in config["run_config"]["num_epochs"]:
+    epoch_data = {"loss": [0, 0], "correct": [0, 0]}
+    for epoch in range(config["run_config"]["num_epochs"]):
         batch_data = {"loss": [0, 0]}
-        for batch_idx, data in enumerate(datasets[list(datasets)[0]]):
+        for batch_idx, data in enumerate(dataloaders[list(dataloaders)[0]]):
             logger.info(f"Running train batch: #{batch_idx}")
-
-            model(data)
             model.train()
             optimizer.zero_grad()
 
-            logits = model(data[0])
+            logits = model(torch.flatten(data[0]))
             predictions = logits.argmax(keepdim=True)
-            loss = loss(logits, data[1])
+            loss = loss_fun(config, model, logits, data[1])
 
             if ((batch_idx + 1) % config["data_config"]["batch_size"]) == 0:
                 loss["loss"].backward()
@@ -81,15 +82,14 @@ def run():
             epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
             batch_data["loss"][0] += loss["loss"].item()
 
-        for batch_idx, data in enumerate(datasets[list(datasets)[0]]):
-            logger.info(f"Running train batch: #{batch_idx}")
+        for batch_idx, data in enumerate(dataloaders[list(dataloaders)[1]]):
+            logger.info(f"Running test batch: #{batch_idx}")
 
-            model(data)
             model.eval()
 
-            logits = model(data[0])
+            logits = model(torch.flatten(data[0]))
             predictions = logits.argmax(keepdim=True)
-            loss = loss(logits, data[1])
+            loss = loss_fun(config, model, logits, data[1])
 
             if ((batch_idx + 1) % config["data_config"]["batch_size"]) == 0:
                 loss["loss"].backward()
@@ -109,3 +109,6 @@ def run():
 
 if __name__ == "__main__":
     run()
+
+
+
