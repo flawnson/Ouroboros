@@ -180,7 +180,7 @@ class PrimaryNetwork(torch.nn.Module):
 
         for i in range(18):
             down_sample = False
-            if i > 5 and i % 6 == 0:
+            if i > 5 and i % 6 == 0:  # Downsampling to different output size as per the ResNet specification
                 down_sample = True
             self.res_net.append(ResNetBlock(self.filter_size[i][0], self.filter_size[i][1], downsample=down_sample))
 
@@ -197,7 +197,8 @@ class PrimaryNetwork(torch.nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
 
         for i in range(18):
-            # if i != 15 and i != 17:
+            # The HyperNetwork output (kernel) gets passed into the Embedding layer
+            # The Embedding layer aggregates the kernels and outputs the weights for the resnet layer
             w1 = self.zs[2*i](self.hope)
             w2 = self.zs[2*i+1](self.hope)
             x = self.res_net[i](x, w1, w2)

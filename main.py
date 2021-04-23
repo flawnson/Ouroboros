@@ -1,7 +1,6 @@
 import argparse
-import logging
 import logzero
-import torch
+import logging
 import json
 import dgl
 
@@ -23,7 +22,7 @@ from data.linear_preprocessing import HousingDataset, get_data
 from utils.holdout import MNISTSplit, QuineSplit
 from utils.checkpoint import load
 from optim.parameters import ModelParameters
-from ops.train import trainer
+from ops.trainers.trainer import trainer
 from ops.tune import Tuner
 from ops.benchmark import Benchmarker
 
@@ -86,6 +85,7 @@ def main():
     aug_model: torch.nn.Module = None
     if config["model_aug_config"]["model_augmentation"].casefold() == "classical":
         aug_model = Classical(config, model, datasets, device).to(device)
+        # aug_model = model
     elif config["model_aug_config"]["model_augmentation"].casefold() == "ouroboros":
         aug_model = Ouroboros(config, model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "auxiliary":

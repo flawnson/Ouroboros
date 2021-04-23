@@ -1,11 +1,12 @@
 """Code named file for our augmented self-referential models"""
 import torch
+import torch.nn.functional as F
 
 from typing import *
 from logzero import logger
 from abc import ABC, abstractmethod
 
-from models.augmented.hypernetwork import HyperNetwork
+from models.augmented.hypernetwork import HyperNetwork, ResNetBlock, Embedding
 
 
 class Ouroboros(ABC):
@@ -114,10 +115,7 @@ class Escher:
                 down_sample = True
             self.res_net.append(ResNetBlock(self.filter_size[i][0], self.filter_size[i][1], downsample=down_sample))
 
-        self.zs = torch.nn.ModuleList()
-
-        for i in range(36):
-            self.zs.append(Embedding(self.zs_size[i], self.z_dim, device))
+        self.zs = torch.nn.ModuleList([Embedding(self.zs_size[i], self.z_dim, device) for i in range(len(self.zs_size))])
 
         self.global_avg = torch.nn.AvgPool2d(8)
         self.final = torch.nn.Linear(64,10)

@@ -107,7 +107,7 @@ class Vanilla(Quine, torch.nn.Module):
     def build_van_output(self) -> torch.nn.Sequential:
         # TODO: Make cleaner
         weight_predictor_layers = []
-        current_layer = torch.nn.Linear(self.model_aug_config["n_hidden"], 1, bias=True)
+        current_layer = torch.nn.Linear(self.model_aug_config["n_hidden"], self.model_aug_config["van_outputs"], bias=True)
         weight_predictor_layers.append(current_layer)
         self.param_list.append(current_layer.weight)
         self.param_names.append("wp_layer{}_weight".format(0))
@@ -167,7 +167,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
     def build_aux_output(self) -> torch.nn.Sequential:
         # TODO: Make cleaner
         digit_predictor_layers = []
-        current_layer = torch.nn.Linear(self.model_aug_config["n_hidden"], 10, bias=True)
+        current_layer = torch.nn.Linear(self.model_aug_config["n_hidden"], self.model_aug_config["aux_outputs"], bias=True)
         logsoftmax = torch.nn.LogSoftmax(dim=0) #should have no learnable weights
         digit_predictor_layers.append(current_layer)
         digit_predictor_layers.append(logsoftmax)

@@ -40,9 +40,9 @@ class AbstractMLPModel(torch.nn.Module, ABC):
             z = x
             x = pooling(x, **self.config["pooling_params"]) if pooling else x
             x = F.relu(x)
-            x = normalization(x, **self.config["normalize_params"]) if normalization else x
+            x = normalization(x, normalized_shape=list(x.size()), **self.config["normalize_params"]) if normalization else x
             x = F.dropout(x, p=self.config["dropout"], training=self.training)
-        x = z
+        x = torch.nn.functional.log_softmax(z, dim=0)
         return x
 
 

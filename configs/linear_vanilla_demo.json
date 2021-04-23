@@ -1,10 +1,10 @@
 {
-  "run_name": "Linear_MNST_classical",
+  "run_name": "Linear_vanilla",
   "seed": 42,
   "run_type": "demo",
   "logging": "logging.INFO",
   "clean_log_dir": true,
-  "log_dir": "C:\\Users\\flawn\\Documents\\Projects\\Project_Introversion\\Ouroboros\\saves\\logs\\classical",
+  "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs",
   "device": "cpu",
   "data_config":
   {
@@ -35,15 +35,15 @@
   },
   "model_aug_config":
   {
-    "model_augmentation": "classical",
+    "model_augmentation": "vanilla",
     "n_inputs": 2,
     "n_hidden": 40,
+    "van_outputs": 1,
+    "aux_outputs": 10,
     "reduction_method": "random"
   },
   "optim_config":
   {
-    "loss_func": "nll_loss",
-    "loss_kwargs": {},
     "optimizer": "adam",
     "optim_kwargs": {},
     "scheduler": "cawr",
@@ -55,9 +55,9 @@
   {
     "num_epochs": 1000,
     "checkpoint_intervals": 100,
-    "checkpoint_dir": "saves/checkpoints/",
+    "checkpoint_dir": "saves/checkpoints/vanilla/",
     "lambda": 0.01,
-    "regenerate": true
+    "regenerate": false
   },
   "score_config": {
       "acc": null

@@ -4,8 +4,8 @@
   "run_type": "demo",
   "logging": "logging.INFO",
   "clean_log_dir": true,
-  "log_dir": "/datadrive/covert/Ouroboros/saves/logs/auxiliary",
-  "device": "gpu",
+  "log_dir": "saves/logs/auxiliary",
+  "device": "cpu",
   "data_config":
   {
     "dataset": "mnist",
@@ -25,9 +25,7 @@
     "pooling": null,
     "pooling_params": null,
     "normalize": "torch.nn.functional.layer_norm",
-    "normalize_params": {
-      "normalized_shape": [40]
-    },
+    "normalize_params": {},
     "dropout": 0.50,
     "input_layer_size_2*model_aug_n_hidden": 80,
     "layer_sizes": [40],
@@ -38,6 +36,8 @@
     "model_augmentation": "auxiliary",
     "n_inputs": 2,
     "n_hidden": 40,
+    "van_outputs": 1,
+    "aux_outputs": 10,
     "reduction_method": "random"
   },
   "optim_config":
@@ -53,7 +53,7 @@
   {
     "num_epochs": 1000,
     "checkpoint_intervals": 100,
-    "checkpoint_dir": "saves/checkpoints/",
+    "checkpoint_dir": "saves/checkpoints/auxiliary/",
     "lambda": 0.01,
     "regenerate": true
   },
