@@ -1,6 +1,7 @@
 # data/log files
 logs/
 output/
+saves/
 *.sh
 *.csv
 *.ipynb
@@ -72,3 +73,6 @@ docs/_build/
 
 # PyBuilder
 target/
+
+#Other
+.idea/

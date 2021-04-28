@@ -65,7 +65,7 @@ python setup.py
 ### Environment Setup
 Install depedencies in the requirements.txt.
 ```shell
-pip install -r configs/envs/requirements.txt
+pip install -r configs/envs/requirements_cpu.txt
 ```
 
 Then you'll need to create an empty directory for model outputs (including saved models).
