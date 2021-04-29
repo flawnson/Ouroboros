@@ -4,8 +4,9 @@ https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/04-utils/tensor
 """
 import os
 import pathlib
-import datetime
+from datetime import datetime
 import tensorflow as tf
+import json
 
 from logzero import logger
 from torch.utils.tensorboard import SummaryWriter
@@ -16,8 +17,8 @@ class TFTBLogger(object):
     def __init__(self, config):
         """Create a summary writer logging to log_dir."""
         self.config = config
-        self.log_dir = os.path.join(config["log_dir"],
-                                    "TB_" + config["run_name"] + f"_{datetime.date.today().strftime('%d_%m_%Y')}")
+        run_name = "TB_" + config["run_name"] + f"_{datetime.now().strftime('%d_%m_%Y_%H_%M_%S')}"
+        self.log_dir = os.path.join(config["log_dir"], run_name)
         pathlib.Path(self.log_dir).mkdir(parents=True, exist_ok=True)
         if config["clean_log_dir"] and len(os.listdir(self.log_dir)) > 0:  # Clears dir of old event files if True
             for f in os.listdir(self.log_dir):
@@ -27,6 +28,8 @@ class TFTBLogger(object):
                 except Exception as e:
                     logger.info(e)
                     logger.info("Continuing run without deleting some files from log directory")
+        #save the config file
+        json.dump(config, open(self.log_dir + "/config.json", 'wb'))
         self.writer = tf.summary.create_file_writer(self.log_dir)
 
     def scalar_summary(self, tag, value, step):
@@ -49,8 +52,8 @@ class PTTBLogger(object):
     def __init__(self, config):
         """Create a summary writer logging to log_dir."""
         self.config = config
-        self.log_dir = os.path.join(config["log_dir"],
-                                    "TB_" + config["run_name"] + f"_{datetime.date.today().strftime('%d_%m_%Y')}")
+        run_name = "TB_" + config["run_name"] + f"_{datetime.now().strftime('%d_%m_%Y_%H_%M_%S')}"
+        self.log_dir = os.path.join(config["log_dir"], run_name)
         pathlib.Path(self.log_dir).mkdir(parents=True, exist_ok=True)
         if config["clean_log_dir"] and len(os.listdir(self.log_dir)) > 0:  # Clears dir of old event files if True
             for f in os.listdir(self.log_dir):
@@ -60,6 +63,10 @@ class PTTBLogger(object):
                 except Exception as e:
                     logger.info(e)
                     logger.info(f"Continuing run without deleting some files from log directory {self.log_dir}")
+        #save the config file
+        # with open('result.json', 'w') as fp:
+        #     json.dump(sample, fp)
+        json.dump(config, open(self.log_dir + "/config.json", 'w'))
         self.writer = SummaryWriter(log_dir=self.log_dir)  # For some reason I need to import it directly...
 
     def scalar_summary(self, tag, value, step):
