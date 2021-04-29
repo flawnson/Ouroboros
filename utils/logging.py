@@ -29,7 +29,7 @@ class TFTBLogger(object):
                     logger.info(e)
                     logger.info("Continuing run without deleting some files from log directory")
         #save the config file
-        json.dump(config, open(self.log_dir + "/config.json", 'wb'))
+        json.dump(config, open(self.log_dir + "/config.json", 'w', encoding='utf-8'), ensure_ascii=False, indent=4)
         self.writer = tf.summary.create_file_writer(self.log_dir)
 
     def scalar_summary(self, tag, value, step):
@@ -64,7 +64,7 @@ class PTTBLogger(object):
                     logger.info(e)
                     logger.info(f"Continuing run without deleting some files from log directory {self.log_dir}")
         #save the config file
-        json.dump(config, open(self.log_dir + "/config.json", 'w'))
+        json.dump(config, open(self.log_dir + "/config.json", 'w', encoding='utf-8'), ensure_ascii=False, indent=4)
         self.writer = SummaryWriter(log_dir=self.log_dir)  # For some reason I need to import it directly...
 
     def scalar_summary(self, tag, value, step):
