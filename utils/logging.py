@@ -64,8 +64,6 @@ class PTTBLogger(object):
                     logger.info(e)
                     logger.info(f"Continuing run without deleting some files from log directory {self.log_dir}")
         #save the config file
-        # with open('result.json', 'w') as fp:
-        #     json.dump(sample, fp)
         json.dump(config, open(self.log_dir + "/config.json", 'w'))
         self.writer = SummaryWriter(log_dir=self.log_dir)  # For some reason I need to import it directly...
 
