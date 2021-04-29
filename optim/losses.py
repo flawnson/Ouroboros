@@ -15,29 +15,74 @@ from models.augmented.hypernetwork import PrimaryNetwork
 
 
 class QuineLoss:
-
+    """
+    QuineLoss class is a wrapper for functionality concerning model parameters.
+    """
     def __init__(self, config: Dict, predictions: torch.tensor, targets: torch.tensor):
+        """
+        Initializes a QuineLoss class.
+
+        Args:
+            config: Configuration dictionary of the run.
+            predictions: The model's predictions.
+            targets: The ground truth target.
+
+        Attributes:
+            config: Configuration dictionary of the run.
+            predictions: The model's predictions.
+            targets: The ground truth target.
+        """
         self.config = config
         self.predictions = predictions
         self.targets = targets
 
     def sr_loss(self) -> float:
+        """
+        Calculates the self replicating loss
+
+        Returns:
+            The loss value as a float.
+        """
         loss_sr = (torch.linalg.norm(self.predictions["param"] - self.targets["param"], ord=2)) ** 2
 
         return loss_sr
 
     def task_loss(self) -> float:
+        """
+        Calculates the auxiliary task loss.
+
+        Returns:
+            The loss value as a float.
+        """
         loss_task = F.nll_loss(self.predictions["aux"].unsqueeze(dim=0), self.targets["aux"]) #create dictionary indices
 
         return loss_task
 
     def combined_loss(self) -> float:
+        """
+        Calculates the combined loss (self replicating + task loss)
+
+        Returns:
+            The loss value as a float.
+        """
         loss_combined = self.sr_loss() + self.config["run_config"]["lambda"] * self.task_loss()
 
         return loss_combined
 
 
 def loss(config: Dict, model: torch.nn.Module, logits, targets) -> Union[Dict, float]:
+    """
+    Creates and returns a dictionary with the loss values depending on the model type.
+
+    Args:
+        config: Configuration dictionary of the run.
+        model: The Pytorch model of this run.
+        logits: The predictions of the model.
+        targets: The ground truth target.
+
+    Returns:
+        A dictionary with the calculated loss value(s) depending on the type of the model.
+    """
     optim_config = config["optim_config"]
     if type(model) == Classical:
         return {"loss": eval(optim_config["loss_func"])(logits.unsqueeze(dim=0),
