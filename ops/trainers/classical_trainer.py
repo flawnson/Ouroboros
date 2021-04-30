@@ -17,6 +17,29 @@ from utils.utilities import timed
 class ClassicalTrainer(AbstractTrainer):
 
     def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dict[str, DataLoader], device: torch.device):
+        """
+        Initializes a ClassicalTrainer class.
+
+        Args:
+            config: Configuration dictionary of the run.
+            model: The Pytorch model.
+            dataset: The data that will be used in the run.
+            device: Device that training will be run on.
+
+        Attributes:
+            config: Configuration dictionary of the run.
+            data_config: Data configurations of the run.
+            run_config: Run configurations of the run.
+            model: The Pytorch model.
+            optimizer: Optimizer used for the run.
+            scheduler: Learning rate scheduler used for the run.
+            tb_logger: Tensorboard logger.
+            dataset: The data that will be used in the run.
+            device: Device that training will be run on.
+            batch_data: Temporarily store per-batch scores and values for logging.
+            epoch_data: Temporarily store per-epoch scores and values for logging.
+        """
+
         # TODO: Potentially unecessary usage of dictionary in the return of loss function
         super(ClassicalTrainer, self).__init__(config, model, dataset, device)
         self.config = config
@@ -34,6 +57,15 @@ class ClassicalTrainer(AbstractTrainer):
                            "correct": [0] * len(dataset)}  # First position for training scores, second position for test scores
 
     def train(self, data, batch_idx):
+        """
+        Run data into model, collect output and target label for loss calculations.
+        Args:
+            data: A single batch of data.
+            batch_idx: The index of the batch.
+
+        Returns:
+            The model output predictions, and the target label.
+        """
         self.model.train()
         self.optimizer.zero_grad()
 
@@ -55,6 +87,15 @@ class ClassicalTrainer(AbstractTrainer):
 
     @torch.no_grad()
     def test(self, data, batch_idx):
+        """
+        Run data into model, collect output and target label for loss calculations.
+        Args:
+            data: A single batch of data.
+            batch_idx: The index of the batch.
+
+        Returns:
+            The model output predictions, and the target label.
+        """
         self.model.eval()
 
         logits = self.model(data[0])
@@ -70,24 +111,35 @@ class ClassicalTrainer(AbstractTrainer):
         return logits, data[1]
 
     def loss(self, predictions, targets) -> Dict:
+        """
+        Calculates loss based on predictions and targets.
+        Args:
+            predictions: Model output predictions.
+            targets: Target labels corresponding to the model predictions.
+
+        Returns:
+            A dictionary of loss values depending on the model type.
+        """
         return loss(self.config, self.model, predictions, targets)
 
     def score(self) -> Dict:
+        """
+        Calculates score.
+        Returns:
+            A score dictionary.
+        """
         return scores(self.config, self.dataset, self.epoch_data["correct"], self.device)
 
     def write(self, epoch: int, scores: Dict, train_epoch_length: int, test_epoch_length: int):
+        """
+        Logs the loss and scores to Tensorboard.
+        """
         logger.info(f"Train scores, Test scores: {scores}")
-
         logger.info(f"Total Loss value: {self.epoch_data['loss'][0]}")
         logger.info(f"Train epoch length: {train_epoch_length}")
         logger.info(f"Test epoch length: {test_epoch_length}")
         logger.info(f"Batch size: {self.data_config['batch_size']}")
 
-        # Log values for training
-        #PRINT STATEMENTS DON'T WORK???
-        print("Loss value: ", self.epoch_data["loss"][0])
-        print("Train epoch length: ", train_epoch_length)
-        print("Batch size: ", self.data_config["batch_size"])
         train_loss = self.epoch_data["loss"][0] / (train_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('loss (train)', train_loss, epoch)
         self.tb_logger.scalar_summary('scores (train)', scores["acc"][0], epoch)
@@ -100,6 +152,9 @@ class ClassicalTrainer(AbstractTrainer):
         logger.info("Successfully wrote logs to tensorboard")
 
     def reset(self):
+        """
+        Reset the temporary state values for epoch_data.
+        """
         for i in range(len(self.dataset)):
             self.epoch_data["loss"][i] = 0
             self.epoch_data["correct"][i] = 0
@@ -108,6 +163,9 @@ class ClassicalTrainer(AbstractTrainer):
 
     @timed
     def run_train(self):
+        """
+        Main training loop.
+        """
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
