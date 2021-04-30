@@ -8,6 +8,7 @@ from datetime import datetime
 import tensorflow as tf
 import json
 
+import logzero
 from logzero import logger
 from torch.utils.tensorboard import SummaryWriter
 
@@ -28,9 +29,13 @@ class TFTBLogger(object):
                 except Exception as e:
                     logger.info(e)
                     logger.info("Continuing run without deleting some files from log directory")
+        self.writer = tf.summary.create_file_writer(self.log_dir)
+
         #save the config file
         json.dump(config, open(self.log_dir + "/config.json", 'w', encoding='utf-8'), ensure_ascii=False, indent=4)
-        self.writer = tf.summary.create_file_writer(self.log_dir)
+
+        #create log file for logzero
+        logzero.logfile(self.log_dir + "/log.log")
 
     def scalar_summary(self, tag, value, step):
         """Log a scalar variable."""
@@ -50,7 +55,11 @@ class TFTBLogger(object):
 
 class PTTBLogger(object):
     def __init__(self, config):
-        """Create a summary writer logging to log_dir."""
+        """
+        Main Logger.
+        Create a summary writer logging to log_dir.
+        Create a config.json and logzero log file.
+        """
         self.config = config
         run_name = "TB_" + config["run_name"] + f"_{datetime.now().strftime('%d_%m_%Y_%H_%M_%S')}"
         self.log_dir = os.path.join(config["log_dir"], run_name)
@@ -63,9 +72,13 @@ class PTTBLogger(object):
                 except Exception as e:
                     logger.info(e)
                     logger.info(f"Continuing run without deleting some files from log directory {self.log_dir}")
+        self.writer = SummaryWriter(log_dir=self.log_dir)  # For some reason I need to import it directly...
+
         #save the config file
         json.dump(config, open(self.log_dir + "/config.json", 'w', encoding='utf-8'), ensure_ascii=False, indent=4)
-        self.writer = SummaryWriter(log_dir=self.log_dir)  # For some reason I need to import it directly...
+
+        #create log file for logzero
+        logzero.logfile(self.log_dir + "/log.log")
 
     def scalar_summary(self, tag, value, step):
         """Log a scalar variable."""
