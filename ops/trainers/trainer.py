@@ -17,6 +17,12 @@ from .quine_trainer import AuxiliaryTrainer, VanillaTrainer
 
 
 def trainer(config: Dict, model: torch.nn.Module, param_data: torch.nn.Module, dataloaders: List[torch.utils.data.DataLoader], device: torch.device):
+    """
+    Initializes and returns a Trainer object based on model type.
+
+    Returns:
+        A trainer instance.
+    """
     if isinstance(model, (Classical, MLPModel)):
         return ClassicalTrainer(config, model, dataloaders, device).run_train()
     elif isinstance(model, Auxiliary):
