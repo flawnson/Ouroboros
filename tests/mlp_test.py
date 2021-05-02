@@ -11,6 +11,7 @@ from optim.losses import loss as loss_fun
 from data.linear_preprocessing import get_data
 from optim.algos import OptimizerObj, LRScheduler
 from utils.holdout import MNISTSplit
+from utils.logging import PTTBLogger
 
 
 class Model(torch.nn.Module):
@@ -51,6 +52,7 @@ def run():
     config: Dict = json.load(open(args.config))
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
     logzero.loglevel(eval(config["logging"]))
+    tb_logger = PTTBLogger(config)
     logger.info(f"Successfully retrieved config json. Running {config['run_name']} on {device}.")
     logger.info(f"Using PyTorch version: {torch.__version__}")
 
@@ -100,6 +102,18 @@ def run():
 
             epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
             batch_data["loss"][0] += loss["loss"].item()
+
+            # Log values for training
+            train_epoch_length = len(dataloaders[list(dataloaders)[0]])
+            actual_train_loss = epoch_data["loss"][0] / (train_epoch_length // config["data_config"]["batch_size"])
+            tb_logger.scalar_summary('loss (train)', actual_train_loss, epoch)
+
+            # Log values for testing
+            test_epoch_length = len(dataloaders[list(dataloaders)[0]])
+            actual_test_loss = epoch_data["loss"][1] / (test_epoch_length // config["data_config"]["batch_size"])
+            tb_logger.scalar_summary('loss (test)', actual_test_loss, epoch)
+
+            logger.info("Successfully wrote logs to tensorboard")
 
             epoch_data["loss"][0] = 0
             epoch_data["correct"][0] = 0

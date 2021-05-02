@@ -1,4 +1,7 @@
+import os
+import sys
 import torch
+import shutil
 import os.path as osp
 
 from typing import *
@@ -7,7 +10,6 @@ from logzero import logging
 
 def checkpoint(config: Dict, epoch: int, model: torch.nn.Module, loss: float, optimizer: torch.optim):
     """
-    This is an example of Google style.
     Checkpoint intervals must be a divisor of the total number of epochs
 
     Args:
@@ -20,6 +22,8 @@ def checkpoint(config: Dict, epoch: int, model: torch.nn.Module, loss: float, op
     Raises:
         Pytorch's error returned by a failed attempt at saving a model
     """
+    save_dir = osp.join(config["log_dir"], "checkpoints",
+                        f"{config['run_name']}_{config['model_config']['model_type']}_{config['run_type']}_{config['data_config']['dataset']}_epoch_{str(epoch)}.pt")
     if config["run_config"]["checkpoint_intervals"] is None:
         pass
     elif epoch % config["run_config"]["checkpoint_intervals"] == 0:
@@ -29,13 +33,16 @@ def checkpoint(config: Dict, epoch: int, model: torch.nn.Module, loss: float, op
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'loss': loss,
-            }, osp.join(config["run_config"].get(['checkpoint_dir'], osp.join("saves", "checkpoints")),
-                        f"{config['run_name']}_{config['model_config']['model_type']}_{config['run_type']}_{config['data_config']['dataset']}_epoch_{str(epoch)}.pt"))
-            logging.info(f"Successfully saved model checkpoint at epoch{epoch}. File saved at {config['run_config']['checkpoint_dir']}")
+            }, save_dir)
+            logging.info(f"Successfully saved model checkpoint at epoch {epoch}. File saved at {osp.join(config['log_dir'], 'checkpoints')}")
         except:
             logging.info(f"Failed to save checkpoint... Continuing run")
     else:
         pass
+
+    # Save the model
+    model_path = os.path.abspath(sys.modules[model.__module__].__file__)
+    shutil.copy(config["log_dir"], os.path.join('osp', './example_generator.py'))
 
 
 def load(config, model: torch.nn.Module = None):

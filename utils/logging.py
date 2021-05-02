@@ -4,6 +4,7 @@ https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/04-utils/tensor
 """
 import os
 import pathlib
+import os.path as osp
 from datetime import datetime
 import tensorflow as tf
 import json
@@ -32,10 +33,10 @@ class TFTBLogger(object):
         self.writer = tf.summary.create_file_writer(self.log_dir)
 
         #save the config file
-        json.dump(config, open(self.log_dir + "/config.json", 'w', encoding='utf-8'), ensure_ascii=False, indent=4)
+        json.dump(config, open(osp.join(self.log_dir, "config.json"), 'w', encoding='utf-8'), ensure_ascii=False, indent=4)
 
         #create log file for logzero
-        logzero.logfile(self.log_dir + "/log.log")
+        logzero.logfile(osp.join(self.log_dir, "log.log"))
 
     def scalar_summary(self, tag, value, step):
         """Log a scalar variable."""
@@ -75,10 +76,10 @@ class PTTBLogger(object):
         self.writer = SummaryWriter(log_dir=self.log_dir)  # For some reason I need to import it directly...
 
         #save the config file
-        json.dump(config, open(self.log_dir + "/config.json", 'w', encoding='utf-8'), ensure_ascii=False, indent=4)
+        json.dump(config, open(osp.join(self.log_dir, "config.json"), 'w', encoding='utf-8'), ensure_ascii=False, indent=4)
 
         #create log file for logzero
-        logzero.logfile(self.log_dir + "/log.log")
+        logzero.logfile(osp.join(self.log_dir, "log.log"))
 
     def scalar_summary(self, tag, value, step):
         """Log a scalar variable."""
