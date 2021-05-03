@@ -51,7 +51,7 @@ def run():
 
     config: Dict = json.load(open(args.config))
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
-    logzero.loglevel(eval(config["logging"]))
+    logzero.loglevel(eval(config["log_level"]))
     tb_logger = PTTBLogger(config)
     logger.info(f"Successfully retrieved config json. Running {config['run_name']} on {device}.")
     logger.info(f"Using PyTorch version: {torch.__version__}")
@@ -96,12 +96,12 @@ def run():
             if ((batch_idx + 1) % config["data_config"]["batch_size"]) == 0:
                 loss["loss"].backward()
                 optimizer.step()
-                epoch_data["loss"][0] += batch_data["loss"][0]
-                batch_data["loss"][0] = 0.0
+                epoch_data["loss"][1] += batch_data["loss"][0]
+                batch_data["loss"][1] = 0.0
                 optimizer.zero_grad()
 
-            epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
-            batch_data["loss"][0] += loss["loss"].item()
+            epoch_data["correct"][1] += predictions.eq(data[1].view_as(predictions)).sum().item()
+            batch_data["loss"][1] += loss["loss"].item()
 
             # Log values for training
             train_epoch_length = len(dataloaders[list(dataloaders)[0]])
