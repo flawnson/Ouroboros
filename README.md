@@ -99,9 +99,19 @@ Demo is a simple training run. It takes a configuration file and runs the Traine
 
 ### Tuning
 Tuning is a pair of consecutive runs. The first run executes the Tuner (a wrapper of the Trainer pipeline meant to find and return the best parameters it can find) once and the second run executes the Trainer once.
-### Parallelizing
 
+### Parallelizing
 Parallelizing allows you to execute and run several Demo and/or Tuning pipelines in tandem. It uses mutliprocessing to find and use as many cores you define in the confiuration file (yet to be implemented).
+
+### Logging and Checkpointing
+Logging is controlled by the config files.
+1. Console logs - Runs are logged to console with logzero (mostly consists of info and exception logs) and saved as a `.txt` file in the `saves/logs` directory.
+2. Config logs - A copy of the config is saved as a `.json` for each run in the `saves/logs` directory.
+3. Tensorboard logs - Saved in the `runs` directory, used to visualize training.
+
+Model checkpointing is performed with PyTorch's `save` function.
+1. Model checkpoints are saved at each interval as specified in the `run_config` (saved in the `saves/checkpoints` directory).
+2. The model file itself is copied into the checkpoint directory, where it can be used with the saved `.json` config (saved in the `saves/checkpoints` directory).
 
 ## Roadmap
 
