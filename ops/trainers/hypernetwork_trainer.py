@@ -11,7 +11,7 @@ from .abstract_trainer import AbstractTrainer
 from optim.algos import OptimizerObj, LRScheduler
 from optim.losses import loss
 from utils.scores import scores
-from utils.checkpoint import checkpoint
+from utils.checkpoint import PTCheckpoint
 from utils.logging import PTTBLogger
 from utils.utilities import timed
 
@@ -26,6 +26,7 @@ class HyperNetworkTrainer(AbstractTrainer):
         self.optimizer = OptimizerObj(config, self.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = PTTBLogger(config)
+        self.checkpoint = PTCheckpoint(config)
         self.batch_data = {"running_loss": [0] * len(dataset),
                            "correct": [0] * len(dataset)}
         self.epoch_data = {"running_loss": [0] * len(dataset),
@@ -99,7 +100,12 @@ class HyperNetworkTrainer(AbstractTrainer):
                 # Scores cumulated and calculated per epoch, as done in Quine
                 epoch_scores = self.score()
 
-                checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
+                self.checkpoint.checkpoint(self.config,
+                                           epoch,
+                                           self.model,
+                                           self.epoch_data["loss"][0],
+                                           self.optimizer)
+
                 self.write(epoch, epoch_scores)
                 self.reset()
 
@@ -114,6 +120,7 @@ class DualHyperNetworkTrainer(AbstractTrainer):
         self.optimizer = OptimizerObj(config, self.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = PTTBLogger(config)
+        self.checkpoint = PTCheckpoint(config)
         self.batch_data = {"running_loss": [0, 0],
                            "correct": [0, 0]}
         self.epoch_data = {"running_loss": [0, 0],
@@ -183,6 +190,11 @@ class DualHyperNetworkTrainer(AbstractTrainer):
                 # Scores cumulated and calculated per epoch, as done in Quine
                 epoch_scores = self.score()
 
-                checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
+                self.checkpoint.checkpoint(self.config,
+                                           epoch,
+                                           self.model,
+                                           self.epoch_data["loss"][0],
+                                           self.optimizer)
+
                 self.write(epoch, epoch_scores)
                 self.reset()

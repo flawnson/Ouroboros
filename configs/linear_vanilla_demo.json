@@ -55,6 +55,7 @@
   {
     "num_epochs": 1000,
     "checkpoint_intervals": 100,
+    "clean_checkpoint_dir": true,
     "checkpoint_dir": "saves/checkpoints/vanilla/",
     "lambda": 0.01,
     "regenerate": false

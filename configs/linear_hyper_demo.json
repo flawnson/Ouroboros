@@ -2,7 +2,8 @@
   "run_name": "Linear_CIFAR_hypernetwork",
   "seed": 42,
   "run_type": "demo",
-  "logging": "logging.INFO",
+  "logging": false,
+  "log_level": "logging.INFO",
   "clean_log_dir": true,
   "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs",
   "device": "cpu",
@@ -42,6 +43,7 @@
   {
     "num_epochs": 1000,
     "checkpoint_intervals": 100,
+    "clean_checkpoint_dir": true,
     "checkpoint_dir": "saves/checkpoints/hypernetwork/",
     "regenerate": true
   },

@@ -32,7 +32,7 @@ class TFTBLogger(object):
         self.config = config
         if self.config["logging"]:
             run_name = "TB_" + config["run_name"] + f"_{datetime.now().strftime('%d_%m_%Y_%H_%M_%S')}"
-            self.log_dir = os.path.join(config["log_dir"], run_name)
+            self.log_dir = os.path.join(config["log_dir"], "events", run_name)
             pathlib.Path(self.log_dir).mkdir(parents=True, exist_ok=True)
             if config["clean_log_dir"] and len(os.listdir(self.log_dir)) > 0:  # Clears dir of old event files if True
                 for f in os.listdir(self.log_dir):
@@ -40,7 +40,7 @@ class TFTBLogger(object):
                         os.remove(os.path.join(self.log_dir, f))
                         logger.info("Successfully cleaned TB log directory")
                     except Exception as e:
-                        logger.info(e)
+                        logger.exception(e)
                         logger.info("Continuing run without deleting some files from log directory")
             self.writer = tf.summary.create_file_writer(self.log_dir)
 
@@ -81,7 +81,7 @@ class PTTBLogger(object):
         self.config = config
         if self.config["logging"]:
             run_name = "TB_" + config["run_name"] + f"_{datetime.now().strftime('%d_%m_%Y_%H_%M_%S')}"
-            self.log_dir = os.path.join(config["log_dir"], run_name)
+            self.log_dir = os.path.join(config["log_dir"], "events", run_name)
             pathlib.Path(self.log_dir).mkdir(parents=True, exist_ok=True)
             if config["clean_log_dir"] and len(os.listdir(self.log_dir)) > 0:  # Clears dir of old event files if True
                 for f in os.listdir(self.log_dir):

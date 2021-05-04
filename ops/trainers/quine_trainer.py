@@ -10,7 +10,7 @@ from optim.algos import OptimizerObj, LRScheduler
 from optim.losses import loss
 from optim.parameters import ModelParameters
 from utils.scores import scores
-from utils.checkpoint import checkpoint
+from utils.checkpoint import PTCheckpoint
 from utils.logging import PTTBLogger
 from utils.utilities import timed
 
@@ -25,6 +25,7 @@ class VanillaTrainer(AbstractTrainer):
         self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = PTTBLogger(config)
+        self.checkpoint = PTCheckpoint(config)
         self.dataset = dataset
         self.device = device
         self.batch_data = {"sr_loss": [0] * len(dataset)}  # First position for training scores, second position for test scores
@@ -119,7 +120,12 @@ class VanillaTrainer(AbstractTrainer):
                 # Regeneration (per epoch) step if specified in config
                 # if self.run_config["regenerate"]: self.wrapper.model.regenerate()
 
-                checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
+                self.checkpoint.checkpoint(self.config,
+                                           epoch,
+                                           self.wrapper.model,
+                                           self.epoch_data["loss"][0],
+                                           self.optimizer)
+
                 self.write(epoch, train_epoch_length, test_epoch_length)
                 self.reset()
 
@@ -135,6 +141,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = PTTBLogger(config)
+        self.checkpoint = PTCheckpoint(config)
         self.dataset = dataset
         self.device = device
         self.batch_data = {"sr_loss": [0, 0],
@@ -268,6 +275,11 @@ class AuxiliaryTrainer(AbstractTrainer):
                 # Regeneration (per epoch) step if specified in config
                 if self.run_config["regenerate"]: self.wrapper.model.regenerate()
 
-                checkpoint(self.config, epoch, self.wrapper.model, 0.0, self.optimizer)
+                self.checkpoint.checkpoint(self.config,
+                                           epoch,
+                                           self.wrapper.model,
+                                           self.epoch_data["loss"][0],
+                                           self.optimizer)
+
                 self.write(epoch, epoch_scores, train_epoch_length, test_epoch_length)
                 self.reset()

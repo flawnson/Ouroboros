@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from optim.algos import OptimizerObj, LRScheduler
 from optim.losses import loss
 from utils.scores import scores
-from utils.checkpoint import checkpoint
+from utils.checkpoint import PTCheckpoint
 from utils.logging import PTTBLogger
 from utils.utilities import timed
 
@@ -49,6 +49,7 @@ class ClassicalTrainer(AbstractTrainer):
         self.optimizer = OptimizerObj(config, self.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = PTTBLogger(config)
+        self.checkpoint = PTCheckpoint(config)
         self.dataset = dataset
         self.device = device
         self.batch_data = {"loss": [0] * len(dataset),
@@ -180,7 +181,11 @@ class ClassicalTrainer(AbstractTrainer):
                     logger.info(f"Running test batch: #{batch_idx}")
                     logits, targets = self.test(data, batch_idx)
 
-                checkpoint(self.config, epoch, self.model, 0.0, self.optimizer)
+                self.checkpoint.checkpoint(self.config,
+                                           epoch,
+                                           self.model,
+                                           self.epoch_data["loss"][0],
+                                           self.optimizer)
 
                 epoch_scores = self.score()
                 self.write(epoch, epoch_scores, train_epoch_length, test_epoch_length)
