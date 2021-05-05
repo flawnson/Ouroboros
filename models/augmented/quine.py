@@ -20,7 +20,6 @@ class Quine(ABC):
         self.model = model
         self.device = device
         self.param_list = [] + self.model.param_list  # Combine the parameters from the main model
-        self.param_names = []
         self.cum_params_arr = np.cumsum(np.array([np.prod(p.shape) for p in self.param_list]))
         self.num_params = int(self.cum_params_arr[-1])
         #if we specify a smaller subset, use that amount instead
@@ -105,14 +104,12 @@ class Vanilla(Quine, torch.nn.Module):
         return torch.nn.Sequential(rand_proj_layer)
 
     def build_van_output(self) -> torch.nn.Sequential:
-        # TODO: Make cleaner
         weight_predictor_layers = []
-        current_layer = torch.nn.Linear(self.model_aug_config["n_hidden"], self.model_aug_config["van_outputs"], bias=True)
-        weight_predictor_layers.append(current_layer)
-        self.param_list.append(current_layer.weight)
-        self.param_names.append("wp_layer{}_weight".format(0))
-        self.param_list.append(current_layer.bias)
-        self.param_names.append("wp_layer{}_bias".format(0))
+        for in_size, out_size in zip(self.model_aug_config["van_output_layers"], self.model_aug_config["van_output_layers"][1:]):
+            layer = torch.nn.Linear(in_size, out_size, bias=True)
+            weight_predictor_layers.append(layer)
+            self.param_list.append(layer.weight)
+            self.param_list.append(layer.bias)
         return torch.nn.Sequential(*weight_predictor_layers)
 
     def forward(self, x: torch.tensor, y: torch.tensor = None) -> Dict:
@@ -166,16 +163,15 @@ class Auxiliary(Vanilla, torch.nn.Module):
 
     def build_aux_output(self) -> torch.nn.Sequential:
         # TODO: Make cleaner
-        digit_predictor_layers = []
-        current_layer = torch.nn.Linear(self.model_aug_config["n_hidden"], self.model_aug_config["aux_outputs"], bias=True)
+        aux_predictor_layers = []
+        for in_size, out_size in zip(self.model_aug_config["aux_output_layers"], self.model_aug_config["aux_output_layers"][1:]):
+            layer = torch.nn.Linear(in_size, out_size, bias=True)
+            aux_predictor_layers.append(layer)
+            self.param_list.append(layer.weight)
+            self.param_list.append(layer.bias)
         logsoftmax = torch.nn.LogSoftmax(dim=0) #should have no learnable weights
-        digit_predictor_layers.append(current_layer)
-        digit_predictor_layers.append(logsoftmax)
-        self.param_list.append(current_layer.weight)
-        self.param_names.append("dp_layer{}_weight".format(0))
-        self.param_list.append(current_layer.bias)
-        self.param_names.append("dp_layer{}_bias".format(0))
-        return torch.nn.Sequential(*digit_predictor_layers)
+        aux_predictor_layers.append(logsoftmax)
+        return torch.nn.Sequential(*aux_predictor_layers)
 
     def forward(self, x: torch.tensor, y: torch.tensor = None) -> Tuple[torch.tensor, torch.tensor]:
         """
@@ -194,6 +190,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
             output2 = self.aux_input(y)
             new_output = torch.cat((new_output, output2))
         else:
+            # Substitutes data with random matrix during regeneration... Could probably do better
             new_output = torch.cat((new_output, torch.rand(self.model_aug_config["n_hidden"])))
 
         # run_logging.info("Input 1: ", output1)

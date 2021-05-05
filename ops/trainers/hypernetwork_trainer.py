@@ -27,9 +27,9 @@ class HyperNetworkTrainer(AbstractTrainer):
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = PTTBLogger(config)
         self.checkpoint = PTCheckpoint(config)
-        self.batch_data = {"running_loss": [0] * len(dataset),
+        self.batch_data = {"loss": [0] * len(dataset),
                            "correct": [0] * len(dataset)}
-        self.epoch_data = {"running_loss": [0] * len(dataset),
+        self.epoch_data = {"loss": [0] * len(dataset),
                            "correct": [0] * len(dataset)}
         self.device = device
 
@@ -44,14 +44,14 @@ class HyperNetworkTrainer(AbstractTrainer):
             loss["loss"].backward()
             self.optimizer.step()
             self.scheduler.step()
-            self.epoch_data["running_loss"][0] += loss["loss"]
+            self.epoch_data["loss"][0] += loss["loss"]
 
-            self.batch_data["running_loss"][0] = 0.0
+            self.batch_data["loss"][0] = 0.0
             self.optimizer.zero_grad()
 
-            self.epoch_data["running_loss"][1] += self.batch_data["running_loss"][1]  # accumulate for epoch
+            self.epoch_data["loss"][1] += self.batch_data["loss"][1]  # accumulate for epoch
 
-        self.batch_data["running_loss"][0] += loss["loss"]
+        self.batch_data["loss"][0] += loss["loss"]
 
     def test(self, data, batch_idx):
         total = 0
@@ -67,19 +67,19 @@ class HyperNetworkTrainer(AbstractTrainer):
 
     def write(self, epoch, epoch_scores):
         logger.info(f"Total Loss value: {epoch_scores['acc'][0]}")
-        logger.info(f"Total Loss value: {self.epoch_data['running_loss'][0]}")
+        logger.info(f"Total Loss value: {self.epoch_data['loss'][0]}")
 
-        self.tb_logger.scalar_summary('loss (train)', self.epoch_data["running_loss"][0], epoch)
+        self.tb_logger.scalar_summary('loss (train)', self.epoch_data["loss"][0], epoch)
         self.tb_logger.scalar_summary('accuracy (train)', epoch_scores["acc"][0], epoch)
 
-        self.tb_logger.scalar_summary('loss (test)', self.epoch_data["running_loss"][1], epoch)
+        self.tb_logger.scalar_summary('loss (test)', self.epoch_data["loss"][1], epoch)
         self.tb_logger.scalar_summary('accuracy (test)', epoch_scores["acc"][1], epoch)
 
         logger.info("Successfully wrote logs to tensorboard")
 
     def reset(self):
         for i in range(len(self.dataset)):
-            self.epoch_data["running_loss"][i] = 0
+            self.epoch_data["loss"][i] = 0
             self.epoch_data["correct"][i] = 0
 
         logger.info("States successfully reset for new epoch")
@@ -121,9 +121,9 @@ class DualHyperNetworkTrainer(AbstractTrainer):
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = PTTBLogger(config)
         self.checkpoint = PTCheckpoint(config)
-        self.batch_data = {"running_loss": [0, 0],
+        self.batch_data = {"loss": [0, 0],
                            "correct": [0, 0]}
-        self.epoch_data = {"running_loss": [0, 0],
+        self.epoch_data = {"loss": [0, 0],
                            "correct": [0, 0]}
         self.device = device
 
@@ -138,14 +138,14 @@ class DualHyperNetworkTrainer(AbstractTrainer):
             loss["loss"].backward()
             self.optimizer.step()
             self.scheduler.step()
-            self.epoch_data["running_loss"][0] += loss["loss"]
+            self.epoch_data["loss"][0] += loss["loss"]
 
-            self.batch_data["running_loss"][0] = 0.0
+            self.batch_data["loss"][0] = 0.0
             self.optimizer.zero_grad()
 
-            self.epoch_data["running_loss"][1] += self.batch_data["running_loss"][1]  # accumulate for epoch
+            self.epoch_data["loss"][1] += self.batch_data["loss"][1]  # accumulate for epoch
 
-        self.batch_data["running_loss"][0] += loss["loss"]
+        self.batch_data["loss"][0] += loss["loss"]
 
     def test(self, data, batch_idx):
         total = 0
@@ -161,17 +161,17 @@ class DualHyperNetworkTrainer(AbstractTrainer):
 
     def write(self, epoch, epoch_scores):
         logger.info(f"Total Loss value: {epoch_scores['acc'][0]}")
-        logger.info(f"Total Loss value: {self.epoch_data['running_loss'][0]}")
+        logger.info(f"Total Loss value: {self.epoch_data['loss'][0]}")
 
         self.tb_logger.scalar_summary('accuracy (train)', epoch_scores["acc"][0], epoch)
-        self.tb_logger.scalar_summary('loss (train)', self.epoch_data["running_loss"][0], epoch)
+        self.tb_logger.scalar_summary('loss (train)', self.epoch_data["loss"][0], epoch)
 
         self.tb_logger.scalar_summary('accuracy (train)', epoch_scores["acc"][1], epoch)
-        self.tb_logger.scalar_summary('loss (train)', self.epoch_data["running_loss"][1], epoch)
+        self.tb_logger.scalar_summary('loss (train)', self.epoch_data["loss"][1], epoch)
 
     def reset(self):
         for i in range(len(self.dataset)):
-            self.epoch_data["running_loss"][i] = 0
+            self.epoch_data["loss"][i] = 0
             self.epoch_data["correct"][i] = 0
 
     def run_train(self):

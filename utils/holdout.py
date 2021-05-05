@@ -29,8 +29,9 @@ class AbstractSplit(ABC):
         try:
             split_size = self.data_config["splits"]["size"]
             logger.info(f"Splitting dataset into {self.data_config['splits']['size']}")
-        except KeyError:
+        except KeyError as e:
             split_size = DEFAULT_SPLIT
+            logger.error(e)
             logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_SPLIT}")
 
         # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])
@@ -165,8 +166,9 @@ class QuineSplit(AbstractSplit):
         try:
             split_size = self.data_config["splits"]["size"]
             logger.info(f"Splitting dataset into {self.data_config['splits']['size']}")
-        except KeyError:
+        except KeyError as e:
             split_size = DEFAULT_SPLIT
+            logger.error(e)
             logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_SPLIT}")
 
         # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])

@@ -123,7 +123,7 @@ class VanillaTrainer(AbstractTrainer):
                 self.checkpoint.checkpoint(self.config,
                                            epoch,
                                            self.wrapper.model,
-                                           self.epoch_data["loss"][0],
+                                           self.epoch_data["sr_loss"][0],
                                            self.optimizer)
 
                 self.write(epoch, train_epoch_length, test_epoch_length)
@@ -278,7 +278,7 @@ class AuxiliaryTrainer(AbstractTrainer):
                 self.checkpoint.checkpoint(self.config,
                                            epoch,
                                            self.wrapper.model,
-                                           self.epoch_data["loss"][0],
+                                           self.epoch_data["sr_loss"][0],
                                            self.optimizer)
 
                 self.write(epoch, epoch_scores, train_epoch_length, test_epoch_length)

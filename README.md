@@ -1,4 +1,5 @@
 # Ouroboros
+<img align="middle" src="https://i.pinimg.com/originals/c5/52/4f/c5524ff6c29c3e74a384441b678b81a1.jpg" alt="M.C Escher's Dragon">
 Introverted NNs, inspired by meta learning techniques, and NN architectures including NN Quines, Introspective NNs, Hypernetworks, and self-referential weight matrices.
 
 # Paper
