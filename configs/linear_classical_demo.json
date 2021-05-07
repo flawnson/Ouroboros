@@ -39,7 +39,7 @@
   },
   "optim_config":
   {
-    "loss_func": "nll_loss",
+    "loss_func": "cross_entropy",
     "loss_kwargs": {},
     "optimizer": "adam",
     "optim_kwargs": {},
