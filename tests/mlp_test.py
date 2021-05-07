@@ -70,7 +70,7 @@ def run():
             model.train()
             optimizer.zero_grad()
 
-            logits = model(torch.flatten(data[0]))
+            logits = model(data[0].reshape(-1))
             predictions = logits.argmax(keepdim=True)
             loss = loss_fun(config, model, logits, data[1])
 
@@ -85,40 +85,37 @@ def run():
             batch_data["loss"][0] += loss["loss"].item()
 
         for batch_idx, data in enumerate(dataloaders[list(dataloaders)[1]]):
-            logger.info(f"Running test batch: #{batch_idx}")
+            with torch.no_grad():
+                logger.info(f"Running test batch: #{batch_idx}")
+                model.eval()
 
-            model.eval()
+                logits = model(data[0].reshape(-1))
+                predictions = logits.argmax(keepdim=True)
+                loss = loss_fun(config, model, logits, data[1])
 
-            logits = model(torch.flatten(data[0]))
-            predictions = logits.argmax(keepdim=True)
-            loss = loss_fun(config, model, logits, data[1])
+                if ((batch_idx + 1) % config["data_config"]["batch_size"]) == 0:
+                    epoch_data["loss"][1] += batch_data["loss"][0]
+                    batch_data["loss"][1] = 0.0
 
-            if ((batch_idx + 1) % config["data_config"]["batch_size"]) == 0:
-                loss["loss"].backward()
-                optimizer.step()
-                epoch_data["loss"][1] += batch_data["loss"][0]
-                batch_data["loss"][1] = 0.0
-                optimizer.zero_grad()
+                epoch_data["correct"][1] += predictions.eq(data[1].view_as(predictions)).sum().item()
+                batch_data["loss"][1] += loss["loss"].item()
 
-            epoch_data["correct"][1] += predictions.eq(data[1].view_as(predictions)).sum().item()
-            batch_data["loss"][1] += loss["loss"].item()
+        # Log values for training
+        train_epoch_length = len(dataloaders[list(dataloaders)[0]])
+        actual_train_loss = epoch_data["loss"][0] / (train_epoch_length // config["data_config"]["batch_size"])
+        tb_logger.scalar_summary('loss (train)', actual_train_loss, epoch)
 
-            # Log values for training
-            train_epoch_length = len(dataloaders[list(dataloaders)[0]])
-            actual_train_loss = epoch_data["loss"][0] / (train_epoch_length // config["data_config"]["batch_size"])
-            tb_logger.scalar_summary('loss (train)', actual_train_loss, epoch)
+        # Log values for testing
+        test_epoch_length = len(dataloaders[list(dataloaders)[0]])
+        actual_test_loss = epoch_data["loss"][1] / (test_epoch_length // config["data_config"]["batch_size"])
+        tb_logger.scalar_summary('loss (test)', actual_test_loss, epoch)
 
-            # Log values for testing
-            test_epoch_length = len(dataloaders[list(dataloaders)[0]])
-            actual_test_loss = epoch_data["loss"][1] / (test_epoch_length // config["data_config"]["batch_size"])
-            tb_logger.scalar_summary('loss (test)', actual_test_loss, epoch)
+        logger.info("Successfully wrote logs to tensorboard")
 
-            logger.info("Successfully wrote logs to tensorboard")
-
-            epoch_data["loss"][0] = 0
-            epoch_data["correct"][0] = 0
-            epoch_data["loss"][1] = 0
-            epoch_data["correct"][1] = 0
+        epoch_data["loss"][0] = 0
+        epoch_data["correct"][0] = 0
+        epoch_data["loss"][1] = 0
+        epoch_data["correct"][1] = 0
 
 
 if __name__ == "__main__":

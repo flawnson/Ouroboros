@@ -83,7 +83,6 @@ class ClassicalTrainer(AbstractTrainer):
 
         self.epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
         self.batch_data["loss"][0] += loss["loss"].item()
-        print(self.model)
         return logits, data[1]
 
     @torch.no_grad()

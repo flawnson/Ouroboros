@@ -142,8 +142,9 @@ class Embedding(torch.nn.Module):
         self.z_num = z_num
         self.z_dim = z_dim
 
-        h,k = self.z_num
+        h, k = self.z_num
 
+        # Generating unique (random) layer embeddings to be passed into HyperNetwork
         for i in range(h):
             for j in range(k):
                 self.z_list.append(torch.nn.Parameter(torch.fmod(torch.randn(self.z_dim).to(device), 2)))
@@ -166,28 +167,26 @@ class PrimaryNetwork(torch.nn.Module):
         self.conv1 = torch.nn.Conv2d(3, 16, 3, padding=1)
         self.bn1 = torch.nn.BatchNorm2d(16)
 
-        self.z_dim = z_dim
-        self.hope = HyperNetwork(z_dim=self.z_dim, device=device)
+        self.hope = HyperNetwork(z_dim=z_dim, device=device)
 
         self.zs_size = [[1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1],
                         [2, 1], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2], [2, 2],
                         [4, 2], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4], [4, 4]]
 
-        self.filter_size = [[16,16], [16,16], [16,16], [16,16], [16,16], [16,16], [16,32], [32,32], [32,32], [32,32],
-                            [32,32], [32,32], [32,64], [64,64], [64,64], [64,64], [64,64], [64,64]]
+        self.filter_size = [16, 16, 16, 16, 16, 16, 16, 32, 32, 32, 32, 32, 32, 64, 64, 64, 64, 64, 64]
 
+        # ResNet Init
         self.res_net = torch.nn.ModuleList()
-
-        for i in range(18):
+        for i, (in_size, out_size) in enumerate(zip(self.filter_size, self.filter_size[1:])):
             down_sample = False
             if i > 5 and i % 6 == 0:  # Downsampling to different output size as per the ResNet specification
                 down_sample = True
-            self.res_net.append(ResNetBlock(self.filter_size[i][0], self.filter_size[i][1], downsample=down_sample))
+            self.res_net.append(ResNetBlock(in_size, out_size, downsample=down_sample))
 
+        # Embedding Init
         self.zs = torch.nn.ModuleList()
-
         for i in range(36):
-            self.zs.append(Embedding(self.zs_size[i], self.z_dim, device))
+            self.zs.append(Embedding(self.zs_size[i], z_dim, device))
 
         self.global_avg = torch.nn.AvgPool2d(8)
         self.final = torch.nn.Linear(64,10)
@@ -196,7 +195,7 @@ class PrimaryNetwork(torch.nn.Module):
 
         x = F.relu(self.bn1(self.conv1(x)))
 
-        for i in range(18):
+        for i in range(len(self.res_net)):
             # The HyperNetwork output (kernel) gets passed into the Embedding layer
             # The Embedding layer aggregates the kernels and outputs the weights for the resnet layer
             w1 = self.zs[2*i](self.hope)
