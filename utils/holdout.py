@@ -19,6 +19,7 @@ DEFAULT_SPLIT = 0.70
 
 class AbstractSplit(ABC):
     def __init__(self, config, dataset, param_data, device):
+        self.config = config
         self.data_config = config["data_config"]
         self.dataset = dataset
         self.param_data = param_data
