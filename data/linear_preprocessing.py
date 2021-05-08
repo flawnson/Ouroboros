@@ -7,6 +7,7 @@ import torchvision as tv
 from logzero import logger
 from typing import Dict, List
 from torch.utils.data import Dataset, ConcatDataset, Subset
+import torchvision.transforms as transforms
 
 
 class HousingDataset(Dataset):
@@ -54,37 +55,74 @@ def get_data(config: Dict) -> ConcatDataset:
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")
 
-    to_concat = []
-    for x in [True, False]:
-        if isinstance(subset, int):
-            to_concat.append(Subset(tv_dataset(os.path.join(config['data_config']['data_dir']),
-                                               train=x,
-                                               download=True,
-                                               transform=transform),
-                                    subset_indices))
-        else:
-            to_concat.append(tv_dataset(os.path.join(config['data_config']['data_dir']),
-                                        train=x,
-                                        download=True,
-                                        transform=transform))
-    dataset = ConcatDataset(to_concat)
 
-    to_concat_targets = []
-    for x in [True, False]:
-        if isinstance(subset, int):
-            to_concat_targets.append(tv_dataset(os.path.join(config['data_config']['data_dir']),
-                                                train=x,
-                                                download=True,
-                                                transform=transform).targets[:subset])
-        else:
-            to_concat_targets.append(tv_dataset(os.path.join(config['data_config']['data_dir']),
-                                                train=x,
-                                                download=True,
-                                                transform=transform).targets)
+    #### Modified
+    train_data = tv_dataset(root=os.path.join(config['data_config']['data_dir']), train=True, download=True)
+    mean = train_data.data.float().mean() / 255
+    std = train_data.data.float().std() / 255
 
-    # In case targets are not a tensor (like in CIFAR10)
-    to_concat_targets = [torch.tensor(x) for x in to_concat_targets]
+    print(f'Calculated mean: {mean}')
+    print(f'Calculated std: {std}')
 
-    dataset.targets = torch.cat(to_concat_targets)
+    train_transforms = transforms.Compose([
+        transforms.RandomRotation(5, fill=(0,)),
+        transforms.RandomCrop(28, padding=2),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[mean], std=[std])
+    ])
 
-    return dataset
+    test_transforms = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[mean], std=[std])
+    ])
+
+    train_data = tv_dataset(root=os.path.join(config['data_config']['data_dir']),
+                                train=True,
+                                download=True,
+                                transform=train_transforms)
+
+    test_data = tv_dataset(root=os.path.join(config['data_config']['data_dir']),
+                               train=False,
+                               download=True,
+                               transform=test_transforms)
+
+    print(f'Number of training examples: {len(train_data)}')
+    print(f'Number of testing examples: {len(test_data)}')
+
+    return (train_data, test_data)
+
+    ####
+
+    # to_concat = []
+    # for x in [True, False]:
+    #     if isinstance(subset, int):
+    #         to_concat.append(Subset(tv_dataset(os.path.join(config['data_config']['data_dir']),
+    #                                            train=x,
+    #                                            download=True,
+    #                                            transform=transform),
+    #                                 subset_indices))
+    #     else:
+    #         to_concat.append(tv_dataset(os.path.join(config['data_config']['data_dir']),
+    #                                     train=x,
+    #                                     download=True,
+    #                                     transform=transform))
+    # dataset = ConcatDataset(to_concat)
+    #
+    # to_concat_targets = []
+    # for x in [True, False]:
+    #     if isinstance(subset, int):
+    #         to_concat_targets.append(tv_dataset(os.path.join(config['data_config']['data_dir']),
+    #                                             train=x,
+    #                                             download=True,
+    #                                             transform=transform).targets[:subset])
+    #     else:
+    #         to_concat_targets.append(tv_dataset(os.path.join(config['data_config']['data_dir']),
+    #                                             train=x,
+    #                                             download=True,
+    #                                             transform=transform).targets)
+    #
+    # # In case targets are not a tensor (like in CIFAR10)
+    # to_concat_targets = [torch.tensor(x) for x in to_concat_targets]
+    #
+    # dataset.targets = torch.cat(to_concat_targets)
+    # return dataset
