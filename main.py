@@ -84,7 +84,7 @@ def main():
     ### Model augmentation ### (for none, use classical, all augmentations are model agnostic)
     aug_model: torch.nn.Module = None
     if config["model_aug_config"]["model_augmentation"].casefold() == "classical":
-        aug_model = Classical(config, model, datasets, device).to(device)
+        aug_model = Classical(config, model, device).to(device)
         # aug_model = model
     elif config["model_aug_config"]["model_augmentation"].casefold() == "ouroboros":
         aug_model = Ouroboros(config, model, device).to(device)

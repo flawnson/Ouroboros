@@ -113,7 +113,7 @@ def run():
         test_epoch_length = len(dataloaders[list(dataloaders)[0]])
         actual_test_loss = epoch_data["loss"][1] / (test_epoch_length // config["data_config"]["batch_size"])
         tb_logger.scalar_summary('loss (test)', actual_test_loss, epoch)
-        tb_logger.scalar_summary('scores (train)', epoch_scores["acc"][1], epoch)
+        tb_logger.scalar_summary('scores (test)', epoch_scores["acc"][1], epoch)
 
         logger.info("Successfully wrote logs to tensorboard")
 

@@ -27,15 +27,12 @@
     "pooling_params": null,
     "normalize": "torch.nn.functional.layer_norm",
     "normalize_params": {},
-    "dropout": 0.50,
-    "layer_sizes": [784, 40, 40]
+    "dropout": 0.10,
+    "layer_sizes": [784, 392, 146, 28]
   },
   "model_aug_config":
   {
-    "model_augmentation": "classical",
-    "n_inputs": 2,
-    "n_hidden": 40,
-    "reduction_method": "random"
+    "model_augmentation": "classical"
   },
   "optim_config":
   {
