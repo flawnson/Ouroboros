@@ -27,7 +27,7 @@
     "pooling_params": null,
     "normalize": "torch.nn.functional.layer_norm",
     "normalize_params": {},
-    "dropout": 0.50,
+    "dropout": 0.25,
     "layer_sizes": [80, 40, 40]
   },
   "model_aug_config":

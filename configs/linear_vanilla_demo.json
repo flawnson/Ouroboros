@@ -28,7 +28,7 @@
     "normalize_params": {
       "normalized_shape": [40]
     },
-    "dropout": 0.50,
+    "dropout": 0.25,
     "layer_sizes": [40, 40, 40]
   },
   "model_aug_config":
@@ -37,7 +37,6 @@
     "n_inputs": 2,
     "n_hidden": 40,
     "van_output_layers": [40, 1],
-    "aux_output_layers": [40, 10],
     "reduction_method": "random"
   },
   "optim_config":
