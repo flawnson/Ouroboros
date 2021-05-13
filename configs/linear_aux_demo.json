@@ -2,7 +2,7 @@
   "run_name": "Linear_MNST_auxiliary",
   "seed": 42,
   "run_type": "demo",
-  "logging": false,
+  "logging": true,
   "log_level": "logging.INFO",
   "clean_log_dir": true,
   "log_dir": "saves/logs/auxiliary",
@@ -17,7 +17,7 @@
     "num_splits": 5,
     "shuffle": true,
     "batch_size": 16,
-    "subset": 100
+    "subset": null
   },
   "model_config":
   {
@@ -27,14 +27,14 @@
     "pooling_params": null,
     "normalize": "torch.nn.functional.layer_norm",
     "normalize_params": {},
-    "dropout": 0.25,
-    "layer_sizes": [80, 40, 40]
+    "dropout": 0.10,
+    "layer_sizes": [784, 392, 146, 40]
   },
   "model_aug_config":
   {
     "model_augmentation": "auxiliary",
     "n_inputs": 2,
-    "n_hidden": 40,
+    "n_hidden": 392,
     "van_output_layers": [40, 1],
     "aux_output_layers": [40, 10],
     "reduction_method": "random"
