@@ -16,6 +16,7 @@ class AbstractHyperNetwork(ABC, torch.nn.Module):
         self.model = model
         self.device = device
 
+    @abstractmethod
     def forward(self, x):
         return x
 
@@ -74,7 +75,7 @@ class MLPHyperNetwork(AbstractHyperNetwork):
 
 class HyperNetwork(torch.nn.Module):
 
-    def __init__(self, f_size=3, z_dim=64, out_size=16, in_size=16, device="cpu"):
+    def __init__(self, f_size: int=3, z_dim: int=64, out_size: int=16, in_size: int=16, device: torch.device="cpu"):
         super(HyperNetwork, self).__init__()
         self.z_dim = z_dim
         self.f_size = f_size
@@ -87,8 +88,8 @@ class HyperNetwork(torch.nn.Module):
         self.w2 = torch.nn.Parameter(torch.fmod(torch.randn((self.z_dim, self.out_size*self.f_size*self.f_size)).to(device),2))
         self.b2 = torch.nn.Parameter(torch.fmod(torch.randn((self.out_size*self.f_size*self.f_size)).to(device),2))
 
-    def forward(self, z):
-
+    def forward(self, z: torch.tensor):
+        # z is the randomly generated unique layer embedding
         h_in = torch.matmul(z, self.w1) + self.b1
         h_in = h_in.view(self.in_size, self.z_dim)
 
@@ -99,13 +100,14 @@ class HyperNetwork(torch.nn.Module):
 
 
 class IdentityLayer(torch.nn.Module):
+    """Identity layer used in ResNet if downsampling is not applied"""
     def forward(self, x):
         return x
 
 
 class ResNetBlock(torch.nn.Module):
-
-    def __init__(self, in_size=16, out_size=16, downsample=False):
+    """ResNet block that uses the hypernetwork generated weights to do convolutions on the data"""
+    def __init__(self, in_size: int=16, out_size: int=16, downsample: bool=False):
         super(ResNetBlock,self).__init__()
         self.out_size = out_size
         self.in_size = in_size
@@ -119,7 +121,7 @@ class ResNetBlock(torch.nn.Module):
         self.bn1 = torch.nn.BatchNorm2d(out_size)
         self.bn2 = torch.nn.BatchNorm2d(out_size)
 
-    def forward(self, x, conv1_w, conv2_w):
+    def forward(self, x: torch.tensor, conv1_w: torch.tensor, conv2_w: torch.tensor):
 
         residual = self.reslayer(x)
 
@@ -137,8 +139,8 @@ class ResNetBlock(torch.nn.Module):
 
 
 class Embedding(torch.nn.Module):
-
-    def __init__(self, z_num, z_dim, device):
+    """Class to create layer embeddings to pass into hypernetworks and aggregate output into conv layer weights"""
+    def __init__(self, z_num: List, z_dim: int, device: torch.device):
         super(Embedding, self).__init__()
 
         self.z_list = torch.nn.ParameterList()
@@ -147,13 +149,13 @@ class Embedding(torch.nn.Module):
 
         h, k = self.z_num
 
-        # Generating unique (random) layer embeddings to be passed into HyperNetwork
+        # Generating unique (random) layer embeddings to be passed into HyperNetwork (enough to each dimension)
         for i in range(h*k):
             self.z_list.append(torch.nn.Parameter(torch.fmod(torch.randn(self.z_dim).to(device), 2)))
 
-    def forward(self, hyper_net):
+    def forward(self, hyper_net: torch.nn.Module):
         ww = []
-        k, h = self.z_num
+        h, k = self.z_num
         for i in range(h):
             w = []
             for j in range(k):
@@ -163,19 +165,23 @@ class Embedding(torch.nn.Module):
 
 
 class PrimaryNetwork(torch.nn.Module):
-
-    def __init__(self, z_dim=64, device="cpu"):
+    """The model used to make predictions on the data; the model that the hypernetwork is generating weights for"""
+    def __init__(self, config, z_dim: int = 64, device: torch.device = "cpu"):
         super(PrimaryNetwork, self).__init__()
+        self.config = config
+        self.model_config = config["model_config"]
         self.conv1 = torch.nn.Conv2d(3, 16, 3, padding=1)
         self.bn1 = torch.nn.BatchNorm2d(16)
         self.hope = HyperNetwork(z_dim=z_dim, device=device)
-        self.ratio = 0.0625
 
+        # CANNOT BE CHANGED WITHOUT CAUSING ERRORS (Further investigation and refactoring needed)
+        self.ratio = 0.0625
         self.filter_size = [16, 16, 16, 16, 16, 16, 16, 32, 32, 32, 32, 32, 32, 64, 64, 64, 64, 64, 64]
 
         # Each size value in each pair is actually 16x that value to correspond with the filter_size
         # 36 is 2x the number of filters which is 18, because there are 2 conv layers that need weights in each resnet
-        self.zs = [int(i*self.ratio) for i in self.filter_size]
+        # ratio is the kernel size w.r.t filter size (all values in filter_size must be divisible)
+        self.zs = [int(i*self.model_config["ratio"]) for i in self.filter_size]
         self.zs_size = np.reshape([[[i, i], [j, i]] for i, j in zip(self.zs, self.zs[1:])], (-1, 2)).tolist()[1:]
         self.zs_size.append(self.zs_size[-1])
 
@@ -195,9 +201,11 @@ class PrimaryNetwork(torch.nn.Module):
         self.global_avg = torch.nn.AvgPool2d(8)
         self.final = torch.nn.Linear(64,10)
 
-    def forward(self, x):
+    def forward(self, x: torch.tensor):
 
-        x = F.relu(self.bn1(self.conv1(x)))
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = F.relu(x)
 
         for i in range(len(self.filter_size) - 1):  # Because there are 19 sizes used to create 18 filters
             # The HyperNetwork output (kernel) gets passed into the Embedding layer
@@ -207,7 +215,8 @@ class PrimaryNetwork(torch.nn.Module):
             x = self.res_net[i](x, w1, w2)
 
         x = self.global_avg(x)
-        x = self.final(x.view(-1,64))
+        x = x.view(-1,64)
+        x = self.final(x)
 
         return x
 

@@ -27,6 +27,13 @@ class Quine(ABC):
         if isinstance(subset, int):
             self.num_params = subset
 
+    def to_onehot(self, idxs: torch.tensor):
+        idxs = idxs.item() if type(idxs) == torch.tensor else idxs
+        onehot = torch.zeros(self.num_params, device=self.device)
+        onehot[idxs] = 1
+        # onehots = [torch.zeros(self.num_params, device=self.device)[idx.item()] for idx in idxs]  # Was testing different batch sizes
+        return onehot
+
     def indexer(self) -> List:
         """
         Function that reaches into the model parameters to return their coordinates
@@ -126,14 +133,14 @@ class Vanilla(Quine, torch.nn.Module):
         Model parameters are kept in self.param_list and used for training and inference
         Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter.
         """
-        params_data = torch.eye(self.num_params, device=self.device)
+        # params_data = torch.eye(self.num_params, device=self.device)
         index_list = list(range(self.num_params))
         coordinates = self.indexer()
         logger.info(f"Regenerating {len(coordinates)} parameters")
         for param_idx, coo in zip(index_list, coordinates):
             logger.info(f"Regenerating parameter {param_idx}")
             with torch.no_grad():
-                idx_vector = torch.squeeze(params_data[param_idx])  # Pulling out the nested tensor
+                idx_vector = torch.squeeze(self.to_onehot(param_idx))  # Pulling out the nested tensor
                 predicted_param = self.forward(idx_vector, None)
                 new_params = deepcopy(self.param_list)
                 new_params[coo[0]][coo[1]][coo[2]] = predicted_param

@@ -21,7 +21,8 @@
   },
   "model_config":
   {
-    "model_type": "hypernetwork"
+    "model_type": "hypernetwork",
+    "ratio": 0.0625
   },
   "model_aug_config":
   {

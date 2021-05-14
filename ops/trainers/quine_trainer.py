@@ -35,7 +35,7 @@ class VanillaTrainer(AbstractTrainer):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
 
-        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
+        idx_vector = torch.squeeze(self.wrapper.model.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
 
         predictions = {"param": self.wrapper.model(idx_vector)}
@@ -56,7 +56,7 @@ class VanillaTrainer(AbstractTrainer):
     @torch.no_grad()
     def test(self, param_idx, batch_idx):
         self.wrapper.model.eval()
-        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
+        idx_vector = torch.squeeze(self.wrapper.model.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
         predictions = {"param": self.wrapper.model(idx_vector)}
         targets = {"param": param}
@@ -157,7 +157,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
 
-        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
+        idx_vector = torch.squeeze(self.wrapper.model.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
 
         # Both predictions and targets will be dictionaries that hold two elements
@@ -190,7 +190,7 @@ class AuxiliaryTrainer(AbstractTrainer):
     @torch.no_grad()
     def test(self, data, param_idx, batch_idx):
         self.wrapper.model.eval()
-        idx_vector = torch.squeeze(self.wrapper.to_onehot(param_idx)) #coordinate of the param in one hot vector form
+        idx_vector = torch.squeeze(self.wrapper.model.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
         outputs = {"param": self.wrapper.model(idx_vector, data[0].to(self.device))[0],
                    "aux": self.wrapper.model(idx_vector, data[0].to(self.device))[1]}

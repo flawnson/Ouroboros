@@ -94,7 +94,7 @@ def main():
         aug_model = Vanilla(config, model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "hypernetwork":
         if config["model_config"]["model_type"].casefold() == "hypernetwork":
-            aug_model = PrimaryNetwork(device=device).to(device)
+            aug_model = PrimaryNetwork(config, device=device).to(device)
         if config["model_config"]["model_type"].casefold() == "linear":
             aug_model = MLPHyperNetwork(config, model, device).to(device)
         if config["model_config"]["model_type"].casefold() == "image":

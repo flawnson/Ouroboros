@@ -36,12 +36,6 @@ class ModelParameters(object):
 
         self.device = device
 
-    def to_onehot(self, idxs: torch.tensor):
-        onehot = torch.zeros(self.num_params, device=self.device)
-        onehot[idxs.item()] = 1
-        # onehots = [torch.zeros(self.num_params, device=self.device)[idx.item()] for idx in idxs]  # Was testing different batch sizes
-        return onehot
-
     def get_param(self, idx: int) -> float:
         """
         Gets the parameter at the specified index in the model
