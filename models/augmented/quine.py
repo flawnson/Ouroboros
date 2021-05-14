@@ -45,8 +45,12 @@ class Quine(ABC):
         counter = 0
         for i, params in enumerate(self.param_list):
             try:
+                if len(list(params.size())) == 0:
+                    params = torch.unsqueeze(params, dim=0)
                 for n, param in enumerate(params):
                     try:
+                        if len(list(param.size())) == 0:
+                            param = torch.unsqueeze(param, dim=0)
                         for d, p in enumerate(param):
                             coordinates.append([i, n, d])
                     except TypeError:
