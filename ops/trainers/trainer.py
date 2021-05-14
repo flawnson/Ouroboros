@@ -9,7 +9,7 @@ from models.standard.mlp_model import MLPModel
 from models.augmented.quine import Auxiliary, Vanilla
 from models.augmented.ouroboros import Godel
 from models.augmented.classical import Classical
-from models.augmented.hypernetwork import PrimaryNetwork
+from models.augmented.hypernetwork import ResNetPrimaryNetwork
 from .abstract_trainer import AbstractTrainer
 from .classical_trainer import ClassicalTrainer
 from .hypernetwork_trainer import HyperNetworkTrainer, DualHyperNetworkTrainer
@@ -29,7 +29,7 @@ def trainer(config: Dict, model: torch.nn.Module, param_data: torch.nn.Module, d
         return AuxiliaryTrainer(config, param_data, dataloaders, device).run_train()
     elif isinstance(model, Vanilla):
         return VanillaTrainer(config, param_data, dataloaders, device).run_train()
-    elif isinstance(model, PrimaryNetwork):
+    elif isinstance(model, ResNetPrimaryNetwork):
         return HyperNetworkTrainer(config, model, dataloaders, device).run_train()
     elif isinstance(model, Godel):
         return DualHyperNetworkTrainer(config, model, dataloaders, device).run_train()

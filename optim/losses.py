@@ -11,7 +11,7 @@ from models.standard.mlp_model import MLPModel
 from models.augmented.quine import Quine, Vanilla, Auxiliary
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
-from models.augmented.hypernetwork import PrimaryNetwork
+from models.augmented.hypernetwork import ResNetPrimaryNetwork
 
 
 class QuineLoss:
@@ -98,7 +98,7 @@ def loss(config: Dict, model: torch.nn.Module, logits, targets) -> Union[Dict, f
                     "combined_loss": quine_loss.combined_loss()}
     elif isinstance(model, Ouroboros):
         pass
-    elif type(model) == PrimaryNetwork:
+    elif type(model) == ResNetPrimaryNetwork:
         return {"loss": eval(optim_config["loss_func"])(logits, targets, **optim_config["loss_kwargs"])}
     else:
         try:

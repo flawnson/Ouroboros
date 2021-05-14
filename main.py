@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 from models.standard.graph_model import GNNModel
 from models.standard.mlp_model import MLPModel
 from models.augmented.quine import Auxiliary, Vanilla
-from models.augmented.hypernetwork import MLPHyperNetwork, CNNHyperNetwork, PrimaryNetwork
+from models.augmented.hypernetwork import MLPHyperNetwork, CNNHyperNetwork, ResNetPrimaryNetwork
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
@@ -94,7 +94,7 @@ def main():
         aug_model = Vanilla(config, model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "hypernetwork":
         if config["model_config"]["model_type"].casefold() == "hypernetwork":
-            aug_model = PrimaryNetwork(config, device=device).to(device)
+            aug_model = ResNetPrimaryNetwork(config, device=device).to(device)
         if config["model_config"]["model_type"].casefold() == "linear":
             aug_model = MLPHyperNetwork(config, model, device).to(device)
         if config["model_config"]["model_type"].casefold() == "image":
