@@ -176,7 +176,7 @@ class PrimaryNetwork(torch.nn.Module):
 
         # CANNOT BE CHANGED WITHOUT CAUSING ERRORS (Further investigation and refactoring needed)
         self.ratio = 0.0625
-        self.filter_size = [16, 16, 16, 16, 16, 16, 16, 32, 32, 32, 32, 32, 32, 64, 64, 64, 64, 64, 64]
+        self.filter_size = [16, 16, 16, 16, 16, 16, 16, 32, 32, 32, 32, 32, 32, 32, 64, 64, 64, 64, 64, 64]
 
         # Each size value in each pair is actually 16x that value to correspond with the filter_size
         # 36 is 2x the number of filters which is 18, because there are 2 conv layers that need weights in each resnet
@@ -189,7 +189,7 @@ class PrimaryNetwork(torch.nn.Module):
         self.res_net = torch.nn.ModuleList()
         for i, (in_size, out_size) in enumerate(zip(self.filter_size, self.filter_size[1:])):
             down_sample = False
-            if i > 5 and i % 6 == 0:  # Downsampling to different output size as per the ResNet specification
+            if i > 5 and in_size != out_size:  # Downsampling to different output size as per the ResNet specification
                 down_sample = True
             self.res_net.append(ResNetBlock(in_size, out_size, downsample=down_sample))
 
