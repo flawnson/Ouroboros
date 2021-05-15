@@ -1,3 +1,7 @@
+"""HyperNetwork implemented by ___ and available here:
+https://github.com/g1910/HyperNetworks
+ResNet inspired by torchvision's implementation avilable here:
+https://github.com/pytorch/vision/blob/6cc4970b3a01d3357af038c3d4b6a81f9fb74357/torchvision/models/resnet.py#L52"""
 import torch
 import numpy as np
 import torch.nn.functional as F
@@ -21,7 +25,7 @@ class AbstractHyperNetwork(ABC, torch.nn.Module):
         return x
 
 
-class CNNHyperNetwork(AbstractHyperNetwork):
+class MLPHyperNetwork(AbstractHyperNetwork):
     """Original HyperNetwork implementation uses an MLP to generate CNN kernels/filters not model weights"""
     def __init__(self, config, model, device):
         """
@@ -31,40 +35,19 @@ class CNNHyperNetwork(AbstractHyperNetwork):
             config: A dictionary of configurations
             model: The SubNetwork (that will receive its filters from the HyperNetwork)
         """
-        super(CNNHyperNetwork, self).__init__(config, model, device)
+        super(MLPHyperNetwork, self).__init__(config, model, device)
         self.config = config
         self.model = model
         self.device = device
-        self.hypernet = self.build_hypernetwork()
-        self.embedding = self.build_embedding()
 
-    def build_embedding(self):
-        return None
-
-    def build_hypernetwork(self):
-        """
-        Build and return an MLP as the HyperNetwork
-
-        Returns: Sequential object with MLP model
-
-        """
-        return torch.nn.Sequential(MLPModel(self.config, self.device).to(self.device))
-
-    def forward(self, x):
-        """Manually built in original implementation, attempting automatic build"""
-        # h_in = torch.matmul(x, self.w2) + self.b2
-        # h_in = h_in.view(self.in_size, self.z_dim)
-        #
-        # h_final = torch.matmul(h_in, self.w1) + self.b1
-        # kernel = h_final.view(self.out_size, self.in_size, self.f_size, self.f_size)
-        kernel = self.hypernet(self.embedding)
-        return kernel
+    def forward(self, z):
+        return self.model(z)
 
 
-class MLPHyperNetwork(torch.nn.Module):
+class LinearHyperNetwork(torch.nn.Module):
     """Modified HyperNetwork that uses Linear layers instead of hand coded weights and biases"""
     def __init__(self, config, f_size: int = 3, z_dim: int = 64, out_size: int = 16, in_size: int = 16, device: torch.device = "cpu"):
-        super(MLPHyperNetwork, self).__init__()
+        super(LinearHyperNetwork, self).__init__()
         self.config = config
         self.device = device
         self.z_dim = z_dim
@@ -74,7 +57,7 @@ class MLPHyperNetwork(torch.nn.Module):
         self.layer_1 = torch.nn.Linear(self.z_dim, self.in_size*self.z_dim, bias=True)
         self.layer_2 = torch.nn.Linear(self.z_dim, self.out_size*self.f_size*self.f_size, bias=True)
 
-    def forward(self, z):
+    def forward(self, z: torch.tensor):
         z = self.layer_1(z)
         z = z.view(self.in_size, self.z_dim)
         z = self.layer_2(z)
@@ -181,12 +164,12 @@ class ResNetPrimaryNetwork(torch.nn.Module):
         self.model_config = config["model_config"]
         self.conv1 = torch.nn.Conv2d(3, 16, 3, padding=1)
         self.bn1 = torch.nn.BatchNorm2d(16)
-        self.hope = MLPHyperNetwork(config=config, z_dim=z_dim, device=device)
+        self.hope = LinearHyperNetwork(config=config, z_dim=z_dim, device=device)
         # self.hope = HyperNetwork(z_dim=z_dim, device=device)
 
         # CANNOT BE CHANGED WITHOUT CAUSING ERRORS (Further investigation and refactoring needed)
         self.ratio = 0.0625
-        self.filter_size = [16, 16, 16, 16, 16, 16, 16, 32, 32, 32, 32, 32, 32, 32, 64, 64, 64, 64, 64, 64]
+        self.filter_size = [16, 16, 16, 16, 16, 16, 16, 32, 32, 32, 32, 32, 32, 64, 64, 64, 64, 64, 64]
 
         # Each size value in each pair is actually 16x that value to correspond with the filter_size
         # 36 is 2x the number of filters which is 18, because there are 2 conv layers that need weights in each resnet
@@ -208,6 +191,7 @@ class ResNetPrimaryNetwork(torch.nn.Module):
         for i in range(len(self.zs_size)):
             self.zs.append(Embedding(self.zs_size[i], z_dim, device))
 
+        # Consider using AdaptiveAvgPool as seen in torchvision's ResNet model
         self.global_avg = torch.nn.AvgPool2d(8)
         self.final = torch.nn.Linear(64, 10)
 

@@ -88,12 +88,34 @@ tensorboard --logdir=logs/GAT_tuning/tune_model
 Docker containers for running the project are on the roadmap!
 
 ## Usage
-The core component of usage is the training pipeline. The tuning pipeline, parallelization pipeline, and all others inherit from the Trainer superclass.
+The steps executed by each pipeline run are outlined:
+1. Load config dictionary from `JSON` file and setup logging, device management, set seeds, etc.
+2. Data downloading and preprocessing
+3. Setup standard model (MLP, CNN, GCN, Transformer, etc.)
+4. Setup augmented model implemented as a standard model wrapper (Quine, HyperNetwork, etc.)
+5. Load model-dependant datasets (if required)
+6. Split datasets using selected strategy
+7. Select run-type pipeline
 
 Run:
 ```shell
 python main.py -c "path_to_config_file.json"
 ```
+
+### Standard Models
+There are 2 standard models implemented (Transformer and CNN in development):
+* MLP
+* GCN
+
+### Augmented Models
+There are 2 augmented models implemented:
+* Quine (With help from: https://github.com/AustinT/nn-quine)
+* HyperNetwork (With help from: https://github.com/g1910/HyperNetworks)
+
+### Datasets
+There are two datasets with loading and transformations implemented and used:
+* MNIST - Quine and Classical model types
+* CIFAR - HyperNetwork
 
 ### Demo
 Demo is a simple training run. It takes a configuration file and runs the Trainer once.
