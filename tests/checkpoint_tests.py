@@ -16,7 +16,7 @@ from utils.checkpoint import PTCheckpoint
 ### Configuring ###
 
 
-DEFAULT_CONFIG = os.path.join("configs", "linear_aux_demo.json")
+DEFAULT_CONFIG = os.path.join("configs", "linear_aux_demo_small.json")
 
 
 @pytest.fixture

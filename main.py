@@ -56,7 +56,7 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         datasets = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        datasets = get_data(config)
+        datasets = get_data(config).to(device)
     elif config["data_config"]["dataset"].casefold() == "cifar" or "cifar10":
         datasets = get_data(config)
     else:

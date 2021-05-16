@@ -1,0 +1,61 @@
+{
+  "run_name": "Linear_MNST_classical",
+  "seed": 42,
+  "run_type": "demo",
+  "logging": true,
+  "log_level": "logging.INFO",
+  "clean_log_dir": true,
+  "log_dir": "saves/logs/classical",
+  "device": "cuda",
+  "data_config":
+  {
+    "dataset": "mnist",
+    "concat": true,
+    "data_dir": "data/datafiles/mnist",
+    "data_path": "data/datafiles/housing_prices/train.csv",
+    "split_type": "holdout",
+    "num_splits": 5,
+    "shuffle": true,
+    "batch_size": 16,
+    "subset": 3000
+  },
+  "model_config":
+  {
+    "model_dir": null,
+    "model_type": "linear",
+    "pooling": null,
+    "pooling_params": null,
+    "normalize": "torch.nn.functional.layer_norm",
+    "normalize_params": {},
+    "dropout": 0.10,
+    "layer_sizes": [784, 40, 10]
+  },
+  "model_aug_config":
+  {
+    "model_augmentation": "classical"
+  },
+  "optim_config":
+  {
+    "loss_func": "cross_entropy",
+    "loss_kwargs": {},
+    "optimizer": "adam",
+    "optim_kwargs": {},
+    "scheduler": "cawr",
+    "scheduler_kwargs": {
+      "T_0": 10
+    }
+  },
+  "run_config":
+  {
+    "num_epochs": 500,
+    "checkpoint_intervals": 100,
+    "clean_checkpoint_dir": true,
+    "checkpoint_dir": "saves/checkpoints/classical/"
+  },
+  "score_config": {
+      "acc": null
+  },
+  "tuning_config": {
+
+  }
+}

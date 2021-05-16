@@ -10,6 +10,7 @@ saves/
 *.gz
 *.v2
 *.pyc
+datafiles/
 datafiles/mnist/
 datafiles/cifar/
 saves/

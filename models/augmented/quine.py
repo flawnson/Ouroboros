@@ -201,7 +201,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
             new_output = torch.cat((new_output, output2))
         else:
             # Substitutes data with random matrix during regeneration... Could probably do better
-            new_output = torch.cat((new_output, torch.rand(self.model_aug_config["n_hidden"])))
+            new_output = torch.cat((new_output, torch.rand(self.model_aug_config["n_hidden"]).to(self.device)))
 
         # run_logging.info("Input 1: ", output1)
         # run_logging.info("Input 2: ", output2)

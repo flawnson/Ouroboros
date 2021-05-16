@@ -161,10 +161,11 @@ class AuxiliaryTrainer(AbstractTrainer):
         param = self.wrapper.model.get_param(param_idx)
 
         # Both predictions and targets will be dictionaries that hold two elements
+        #TODO: Call self.wrapper.model(...) once instead of twice for predictions
         predictions = {"param": self.wrapper.model(idx_vector, data[0].to(self.device))[0],
                        "aux": self.wrapper.model(idx_vector, data[0].to(self.device))[1]}
         aux_pred = predictions["aux"].argmax(keepdim=True)  # get the index of the max log-probability
-        targets = {"param": param, "aux": data[-1].to(self.device)}
+        targets = {"param": param.to(self.device), "aux": data[-1].to(self.device)}
 
         loss = self.loss(predictions, targets)
 
@@ -195,7 +196,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         outputs = {"param": self.wrapper.model(idx_vector, data[0].to(self.device))[0],
                    "aux": self.wrapper.model(idx_vector, data[0].to(self.device))[1]}
         aux_pred = outputs["aux"].argmax(keepdim=True)  # get the index of the max log-probability
-        targets = {"aux": data[-1], "param": param}
+        targets = {"aux": data[-1].to(self.device), "param": param.to(self.device)}
 
         loss = self.loss(outputs, targets)
 
