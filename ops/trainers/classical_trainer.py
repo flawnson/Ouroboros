@@ -70,9 +70,9 @@ class ClassicalTrainer(AbstractTrainer):
         self.model.train()
         self.optimizer.zero_grad()
 
-        logits = self.model(data[0])
+        logits = self.model(data[0].to(self.device))
         predictions = logits.argmax(keepdim=True)
-        loss = self.loss(logits, data[1])
+        loss = self.loss(logits, data[1].to(self.device))
 
         if ((batch_idx + 1) % self.config["data_config"]["batch_size"]) == 0:
             loss["loss"].backward()
@@ -98,9 +98,9 @@ class ClassicalTrainer(AbstractTrainer):
         """
         self.model.eval()
 
-        logits = self.model(data[0])
+        logits = self.model(data[0].to(self.device))
         predictions = logits.argmax(keepdim=True)
-        loss = self.loss(logits, data[1])
+        loss = self.loss(logits, data[1].to(self.device))
 
         if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
             self.epoch_data["loss"][1] += self.batch_data["loss"][1]

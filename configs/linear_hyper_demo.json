@@ -2,11 +2,11 @@
   "run_name": "Linear_CIFAR_hypernetwork",
   "seed": 42,
   "run_type": "demo",
-  "logging": false,
+  "logging": true,
   "log_level": "logging.INFO",
   "clean_log_dir": true,
-  "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs",
-  "device": "cpu",
+  "log_dir": "saves/logs/hypernetwork",
+  "device": "cuda",
   "data_config":
   {
     "dataset": "cifar",

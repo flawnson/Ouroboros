@@ -15,7 +15,7 @@ from utils.logging import PTTBLogger
 
 @pytest.fixture
 def config():
-    file = os.path.join("configs", "linear_aux_demo.json")
+    file = os.path.join("configs", "linear_aux_demo_small.json")
     config: Dict = json.load(open(file))
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
     logzero.loglevel(eval(config["logging"]))
