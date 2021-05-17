@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     config: Dict = json.load(open(args.config))
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
-    logzero.loglevel(eval(config["logging"]))
+    logzero.loglevel(eval(config["log_level"]))
     logger.info(f"Successfully retrieved config json. Running {config['run_name']} on {device}.")
 
     # In json config file, provide the name of the testing function to execute and pass the compulsory kwargs arguments

@@ -22,7 +22,7 @@ DEFAULT_CONFIG = os.path.join("configs", "linear_aux_demo.json")
 @pytest.fixture
 def config():
     config: Dict = json.load(open(DEFAULT_CONFIG))
-    logzero.loglevel(eval(config["logging"]))
+    logzero.loglevel(eval(config["log_level"]))
     logger.info(f"Successfully retrieved config json. Running {config['run_name']}.")
 
     return config

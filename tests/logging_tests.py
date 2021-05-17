@@ -15,10 +15,10 @@ from utils.logging import PTTBLogger
 
 @pytest.fixture
 def config():
-    file = os.path.join("configs", "linear_aux_demo.json")
+    file = os.path.join("..", "configs", "linear_aux_demo.json")
     config: Dict = json.load(open(file))
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
-    logzero.loglevel(eval(config["logging"]))
+    logzero.loglevel(eval(config["log_level"]))
     logger.info(f"Successfully retrieved config json. Running {config['run_name']} on {device}.")
 
     return config
@@ -31,5 +31,8 @@ def test_pt_logging(config):
         pt_logger.scalar_summary('Some other metric', np.random.randint(0, 1000), idx)
 
     assert os.path.exists(config["log_dir"])
-    assert len(os.listdir(config["log_dir"])) > 0
+    if config["clean_log_dir"]:
+        assert len(os.listdir(config["log_dir"])) == 1  # After cleaning dir, only the new event dir should exist
+    else:
+        assert len(os.listdir(config["log_dir"])) > 0
 
