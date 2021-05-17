@@ -161,9 +161,9 @@ class AuxiliaryTrainer(AbstractTrainer):
         param = self.wrapper.model.get_param(param_idx)
 
         # Both predictions and targets will be dictionaries that hold two elements
-        #TODO: Call self.wrapper.model(...) once instead of twice for predictions
-        predictions = {"param": self.wrapper.model(idx_vector, data[0].to(self.device))[0],
-                       "aux": self.wrapper.model(idx_vector, data[0].to(self.device))[1]}
+        output = self.wrapper.model(idx_vector, data[0].to(self.device))
+        predictions = {"param": output[0],
+                       "aux": output[1]}
         aux_pred = predictions["aux"].argmax(keepdim=True)  # get the index of the max log-probability
         targets = {"param": param.to(self.device), "aux": data[-1].to(self.device)}
 
@@ -193,8 +193,9 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.wrapper.model.eval()
         idx_vector = torch.squeeze(self.wrapper.model.to_onehot(param_idx)) #coordinate of the param in one hot vector form
         param = self.wrapper.model.get_param(param_idx)
-        outputs = {"param": self.wrapper.model(idx_vector, data[0].to(self.device))[0],
-                   "aux": self.wrapper.model(idx_vector, data[0].to(self.device))[1]}
+        test_output = self.wrapper.model(idx_vector, data[0].to(self.device))
+        outputs = {"param": test_output[0],
+                   "aux": test_output[1]}
         aux_pred = outputs["aux"].argmax(keepdim=True)  # get the index of the max log-probability
         targets = {"aux": data[-1].to(self.device), "param": param.to(self.device)}
 
