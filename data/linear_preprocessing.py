@@ -69,7 +69,7 @@ def get_image_data(config: Dict) -> ConcatDataset:
         else:
             raise NotImplementedError(f"{config['dataset']} is not a dataset")
     except Exception as e:
-        logger.exception(e)
+        raise e
 
     to_concat = []
     to_concat_targets = []

@@ -38,9 +38,9 @@ class AbstractMLPModel(torch.nn.Module, ABC):
         for layer, pooling, normalization in zip(self.layers, self.pool, self.norm):
             x = layer(x)
             z = x
-            x = pooling(x, **self.config["pooling_params"]) if pooling else x
+            x = pooling(x, **self.config["pooling_kwargs"]) if pooling else x
             x = F.relu(x)
-            x = normalization(x, normalized_shape=list(x.size()), **self.config["normalize_params"]) if normalization else x
+            x = normalization(x, normalized_shape=list(x.size()), **self.config["normalize_kwargs"]) if normalization else x
             x = F.dropout(x, p=self.config["dropout"], training=self.training)
         x = torch.nn.functional.log_softmax(z, dim=0)
         return x
