@@ -9,7 +9,7 @@
   "device": "cuda",
   "data_config":
   {
-    "dataset": "cifar",
+    "dataset": "cifar10",
     "concat": true,
     "data_dir": "data/datafiles/cifar",
     "data_path": "data/datafiles/housing_prices/train.csv",

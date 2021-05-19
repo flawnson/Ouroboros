@@ -2,7 +2,8 @@
   "run_name": "Linear_vanilla",
   "seed": 42,
   "run_type": "demo",
-  "logging": "logging.INFO",
+  "logging": true,
+  "log_level": "logging.INFO",
   "clean_log_dir": true,
   "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs",
   "device": "cpu",
@@ -23,9 +24,9 @@
     "model_dir": null,
     "model_type": "linear",
     "pooling": null,
-    "pooling_params": null,
+    "pooling_kwargs": null,
     "normalize": "torch.nn.functional.layer_norm",
-    "normalize_params": {
+    "normalize_kwargs": {
       "normalized_shape": [40]
     },
     "dropout": 0.25,

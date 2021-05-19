@@ -1,5 +1,5 @@
 {
-  "run_name": "Linear_MNST_auxiliary",
+  "run_name": "Linear_MNIST_auxiliary",
   "seed": 42,
   "run_type": "demo",
   "logging": true,
@@ -24,9 +24,9 @@
     "model_dir": null,
     "model_type": "linear",
     "pooling": null,
-    "pooling_params": null,
+    "pooling_kwargs": null,
     "normalize": "torch.nn.functional.layer_norm",
-    "normalize_params": {},
+    "normalize_kwargs": {},
     "dropout": 0.10,
     "layer_sizes": [784, 40, 40]
   },

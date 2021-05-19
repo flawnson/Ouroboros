@@ -18,7 +18,7 @@ from models.augmented.hypernetwork import MLPHyperNetwork, LinearHyperNetwork, R
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
-from data.linear_preprocessing import HousingDataset, get_data
+from data.linear_preprocessing import HousingDataset, get_image_data
 from utils.holdout import MNISTSplit, QuineSplit
 from utils.checkpoint import load
 from optim.parameters import ModelParameters
@@ -56,9 +56,9 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         datasets = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        datasets = get_data(config).to(device)
+        datasets = get_image_data(config).to(device)
     elif config["data_config"]["dataset"].casefold() == "cifar" or "cifar10":
-        datasets = get_data(config)
+        datasets = get_image_data(config)
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")
     logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
