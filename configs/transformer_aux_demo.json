@@ -1,5 +1,5 @@
 {
-  "run_name": "Linear_MNST_auxiliary",
+  "run_name": "Transformer_text_auxiliary",
   "seed": 42,
   "run_type": "demo",
   "logging": true,
@@ -22,7 +22,7 @@
   "model_config":
   {
     "model_dir": null,
-    "model_type": "linear",
+    "model_type": "transformer",
     "pooling": null,
     "pooling_params": null,
     "normalize": "torch.nn.functional.layer_norm",
@@ -42,7 +42,10 @@
   "optim_config":
   {
     "optimizer": "adam",
-    "optim_kwargs": {},
+    "optim_kwargs": {
+      "betas": [0.9, 0.98],
+      "eps": 1e-9
+    },
     "scheduler": "cawr",
     "scheduler_kwargs": {
       "T_0": 10

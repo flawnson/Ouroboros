@@ -1,5 +1,5 @@
 {
-  "run_name": "Linear_MNST_classical",
+  "run_name": "Linear_MNIST_classical",
   "seed": 42,
   "run_type": "demo",
   "logging": true,
