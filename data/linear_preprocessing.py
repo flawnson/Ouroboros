@@ -36,7 +36,7 @@ def get_image_data(config: Dict) -> ConcatDataset:
     Returns:
         torch.utils.data.Datasets
     """
-    logger.info(f"Downloading {config['data_config']['dataset']} data to {config['data_config']['data_dir']}")
+    logger.info(f"Downloading {config['data_config']['dataset']} data to {config['data_config']['data_kwargs']['root']}")
     transform = tv.transforms.Compose([tv.transforms.ToTensor()])
 
     #If specified, select only a subset for faster running (TAKES DOUBLE THE NUMBER IN CONFIG)
@@ -50,21 +50,21 @@ def get_image_data(config: Dict) -> ConcatDataset:
     try:
         if config["data_config"]["dataset"].casefold() == "mnist":
             for x in [True, False]:
-                tv_dataset = tv.datasets.MNIST(os.path.join(config['data_config']['data_dir']),
+                tv_dataset = tv.datasets.MNIST(root=config["data_config"]["data_kwargs"]["root"],
+                                               download=config["data_config"]["data_kwargs"]["download"],
                                                train=x,
-                                               download=True,
                                                transform=transform)
         elif config["data_config"]["dataset"].casefold() == "cifar10":
             for x in [True, False]:
-                tv_dataset = tv.datasets.CIFAR10(os.path.join(config['data_config']['data_dir']),
+                tv_dataset = tv.datasets.CIFAR10(root=config["data_config"]["data_kwargs"]["root"],
+                                                 download=config["data_config"]["data_kwargs"]["download"],
                                                  train=x,
-                                                 download=True,
                                                  transform=transform)
         elif config["data_config"]["dataset"].casefold() == "imagenet":
             for x in ["train", "val"]:
-                tv_dataset = tv.datasets.ImageNet(os.path.join(config['data_config']['data_dir']),
+                tv_dataset = tv.datasets.ImageNet(root=config["data_config"]["data_kwargs"]["root"],
+                                                  download=config["data_config"]["data_kwargs"]["download"],
                                                   train=x,
-                                                  download=True,
                                                   transform=transform)
         else:
             raise NotImplementedError(f"{config['dataset']} is not a dataset")

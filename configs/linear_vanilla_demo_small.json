@@ -11,7 +11,10 @@
   {
     "dataset": "mnist",
     "concat": true,
-    "data_dir": "data/datafiles/mnist",
+    "data_kwargs": {
+      "root": "data/datafiles/cifar",
+      "download": false
+    },
     "data_path": "data/datafiles/housing_prices/train.csv",
     "split_type": "holdout",
     "num_splits": 5,
