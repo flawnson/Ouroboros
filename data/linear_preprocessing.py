@@ -67,7 +67,7 @@ def get_image_data(config: Dict) -> ConcatDataset:
                                                   train=x,
                                                   transform=transform)
         else:
-            raise NotImplementedError(f"{config['dataset']} is not a dataset")
+            raise NotImplementedError(f"{config['data_config']['dataset']} is not a dataset")
     except Exception as e:
         raise e
 

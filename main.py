@@ -131,7 +131,7 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cifar10":
         dataloaders = MNISTSplit(config, datasets, param_data, device).partition()  # MNIST split appears to work fine with CIFAR
     else:
-        raise NotImplementedError(f"{config['dataset']} is not a valid split")
+        raise NotImplementedError(f"{config['data_config']['dataset']} is not a valid split")
     logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###
