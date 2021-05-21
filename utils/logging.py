@@ -35,7 +35,7 @@ def clean_log_dir(config, log_dir):
             except Exception as e:
                 logger.exception(e)
                 logger.info("Continuing run without deleting some files from log directory")
-        shutil.rmtree(log_dir)
+        shutil.rmtree(log_dir, ignore_errors=True)  # If ignore error left False, raises PermissionError with log.log
 
 
 class TFTBLogger(object):
@@ -94,10 +94,8 @@ class PTTBLogger(object):
             self.writer = SummaryWriter(log_dir=os.path.join(self.log_dir, run_name))  # For some reason I need to import it directly...
 
             #save the config file
-            json.dump(config, open(osp.join(self.log_dir, run_name, "config.json"),
-                                   'w',
-                                   encoding='utf-8'),
-                      ensure_ascii=False, indent=4)
+            with open(osp.join(self.log_dir, run_name, "config.json"), 'w', encoding='utf-8') as o:
+                json.dump(config, o, ensure_ascii=False, indent=4)
 
             #create log file for logzero
             logzero.logfile(osp.join(self.log_dir, run_name, "log.log"))

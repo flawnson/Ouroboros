@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from typing import *
 from logzero import logger
 from optim.losses import loss as loss_fun
-from data.linear_preprocessing import get_data
+from data.linear_preprocessing import get_image_data
 from optim.algos import OptimizerObj, LRScheduler
 from utils.scores import scores
 from utils.holdout import MNISTSplit
@@ -58,7 +58,7 @@ def run():
     logger.info(f"Using PyTorch version: {torch.__version__}")
 
     model = Model(config, device)
-    datasets = get_data(config)
+    datasets = get_image_data(config)
     dataloaders = MNISTSplit(config, datasets, None, device).partition()  # MNIST split appears to work fine with CIFAR
     optimizer = OptimizerObj(config, model).optim_obj
     scheduler = LRScheduler(config, optimizer).schedule_obj

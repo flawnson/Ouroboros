@@ -1,13 +1,15 @@
 import os
-import torch
 import time
+import torch
+import numpy as np
 
-from functools import wraps
-from logzero import logger
 from typing import *
+from logzero import logger
+from functools import wraps
+from torch.utils.data import ConcatDataset
 
 
-def get_example_size(dataset: torch) -> int:
+def get_example_size(dataset: torch.utils.data.dataset) -> int:
     """
     This function returns the size of a single data example, agnostic of types
 
@@ -19,17 +21,23 @@ def get_example_size(dataset: torch) -> int:
     """
     # A function to return the size of an example for any dataset and datatype
     # Might be a bit convoluted right now
-    # if isinstance(dataset, ConcatDataset):
-    #     try:
-    #         dataset_idx = np.random.randint(0, len(dataset.datasets))
-    #         subset_indices = [np.random.randint(len(dataset.datasets[0]))]  # select your indices here as a list
-    #         subset = torch.utils.data.Subset(dataset.datasets[dataset_idx], subset_indices)
-    #         example = next(iter(torch.utils.data.DataLoader(subset, batch_size=1, num_workers=0, shuffle=False)))
-    #         example_size = example[0].reshape(-1).shape[0]
-    #         return example_size
-    #     except:
-    #         logger.info(f"Could not determine size of data example for {dataset} dataset")
-    return 784
+    if isinstance(dataset, ConcatDataset):
+        try:
+            dataset_idx = np.random.randint(0, len(dataset.datasets))
+            subset_indices = [np.random.randint(len(dataset.datasets[0]))]  # select your indices here as a list
+            subset = torch.utils.data.Subset(dataset.datasets[dataset_idx], subset_indices)
+            example = next(iter(torch.utils.data.DataLoader(subset, batch_size=1, num_workers=0, shuffle=False)))
+            example_size = example[0].reshape(-1).shape[0]
+            return example_size
+        except Exception as e:
+            logger.exception(e)
+            dataset_name = dataset.datasets[0].__class__.__name__.casefold()
+            if dataset_name == "mnist":
+                return 784
+            elif dataset_name == "cifar10":
+                return 3072
+            elif dataset_name == "imagenet":
+                return 3072
 
 
 def timed(func: Callable):

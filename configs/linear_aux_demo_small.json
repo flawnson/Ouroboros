@@ -1,5 +1,5 @@
 {
-  "run_name": "Linear_MNIST_auxiliary",
+  "run_name": "Linear_cifar10_auxiliary",
   "seed": 42,
   "run_type": "demo",
   "logging": true,
@@ -9,24 +9,27 @@
   "device": "cuda",
   "data_config":
   {
-    "dataset": "mnist",
+    "dataset": "cifar10",
     "concat": true,
-    "data_dir": "data/datafiles/mnist",
+    "data_kwargs": {
+      "root": "data/datafiles/cifar10",
+      "download": false
+    },
     "data_path": "data/datafiles/housing_prices/train.csv",
     "split_type": "holdout",
     "num_splits": 5,
     "shuffle": true,
     "batch_size": 16,
-    "subset": 100
+    "subset": null
   },
   "model_config":
   {
     "model_dir": null,
     "model_type": "linear",
     "pooling": null,
-    "pooling_params": null,
+    "pooling_kwargs": null,
     "normalize": "torch.nn.functional.layer_norm",
-    "normalize_params": {},
+    "normalize_kwargs": {},
     "dropout": 0.10,
     "layer_sizes": [784, 40, 40]
   },

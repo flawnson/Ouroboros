@@ -18,7 +18,7 @@ from models.augmented.hypernetwork import MLPHyperNetwork, LinearHyperNetwork, R
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
-from data.linear_preprocessing import HousingDataset, get_data
+from data.linear_preprocessing import HousingDataset, get_image_data
 from utils.holdout import MNISTSplit, QuineSplit
 from utils.checkpoint import load
 from optim.parameters import ModelParameters
@@ -55,10 +55,8 @@ def main():
         datasets = HousingDataset(config).dataset.to(device)
     elif config["data_config"]["dataset"].casefold() == "cora":
         datasets = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
-    elif config["data_config"]["dataset"].casefold() == "mnist":
-        datasets = get_data(config).to(device)
-    elif config["data_config"]["dataset"].casefold() == "cifar" or "cifar10":
-        datasets = get_data(config)
+    elif config["data_config"]["dataset"].casefold() == "mnist" or "cifar10" or "imagenet":
+        datasets = get_image_data(config)
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")
     logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
@@ -130,10 +128,10 @@ def main():
             dataloaders = QuineSplit(config, datasets, param_data, device).partition()
         if (param_data is not None) and (len(datasets) < len(param_data)): #if there's not enough MNIST data partition based on number of parameters
             dataloaders = QuineSplit(config, datasets, param_data, device).partition()
-    elif config["data_config"]["dataset"].casefold() == "cifar":
+    elif config["data_config"]["dataset"].casefold() == "cifar10":
         dataloaders = MNISTSplit(config, datasets, param_data, device).partition()  # MNIST split appears to work fine with CIFAR
     else:
-        raise NotImplementedError(f"{config['dataset']} is not a valid split")
+        raise NotImplementedError(f"{config['data_config']['dataset']} is not a valid split")
     logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###

@@ -25,7 +25,7 @@ class HousingDataset(Dataset):
         return None
 
 
-def get_data(config: Dict) -> ConcatDataset:
+def get_image_data(config: Dict) -> ConcatDataset:
     """
     Load torchvision data, both training and tuning, and return a concatenated Dataset object.
     Splitting occurs further downstream (in holdout class methods)
@@ -36,7 +36,7 @@ def get_data(config: Dict) -> ConcatDataset:
     Returns:
         torch.utils.data.Datasets
     """
-    logger.info(f"Downloading {config['data_config']['dataset']} data to {config['data_config']['data_dir']}")
+    logger.info(f"Downloading {config['data_config']['dataset']} data to {config['data_config']['data_kwargs']['root']}")
     transform = tv.transforms.Compose([tv.transforms.ToTensor()])
 
     #If specified, select only a subset for faster running (TAKES DOUBLE THE NUMBER IN CONFIG)
@@ -47,44 +47,43 @@ def get_data(config: Dict) -> ConcatDataset:
     else:
         subset_indices = []
 
-    if config["data_config"]["dataset"].casefold() == "mnist":
-        tv_dataset = tv.datasets.MNIST
-    elif config["data_config"]["dataset"].casefold() == "cifar":
-        tv_dataset = tv.datasets.CIFAR10
-    else:
-        raise NotImplementedError(f"{config['dataset']} is not a dataset")
+    try:
+        if config["data_config"]["dataset"].casefold() == "mnist":
+            for x in [True, False]:
+                tv_dataset = tv.datasets.MNIST(root=config["data_config"]["data_kwargs"]["root"],
+                                               download=config["data_config"]["data_kwargs"]["download"],
+                                               train=x,
+                                               transform=transform)
+        elif config["data_config"]["dataset"].casefold() == "cifar10":
+            for x in [True, False]:
+                tv_dataset = tv.datasets.CIFAR10(root=config["data_config"]["data_kwargs"]["root"],
+                                                 download=config["data_config"]["data_kwargs"]["download"],
+                                                 train=x,
+                                                 transform=transform)
+        elif config["data_config"]["dataset"].casefold() == "imagenet":
+            for x in ["train", "val"]:
+                tv_dataset = tv.datasets.ImageNet(root=config["data_config"]["data_kwargs"]["root"],
+                                                  download=config["data_config"]["data_kwargs"]["download"],
+                                                  train=x,
+                                                  transform=transform)
+        else:
+            raise NotImplementedError(f"{config['data_config']['dataset']} is not a dataset")
+    except Exception as e:
+        raise e
 
     to_concat = []
-    for x in [True, False]:
-        if isinstance(subset, int):
-            to_concat.append(Subset(tv_dataset(os.path.join(config['data_config']['data_dir']),
-                                               train=x,
-                                               download=True,
-                                               transform=transform),
-                                    subset_indices))
-        else:
-            to_concat.append(tv_dataset(os.path.join(config['data_config']['data_dir']),
-                                        train=x,
-                                        download=True,
-                                        transform=transform))
-    dataset = ConcatDataset(to_concat)
-
     to_concat_targets = []
-    for x in [True, False]:
-        if isinstance(subset, int):
-            to_concat_targets.append(tv_dataset(os.path.join(config['data_config']['data_dir']),
-                                                train=x,
-                                                download=True,
-                                                transform=transform).targets[:subset])
-        else:
-            to_concat_targets.append(tv_dataset(os.path.join(config['data_config']['data_dir']),
-                                                train=x,
-                                                download=True,
-                                                transform=transform).targets)
+    if isinstance(subset, int):
+        to_concat.append(Subset(tv_dataset, subset_indices))
+        to_concat_targets.append(tv_dataset.targets[:subset])
+    else:
+        to_concat.append(tv_dataset)
+        to_concat_targets.append(tv_dataset.targets)
 
     # In case targets are not a tensor (like in CIFAR10)
     to_concat_targets = [torch.tensor(x) for x in to_concat_targets]
 
+    dataset = ConcatDataset(to_concat)
     dataset.targets = torch.cat(to_concat_targets)
 
     return dataset
