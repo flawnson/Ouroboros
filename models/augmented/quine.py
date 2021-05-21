@@ -231,7 +231,12 @@ class Auxiliary(Vanilla, torch.nn.Module):
                 idx_vector = torch.squeeze(self.to_onehot(param_idx))  # Pulling out the nested tensor
                 predicted_param, predicted_aux = self.forward(idx_vector, None)
                 new_params = deepcopy(self.param_list)
-                new_params[coo[0]][coo[1]][coo[2]] = predicted_param
+                try:
+                    # To catch ases where the parameter tensor is of size 0
+                    new_params[coo[0]][coo[1]][coo[2]] = predicted_param
+                except Exception as e:
+                    logger.exception(e)
+                    new_params[coo[0]] = predicted_param
                 self.param_list = new_params
         logger.info(f"Successfully regenerated weights")
 

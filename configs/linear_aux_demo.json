@@ -1,5 +1,5 @@
 {
-  "run_name": "Linear_MNIST_auxiliary",
+  "run_name": "Linear_cifar10_auxiliary",
   "seed": 42,
   "run_type": "demo",
   "logging": true,
@@ -12,7 +12,7 @@
     "dataset": "cifar10",
     "concat": true,
     "data_kwargs": {
-      "root": "data/datafiles/cifar",
+      "root": "data/datafiles/cifar10",
       "download": false
     },
     "data_path": "data/datafiles/housing_prices/train.csv",
