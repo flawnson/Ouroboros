@@ -37,7 +37,6 @@ class Quine(ABC):
     def indexer(self) -> List:
         """
         Function that reaches into the model parameters to return their coordinates
-
         Returns:
             A list of the coordinates of the model parameters
         """
@@ -71,7 +70,6 @@ class Quine(ABC):
     def reduction(self, data_size) -> Reduction:
         """
         Select the reduction method
-
         Returns:
             Output of the reduction method
         """
@@ -186,11 +184,9 @@ class Auxiliary(Vanilla, torch.nn.Module):
     def forward(self, x: torch.tensor, y: torch.tensor = None) -> Tuple[torch.tensor, torch.tensor]:
         """
         Forward method of augmented model
-
         Args:
             x: The one hot coordinate for the model parameter
             y: Auxiliary input data (MNIST)
-
         Returns:
             torch.tensor output
         """
@@ -246,8 +242,3 @@ class Auxiliary(Vanilla, torch.nn.Module):
         This method is meant to regenerate entire layers or models at a time rather than individual weights.
         """
         pass
-
-
-
-
-
