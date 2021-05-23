@@ -61,7 +61,8 @@ class AbstractSplit(ABC):
 
     def get_dataloaders(self, samplers: List[torch.utils.data.Sampler]) -> List:
         if self.config["model_aug_config"]["model_augmentation"] == "auxiliary":
-            return [DataLoader(CombineDataset(self.dataset, self.param_data),
+            combined_dataset = CombineDataset(self.dataset, self.param_data)
+            return [DataLoader(combined_dataset,
                                       batch_size=1,
                                       sampler=sampler) for sampler in samplers]
         elif self.config["model_aug_config"]["model_augmentation"] == "vanilla":
