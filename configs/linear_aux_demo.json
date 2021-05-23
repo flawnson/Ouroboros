@@ -6,7 +6,7 @@
   "log_level": "logging.INFO",
   "clean_log_dir": false,
   "log_dir": "saves/logs/auxiliary",
-  "device": "cpu",
+  "device": "cuda",
   "data_config":
   {
     "dataset": "cifar10",
