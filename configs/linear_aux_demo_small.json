@@ -31,13 +31,13 @@
     "normalize": "torch.nn.functional.layer_norm",
     "normalize_kwargs": {},
     "dropout": 0.10,
-    "layer_sizes": [784, 40, 40]
+    "layer_sizes": [10, 10, 10]
   },
   "model_aug_config":
   {
     "model_augmentation": "auxiliary",
     "n_inputs": 2,
-    "n_hidden": 392,
+    "n_hidden": 5,
     "van_output_layers": [40, 1],
     "aux_output_layers": [40, 10],
     "reduction_method": "random"
