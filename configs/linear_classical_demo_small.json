@@ -20,7 +20,8 @@
     "num_splits": 5,
     "shuffle": true,
     "batch_size": 16,
-    "subset": null
+    "data_subset": 200,
+    "param_subset": 200
   },
   "model_config":
   {
