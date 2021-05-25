@@ -31,8 +31,6 @@ class ModelParameters(object):
         if isinstance(subset, int):
             self.num_params = subset
             self.params = torch.tensor(list(range(subset)), device=device) #indices of all params: [1, 2, ......, subset]
-            print("Param size: ", self.params.size())
-            print("Num params: ", self.num_params)
 
         self.device = device
 

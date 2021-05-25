@@ -32,7 +32,7 @@
     "normalize": "torch.nn.functional.layer_norm",
     "normalize_kwargs": {},
     "dropout": 0.10,
-    "layer_sizes": [784, 40, 10]
+    "layer_sizes": [3072, 40, 10]
   },
   "model_aug_config":
   {

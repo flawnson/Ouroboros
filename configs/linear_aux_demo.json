@@ -4,7 +4,7 @@
   "run_type": "demo",
   "logging": true,
   "log_level": "logging.INFO",
-  "clean_log_dir": false,
+  "clean_log_dir": true,
   "log_dir": "saves/logs/auxiliary",
   "device": "cuda",
   "data_config":
