@@ -20,7 +20,8 @@
     "num_splits": 5,
     "shuffle": true,
     "batch_size": 16,
-    "subset": 200
+    "data_subset": 200,
+    "param_subset": null
   },
   "model_config":
   {
@@ -31,13 +32,13 @@
     "normalize": "torch.nn.functional.layer_norm",
     "normalize_kwargs": {},
     "dropout": 0.10,
-    "layer_sizes": [10, 10, 10]
+    "layer_sizes": [50, 10, 40]
   },
   "model_aug_config":
   {
     "model_augmentation": "auxiliary",
     "n_inputs": 2,
-    "n_hidden": 5,
+    "n_hidden": 25,
     "van_output_layers": [40, 1],
     "aux_output_layers": [40, 10],
     "reduction_method": "random"

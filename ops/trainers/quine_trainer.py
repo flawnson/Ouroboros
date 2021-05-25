@@ -262,7 +262,6 @@ class AuxiliaryTrainer(AbstractTrainer):
     @timed
     def run_train(self):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
-            self.coordinates = self.wrapper.model.indexer()
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
 
@@ -280,7 +279,7 @@ class AuxiliaryTrainer(AbstractTrainer):
                 epoch_scores = self.score()
 
                 # Regeneration (per epoch) step if specified in config
-                if self.run_config["regenerate"]: self.wrapper.model.regenerate(self.coordinates, self.param_idx_map)
+                if self.run_config["regenerate"]: self.wrapper.model.regenerate(self.param_idx_map)
 
                 self.checkpoint.checkpoint(self.config,
                                            epoch,
