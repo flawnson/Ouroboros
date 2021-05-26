@@ -47,25 +47,26 @@ def get_image_data(config: Dict) -> ConcatDataset:
     else:
         subset_indices = []
 
+    both_datasets = []
     try:
         if config["data_config"]["dataset"].casefold() == "mnist":
             for x in [True, False]:
-                tv_dataset = tv.datasets.MNIST(root=config["data_config"]["data_kwargs"]["root"],
+                both_datasets.append(tv.datasets.MNIST(root=config["data_config"]["data_kwargs"]["root"],
                                                download=config["data_config"]["data_kwargs"]["download"],
                                                train=x,
-                                               transform=transform)
+                                               transform=transform))
         elif config["data_config"]["dataset"].casefold() == "cifar10":
             for x in [True, False]:
-                tv_dataset = tv.datasets.CIFAR10(root=config["data_config"]["data_kwargs"]["root"],
+                both_datasets.append(tv.datasets.CIFAR10(root=config["data_config"]["data_kwargs"]["root"],
                                                  download=config["data_config"]["data_kwargs"]["download"],
                                                  train=x,
-                                                 transform=transform)
+                                                 transform=transform))
         elif config["data_config"]["dataset"].casefold() == "imagenet":
             for x in ["train", "val"]:
-                tv_dataset = tv.datasets.ImageNet(root=config["data_config"]["data_kwargs"]["root"],
+                both_datasets.append(tv.datasets.ImageNet(root=config["data_config"]["data_kwargs"]["root"],
                                                   download=config["data_config"]["data_kwargs"]["download"],
                                                   train=x,
-                                                  transform=transform)
+                                                  transform=transform))
         else:
             raise NotImplementedError(f"{config['data_config']['dataset']} is not a dataset")
     except Exception as e:
@@ -73,12 +74,13 @@ def get_image_data(config: Dict) -> ConcatDataset:
 
     to_concat = []
     to_concat_targets = []
-    if isinstance(subset, int):
-        to_concat.append(Subset(tv_dataset, subset_indices))
-        to_concat_targets.append(tv_dataset.targets[:subset])
-    else:
-        to_concat.append(tv_dataset)
-        to_concat_targets.append(tv_dataset.targets)
+    for tv_dataset in both_datasets:
+        if isinstance(subset, int):
+            to_concat.append(Subset(tv_dataset, subset_indices))
+            to_concat_targets.append(tv_dataset.targets[:subset])
+        else:
+            to_concat.append(tv_dataset)
+            to_concat_targets.append(tv_dataset.targets)
 
     # In case targets are not a tensor (like in CIFAR10)
     to_concat_targets = [torch.tensor(x) for x in to_concat_targets]
