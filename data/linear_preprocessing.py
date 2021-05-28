@@ -40,7 +40,7 @@ def get_image_data(config: Dict) -> ConcatDataset:
     transform = tv.transforms.Compose([tv.transforms.ToTensor()])
 
     #If specified, select only a subset for faster running (TAKES DOUBLE THE NUMBER IN CONFIG)
-    subset = config["data_config"].get("subset", None)
+    subset = config["data_config"].get("data_subset", None)
     if isinstance(subset, int):
         subset_indices = list(range(subset))
         logger.info(f"Using a subset of the dataset sized: {subset}")

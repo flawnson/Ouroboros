@@ -181,7 +181,6 @@ class QuineSplit(AbstractSplit):
         # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])
         split_idx = list(ShuffleSplit(n_splits=1, train_size=split_size, random_state=self.config["seed"]).split(self.param_data.params))
         split_idx = split_idx[0]
-        print("split idx: ", split_idx)
         samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx]
         dataloaders = self.get_dataloaders(samplers)
 

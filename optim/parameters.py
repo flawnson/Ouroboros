@@ -27,12 +27,10 @@ class ModelParameters(object):
         self.num_params = self.model.num_params
         self.params = torch.tensor(list(range(self.num_params)), device=device) #indices of all params: [1, 2, ......, num_params - 1]
         #if subset is specified, select only a small portion of model params
-        subset = config["data_config"]["subset"]
+        subset = config["data_config"]["param_subset"]
         if isinstance(subset, int):
             self.num_params = subset
             self.params = torch.tensor(list(range(subset)), device=device) #indices of all params: [1, 2, ......, subset]
-            print("Param size: ", self.params.size())
-            print("Num params: ", self.num_params)
 
         self.device = device
 

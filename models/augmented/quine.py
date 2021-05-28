@@ -23,7 +23,7 @@ class Quine(ABC):
         self.cum_params_arr = np.cumsum(np.array([np.prod(p.shape) for p in self.param_list]))
         self.num_params = int(self.cum_params_arr[-1])
         #if we specify a smaller subset, use that amount instead
-        subset = config["data_config"]["subset"]
+        subset = config["data_config"]["param_subset"]
         if isinstance(subset, int):
             self.num_params = subset
 
@@ -90,6 +90,25 @@ class Quine(ABC):
             else:
                 subtract = n_params
         return param.view(-1)[normalized_idx]
+
+    def regenerate_param(self, idx: int, new_param: torch.tensor):
+        assert idx < self.num_params
+        subtract = 0
+        param_section = None
+        normalized_idx = None
+        for i, n_params in enumerate(self.cum_params_arr):
+            if idx < n_params:
+                param_section = self.param_list[i]
+                normalized_idx = idx - subtract
+                original_shape = param_section.size()
+                param_section.view(-1)[normalized_idx] = new_param
+                # Reshape back into original shape
+                param_section = param_section.reshape(original_shape)
+                self.param_list[i] = param_section
+                break
+            else:
+                subtract = n_params
+
 
     @abstractmethod
     def forward(self, x: torch.tensor, y: torch.tensor = None):
@@ -216,28 +235,18 @@ class Auxiliary(Vanilla, torch.nn.Module):
 
     @timed
     @torch.no_grad()
-    def regenerate(self):
+    def regenerate(self, param_idx_map):
         """
         The regenerate, implemented by following the original Quine paper.
         Model parameters are kept in self.param_list and used for training and inference
         Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter.
         """
         index_list = list(range(self.num_params))
-        coordinates = self.indexer()
-        logger.info(f"Regenerating {len(coordinates)} parameters")
-        for param_idx, coo in zip(index_list, coordinates):
+        logger.info(f"Regenerating {self.num_params} parameters")
+        for param_idx in index_list:
             logger.info(f"Regenerating parameter {param_idx}")
-            with torch.no_grad():
-                idx_vector = torch.squeeze(self.to_onehot(param_idx))  # Pulling out the nested tensor
-                predicted_param, predicted_aux = self.forward(idx_vector, None)
-                new_params = deepcopy(self.param_list)
-                try:
-                    # To catch ases where the parameter tensor is of size 0
-                    new_params[coo[0]][coo[1]][coo[2]] = predicted_param
-                except Exception as e:
-                    logger.exception(e)
-                    new_params[coo[0]] = predicted_param
-                self.param_list = new_params
+            predicted_param = param_idx_map[param_idx] # extract the parameter value already calculated in training
+            self.regenerate_param(param_idx, predicted_param)
         logger.info(f"Successfully regenerated weights")
 
     def multiregenerate(self):
@@ -246,8 +255,3 @@ class Auxiliary(Vanilla, torch.nn.Module):
         This method is meant to regenerate entire layers or models at a time rather than individual weights.
         """
         pass
-
-
-
-
-

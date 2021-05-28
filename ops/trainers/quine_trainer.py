@@ -1,3 +1,4 @@
+
 import torch
 
 from typing import *
@@ -152,6 +153,7 @@ class AuxiliaryTrainer(AbstractTrainer):
                            "task_loss": [0, 0],  # The aux loss, original implementation is nll_loss
                            "combined_loss": [0, 0],
                            "correct": [0, 0]}  # First position for training scores, second position for test scores
+        self.param_idx_map = dict({}) # Maps param_idx to value, to be used in regeneration
 
     def train(self, data, param_idx, batch_idx):
         self.wrapper.model.train()
@@ -164,6 +166,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         output = self.wrapper.model(idx_vector, data[0].to(self.device))
         predictions = {"param": output[0],
                        "aux": output[1]}
+        self.param_idx_map[param_idx.item()] = output[0]
         aux_pred = predictions["aux"].argmax(keepdim=True)  # get the index of the max log-probability
         targets = {"param": param.to(self.device), "aux": data[-1].to(self.device)}
 
@@ -196,6 +199,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         test_output = self.wrapper.model(idx_vector, data[0].to(self.device))
         outputs = {"param": test_output[0],
                    "aux": test_output[1]}
+        self.param_idx_map[param_idx.item()] = test_output[0]
         aux_pred = outputs["aux"].argmax(keepdim=True)  # get the index of the max log-probability
         targets = {"aux": data[-1].to(self.device), "param": param.to(self.device)}
 
@@ -275,7 +279,7 @@ class AuxiliaryTrainer(AbstractTrainer):
                 epoch_scores = self.score()
 
                 # Regeneration (per epoch) step if specified in config
-                if self.run_config["regenerate"]: self.wrapper.model.regenerate()
+                if self.run_config["regenerate"]: self.wrapper.model.regenerate(self.param_idx_map)
 
                 self.checkpoint.checkpoint(self.config,
                                            epoch,

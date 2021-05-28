@@ -9,7 +9,7 @@
   "device": "cuda",
   "data_config":
   {
-    "dataset": "mnist",
+    "dataset": "cifar10",
     "concat": true,
     "data_kwargs": {
       "root": "data/datafiles/cifar",
@@ -20,7 +20,8 @@
     "num_splits": 5,
     "shuffle": true,
     "batch_size": 16,
-    "subset": 100
+    "data_subset": 200,
+    "param_subset": 200
   },
   "model_config":
   {
@@ -52,7 +53,7 @@
   },
   "run_config":
   {
-    "num_epochs": 1000,
+    "num_epochs": 10,
     "checkpoint_intervals": 100,
     "clean_checkpoint_dir": true,
     "checkpoint_dir": "saves/checkpoints/vanilla/",
