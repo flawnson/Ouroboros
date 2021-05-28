@@ -50,8 +50,15 @@ class ManualTransformerModel(torch.nn.Module):
 
 class TransformerModel(torch.nn.Module):
 
-    def __init__(self, config, num_tokens, input_size, num_heads, hidden_size, num_layers, dropout=0.5):
+    def __init__(self, config, datasets, device):
         super(TransformerModel, self).__init__()
+        model_config = config["model_config"]
+        num_tokens = model_config["num_tokens"]
+        input_size = model_config["input_size"]
+        num_heads = model_config["num_heads"]
+        hidden_size = model_config["hidden_size"]
+        num_layers = model_config["num_layers"]
+        dropout = model_config["dropout"]
         self.pos_encoder = PositionalEncoding(input_size, dropout)
         encoder_layers = TransformerEncoderLayer(input_size, num_heads, hidden_size, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers, num_layers)
@@ -72,14 +79,14 @@ class TransformerModel(torch.nn.Module):
     def init_weights(self):
         initrange = 0.1
         self.encoder.weight.data.uniform_(-initrange, initrange)
-        self.decoder.bias.data.zero_()
-        self.decoder.weight.data.uniform_(-initrange, initrange)
+        self.transformer_decoder.bias.data.zero_()
+        self.transformer_decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src, src_mask):
         src = self.encoder(src) * math.sqrt(self.ninp)
         src = self.pos_encoder(src)
         output = self.transformer_encoder(src, src_mask)
-        output = self.Transformerdecoder(output)
+        output = self.transformer_decoder(output)
         return output
 
 

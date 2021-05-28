@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader
 
 from models.standard.graph_model import GNNModel
 from models.standard.mlp_model import MLPModel
+from models.standard.transformer_model import TransformerModel
 from models.augmented.quine import Auxiliary, Vanilla
 from models.augmented.hypernetwork import MLPHyperNetwork, LinearHyperNetwork, ResNetPrimaryNetwork
 from models.augmented.classical import Classical
@@ -54,9 +55,11 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "house":
         datasets = HousingDataset(config).dataset.to(device)
     elif config["data_config"]["dataset"].casefold() == "cora":
-        datasets = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
+        datasets = get_graph_data(config)  # Cora only has one graph (index must be 0)
     elif config["data_config"]["dataset"].casefold() == "mnist" or "cifar10" or "imagenet":
         datasets = get_image_data(config)
+    elif config["data_config"]["dataset"].casefold() == "wiki":
+        datasets = get_text_data(config)
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")
     logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
@@ -70,7 +73,7 @@ def main():
     elif config["model_config"]["model_type"].casefold() == "vision":
         pass
     elif config["model_config"]["model_type"].casefold() == "language":
-        pass
+        model = TransformerModel(config, datasets, device).to(device)
     elif config["model_config"]["model_type"].casefold() == "hypernetwork":
         pass
     elif config["model_config"]["load_dir"]:
