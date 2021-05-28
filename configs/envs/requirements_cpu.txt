@@ -10,4 +10,5 @@ tensorboard >= 2.2.1
 tensorflow == 2.4
 torch == 1.8.1+cpu
 torchvision == 0.9.1+cpu
+torchtext == 0.9.1+cpu
 tqdm >= 4.42.1

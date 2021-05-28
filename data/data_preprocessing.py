@@ -1,5 +1,6 @@
 import torch
 import torchvision as tv
+import torchtext as tt
 
 from typing import *
 from logzero import logger
@@ -68,3 +69,11 @@ def get_image_data(config: Dict) -> ConcatDataset:
     dataset.targets = torch.cat(to_concat_targets)
 
     return dataset
+
+def get_text_data(config: Dict) -> ConcatDataset:
+
+    logger.info(f"Downloading {config['data_config']['dataset']} data to {config['data_config']['data_kwargs']['root']}")
+    transform = tt.transforms.Compose([tv.transforms.ToTensor()])
+
+
+

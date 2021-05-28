@@ -31,6 +31,7 @@ def get_example_size(dataset: torch.utils.data.dataset) -> int:
             return example_size
         except Exception as e:
             logger.exception(e)
+            logger.info("Could not infer size of example, attempting to find manually defined size")
             dataset_name = dataset.datasets[0].__class__.__name__.casefold()
             if dataset_name == "mnist":
                 return 784
