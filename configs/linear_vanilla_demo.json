@@ -6,7 +6,13 @@
   "log_level": "logging.INFO",
   "clean_log_dir": true,
   "log_dir": "/cluster/projects/radiomics/Temp/kevin/nnquinelogs",
-  "device": "cpu",
+  "device": "cuda",
+  "wandb_logging":
+  {
+    "run_name": null,
+    "project": "ouroboros",
+    "entity": "ouroboros_ai"
+  },
   "data_config":
   {
     "dataset": "mnist",
