@@ -6,6 +6,12 @@
   "log_level": "logging.INFO",
   "clean_log_dir": true,
   "log_dir": "saves/logs/auxiliary",
+  "wandb_logging":
+  {
+    "run_name": null,
+    "project": "ouroboros",
+    "entity": "ouroboros_ai"
+  },
   "device": "cuda",
   "data_config":
   {
@@ -54,7 +60,7 @@
   },
   "run_config":
   {
-    "num_epochs": 20,
+    "num_epochs": 5,
     "checkpoint_intervals": 100,
     "clean_checkpoint_dir": true,
     "checkpoint_dir": "saves/checkpoints/auxiliary/",

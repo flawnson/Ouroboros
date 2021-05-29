@@ -85,9 +85,19 @@ class VanillaTrainer(AbstractTrainer):
         actual_train_loss = self.epoch_data["sr_loss"][0] / (train_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('sr_loss (train)', actual_train_loss, epoch)
 
+        if self.wandb_logger is not None:
+            self.wandb_logger.log({
+                    'train/sr_loss': actual_train_loss,
+                }, step=epoch, commit=False)
+
         # Log values for testing
         actual_test_loss = self.epoch_data["sr_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('sr_loss (test)', actual_test_loss, epoch)
+
+        if self.wandb_logger is not None:
+            self.wandb_logger.log({
+                    'test/sr_loss': actual_test_loss,
+                }, step=epoch, commit=True)
 
         logger.info("Successfully wrote logs to tensorboard")
 
@@ -102,6 +112,10 @@ class VanillaTrainer(AbstractTrainer):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
+                if self.wandb_logger is not None:
+                    self.wandb_logger.log({
+                            'epoch': epoch
+                        }, commit=False)
 
                 train_epoch_length = len(self.dataset[list(self.dataset)[0]])
                 for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[0]]):
@@ -112,14 +126,6 @@ class VanillaTrainer(AbstractTrainer):
                 for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
                     predictions, targets = self.test(param_idx, batch_idx)
-
-                #SCORING IS NOT DONE FOR VANILLA
-                # Scores cumulated and calculated per epoch, as done in Quine
-                #test_scores = self.score(predictions, targets)
-                #logger.info(test_scores)
-
-                # Regeneration (per epoch) step if specified in config
-                # if self.run_config["regenerate"]: self.wrapper.model.regenerate()
 
                 self.checkpoint.checkpoint(self.config,
                                            epoch,
@@ -239,6 +245,15 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('combined_loss (train)', actual_combined_train_loss, epoch)
         self.tb_logger.scalar_summary('scores (train)', scores["acc"][0], epoch)
 
+        if self.wandb_logger is not None:
+            self.wandb_logger.log(data={
+                'train/sr_loss': actual_sr_train_loss,
+                'train/task_loss': actual_task_train_loss,
+                'train/combined_loss': actual_combined_train_loss,
+                'train/scores': scores["acc"][0],
+            }, step=epoch, commit=False)
+
+
         # Log values for testing
         actual_sr_test_loss = self.epoch_data["sr_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
         actual_task_test_loss = self.epoch_data["task_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
@@ -247,6 +262,14 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('task_loss (test)', actual_task_test_loss, epoch)
         self.tb_logger.scalar_summary('combined_loss (test)', actual_combined_test_loss, epoch)
         self.tb_logger.scalar_summary('scores (test)', scores["acc"][1], epoch)
+
+        if self.wandb_logger is not None:
+            self.wandb_logger.log(data={
+                'test/sr_loss': actual_sr_test_loss,
+                'test/task_loss': actual_task_test_loss,
+                'test/combined_loss': actual_combined_test_loss,
+                'test/scores': scores["acc"][1],
+            }, step=epoch, commit=True)
 
         logger.info("Successfully wrote logs to tensorboard")
 
@@ -264,6 +287,10 @@ class AuxiliaryTrainer(AbstractTrainer):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
+                if self.wandb_logger is not None:
+                    self.wandb_logger.log({
+                            'epoch': epoch
+                        }, commit=False)
 
                 train_epoch_length = len(self.dataset[list(self.dataset)[0]])
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
@@ -289,3 +316,4 @@ class AuxiliaryTrainer(AbstractTrainer):
 
                 self.write(epoch, epoch_scores, train_epoch_length, test_epoch_length)
                 self.reset()
+        self.wandb_logger.finish()

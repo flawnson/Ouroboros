@@ -1,5 +1,6 @@
 import torch
 
+import wandb
 from typing import *
 from logzero import logger
 from abc import ABC, abstractmethod
@@ -41,6 +42,13 @@ class AbstractTrainer(ABC):
         self.optimizer = OptimizerObj(config, model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = PTTBLogger(config)
+
+        self.wandb_logger = None
+        if config["logging"]:
+            self.wandb_logger = wandb.init(name=config["wandb_logging"]["run_name"],
+                                           project=config["wandb_logging"]["project"],
+                                           entity=config["wandb_logging"]["entity"],
+                                           config=config)
         self.dataset = dataset
         self.device = device
 

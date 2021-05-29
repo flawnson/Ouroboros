@@ -11,3 +11,4 @@ tensorflow == 2.4
 torch == 1.8.1
 torchvision == 0.8.2+cpu
 tqdm >= 4.42.1
+wandb >= 0.10.31
