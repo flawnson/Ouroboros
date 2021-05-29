@@ -161,39 +161,50 @@ class AuxiliaryTrainer(AbstractTrainer):
                            "correct": [0, 0]}  # First position for training scores, second position for test scores
         self.param_idx_map = dict({}) # Maps param_idx to value, to be used in regeneration
 
-    def train(self, data, param_idx, batch_idx):
+    def train(self, data, param_idxs, batch_idx):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
 
-        idx_vector = torch.squeeze(self.wrapper.model.to_onehot(param_idx)) #coordinate of the param in one hot vector form
-        param = self.wrapper.model.get_param(param_idx)
+        # Create onehot vectors and parameter indexes for the entire batch
+        idx_vectors = []
+        params = []
+        for param_idx in param_idxs:
+            idx_vector = torch.squeeze(self.wrapper.model.to_onehot(param_idx)) # coordinate of the param in one hot vector form
+            param = self.wrapper.model.get_param(param_idx)
+            idx_vectors.append(idx_vector)
+            params.append(param)
+        idx_vectors = torch.stack((idx_vectors)).to(self.device)
+        params = torch.tensor(params, device=self.device)
 
         # Both predictions and targets will be dictionaries that hold two elements
-        output = self.wrapper.model(idx_vector, data[0].to(self.device))
+        print(idx_vectors.shape)
+        print(data[0].shape)
+        output = self.wrapper.model(idx_vectors, data[0].to(self.device))
         predictions = {"param": output[0],
                        "aux": output[1]}
-        self.param_idx_map[param_idx.item()] = output[0]
+        for i, param_idx in enumerate(param_idxs):
+            self.param_idx_map[param_idx.item()] = output[0][i]
         aux_pred = predictions["aux"].argmax(keepdim=True)  # get the index of the max log-probability
-        targets = {"param": param.to(self.device), "aux": data[-1].to(self.device)}
+        targets = {"param": params, "aux": data[-1].to(self.device)}
 
         loss = self.loss(predictions, targets)
-
-        if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
-            loss["combined_loss"].backward()  # The combined loss is backpropagated right?
-            self.optimizer.step()
-            self.epoch_data["sr_loss"][0] += self.batch_data["sr_loss"][0] #accumulate for epoch
-            self.epoch_data["task_loss"][0] += self.batch_data["task_loss"][0] #accumulate for epoch
-            self.epoch_data["combined_loss"][0] += self.batch_data["combined_loss"][0] #accumulate for epoch
-
-            self.batch_data["sr_loss"][0] = 0.0
-            self.batch_data["task_loss"][0] = 0.0
-            self.batch_data["combined_loss"][0] = 0.0
-            self.optimizer.zero_grad()
 
         self.batch_data["sr_loss"][0] += loss["sr_loss"].item()
         self.batch_data["task_loss"][0] += loss["task_loss"].item()
         self.batch_data["combined_loss"][0] += loss["combined_loss"].item()
         self.epoch_data["correct"][0] += aux_pred.eq(data[1].view_as(aux_pred)).sum().item()
+
+        self.epoch_data["sr_loss"][0] += self.batch_data["sr_loss"][0]  # accumulate for epoch
+        self.epoch_data["task_loss"][0] += self.batch_data["task_loss"][0]  # accumulate for epoch
+        self.epoch_data["combined_loss"][0] += self.batch_data["combined_loss"][0]  # accumulate for epoch
+
+        self.batch_data["sr_loss"][0] = 0.0
+        self.batch_data["task_loss"][0] = 0.0
+        self.batch_data["combined_loss"][0] = 0.0
+
+        loss["combined_loss"].backward()
+        self.optimizer.step()
+        self.optimizer.zero_grad()
 
         return predictions, targets
 
