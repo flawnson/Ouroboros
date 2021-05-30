@@ -316,4 +316,3 @@ class AuxiliaryTrainer(AbstractTrainer):
 
                 self.write(epoch, epoch_scores, train_epoch_length, test_epoch_length)
                 self.reset()
-        self.wandb_logger.finish()
