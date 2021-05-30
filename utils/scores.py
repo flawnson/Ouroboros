@@ -5,13 +5,14 @@ import numpy as np
 from typing import *
 from logzero import logger
 from abc import ABC, abstractmethod
-from sklearn.metrics import f1_score, precision_score, recall_score, jaccard_score, confusion_matrix
+from sklearn.metrics import f1_score, precision_score, recall_score, jaccard_score, confusion_matrix, roc_auc_score
 
 
 class GeneralScores:
-    def __init__(self, config: Dict, dataset, correct, device: torch.device):
+    def __init__(self, config: Dict, dataset, total, correct, device: torch.device):
         self.score_config = config["score_config"]
         self.dataset = dataset
+        self.total = total
         self.correct = correct
         self.device = device
 
@@ -21,12 +22,11 @@ class GeneralScores:
 
     def relative_difference(self) -> float:
         rel_diff = self.calculate_relative_difference(self.predictions["param"].item(), self.targets["param"].item())
-
         return rel_diff
 
     def accuracy(self):
         """ Loops over each set correct number to calculate accuracy"""
-        return [self.correct[x] / len(self.dataset[list(self.dataset)[x]]) for x in range(len(self.correct))]
+        return [self.correct[x] / self.total[x] for x in range(len(self.correct))]
 
     def get_scores(self) -> Dict[str, List[float]]:
         scoreset = {"acc": self.accuracy()}
@@ -51,7 +51,7 @@ class GraphScores:
                         average=params[0])
 
     def auroc(self, params) -> float:
-        return auroc_score(params=params,
+        return roc_auc_score(params=params,
                            dataset=self.dataset,
                            agg_mask=self.agg_mask,
                            split_mask=self.split_mask,
@@ -104,7 +104,7 @@ class GraphScores:
         return {score_type: scoreset[score_type] for score_type in self.score_config.keys()}
 
 
-def scores(config: Dict, dataset, correct, device: torch.device) -> Dict:
+def scores(config: Dict, dataset, total, correct, device: torch.device) -> Dict:
     """
     Function to call the correct score class
 
@@ -119,7 +119,7 @@ def scores(config: Dict, dataset, correct, device: torch.device) -> Dict:
 
     """
     if config["data_config"]["dataset"].casefold() == "mnist" or "cifar" or "cifar10":
-        return GeneralScores(config, dataset, correct, device).get_scores()
+        return GeneralScores(config, dataset, total, correct, device).get_scores()
     elif config["data_config"]["dataset"].casefold() == "cora":
         return GraphScores(config, dataset, correct, device).get_scores()
     else:

@@ -54,7 +54,7 @@ class QuineLoss:
         Returns:
             The loss value as a float.
         """
-        loss_task = F.nll_loss(self.predictions["aux"].unsqueeze(dim=0), self.targets["aux"]) #create dictionary indices
+        loss_task = F.nll_loss(self.predictions["aux"], self.targets["aux"]) #create dictionary indices
 
         return loss_task
 
