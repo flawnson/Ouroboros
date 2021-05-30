@@ -85,7 +85,7 @@ def loss(config: Dict, model: torch.nn.Module, logits, targets) -> Union[Dict, f
     """
     optim_config = config["optim_config"]
     if type(model) == Classical:
-        return {"loss": eval(optim_config["loss_func"])(logits.unsqueeze(dim=0),
+        return {"loss": eval(optim_config["loss_func"])(logits,
                                                         targets,
                                                         **optim_config["loss_kwargs"])}
     if isinstance(model, Quine):

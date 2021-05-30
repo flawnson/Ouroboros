@@ -29,60 +29,81 @@ class VanillaTrainer(AbstractTrainer):
         self.checkpoint = PTCheckpoint(config)
         self.dataset = dataset
         self.device = device
-        self.batch_data = {"sr_loss": [0] * len(dataset)}  # First position for training scores, second position for test scores
         self.epoch_data = {"sr_loss": [0] * len(dataset)}
+        self.param_idx_map = dict({}) # Maps param_idx to value, to be used in regeneration
 
-    def train(self, param_idx, batch_idx):
+
+    def train(self, param_idxs, batch_idx):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
 
-        idx_vector = torch.squeeze(self.wrapper.model.to_onehot(param_idx)) #coordinate of the param in one hot vector form
-        param = self.wrapper.model.get_param(param_idx)
+        param_idxs = param_idxs.to(self.device)
 
-        predictions = {"param": self.wrapper.model(idx_vector)}
-        targets = {"param": param}
+        # Create onehot vectors and parameter indexes for the entire batch
+        idx_vectors = []
+        params = []
+        for param_idx in param_idxs:
+            idx_vector = torch.squeeze(self.wrapper.model.to_onehot(param_idx)) # coordinate of the param in one hot vector form
+            param = self.wrapper.model.get_param(param_idx)
+            idx_vectors.append(idx_vector)
+            params.append(param)
+        idx_vectors = torch.stack((idx_vectors)).to(self.device)
+        params = torch.tensor(params, device=self.device)
+
+        # Both predictions and targets will be dictionaries that hold two elements
+        output = self.wrapper.model(idx_vectors)
+        predictions = {"param": output}
+        for i, param_idx in enumerate(param_idxs):
+            self.param_idx_map[param_idx.item()] = output[i]
+        targets = {"param": params}
 
         loss = self.loss(predictions, targets)
 
-        if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
-            loss["sr_loss"].backward()  # The combined loss is backpropagated right?
-            self.optimizer.step()
-            self.epoch_data["sr_loss"][0] += self.batch_data["sr_loss"][0] #accumulate for epoch
-            self.batch_data["sr_loss"][0] = 0.0
-            self.optimizer.zero_grad()
+        self.epoch_data["sr_loss"][0] += loss["sr_loss"].item()  # accumulate
 
-        self.batch_data["sr_loss"][0] += loss["sr_loss"].item()
+        loss["sr_loss"].backward()
+        self.optimizer.step()
+
         return predictions, targets
 
     @torch.no_grad()
-    def test(self, param_idx, batch_idx):
+    def test(self, param_idxs, batch_idx):
         self.wrapper.model.eval()
-        idx_vector = torch.squeeze(self.wrapper.model.to_onehot(param_idx)) #coordinate of the param in one hot vector form
-        param = self.wrapper.model.get_param(param_idx)
-        predictions = {"param": self.wrapper.model(idx_vector)}
-        targets = {"param": param}
+
+        param_idxs = param_idxs.to(self.device)
+
+        # Create onehot vectors and parameter indexes for the entire batch
+        idx_vectors = []
+        params = []
+        for param_idx in param_idxs:
+            idx_vector = torch.squeeze(self.wrapper.model.to_onehot(param_idx)) # coordinate of the param in one hot vector form
+            param = self.wrapper.model.get_param(param_idx)
+            idx_vectors.append(idx_vector)
+            params.append(param)
+        idx_vectors = torch.stack((idx_vectors)).to(self.device)
+        params = torch.tensor(params, device=self.device)
+
+        test_output = self.wrapper.model(idx_vectors)
+        predictions = {"param": test_output}
+        for i, param_idx in enumerate(param_idxs):
+            self.param_idx_map[param_idx.item()] = test_output[i]
+        targets = {"param": params}
 
         loss = self.loss(predictions, targets)
+        self.epoch_data["sr_loss"][1] += loss["sr_loss"].item() #accumulate for epoch
 
-        if ((batch_idx + 1) % self.data_config["batch_size"]) == 0:
-            self.epoch_data["sr_loss"][1] += self.batch_data["sr_loss"][1] #accumulate for epoch
-            self.batch_data["sr_loss"][1] = 0.0
-
-        self.batch_data["sr_loss"][1] += loss["sr_loss"].item()
         return predictions, targets
 
     def loss(self, predictions, targets):
         return loss(self.config, self.wrapper.model, predictions, targets)
 
     def score(self):
-        # Vanilla doesn't have any scores yet
-        # return scores(self.config, self.dataset, self.epoch_data, self.device)
+        # Vanilla doesn't have any scoring
         pass
 
-    def write(self, epoch: int, train_epoch_length: int, test_epoch_length: int):
-
+    def write(self, epoch: int):
         # Log values for training
-        actual_train_loss = self.epoch_data["sr_loss"][0] / (train_epoch_length // self.data_config["batch_size"])
+        actual_train_loss = self.epoch_data["sr_loss"][0] / self.train_epoch_length
         self.tb_logger.scalar_summary('sr_loss (train)', actual_train_loss, epoch)
 
         if self.wandb_logger is not None:
@@ -91,7 +112,7 @@ class VanillaTrainer(AbstractTrainer):
                 }, step=epoch, commit=False)
 
         # Log values for testing
-        actual_test_loss = self.epoch_data["sr_loss"][1] / (test_epoch_length // self.data_config["batch_size"])
+        actual_test_loss = self.epoch_data["sr_loss"][1] / self.test_epoch_length
         self.tb_logger.scalar_summary('sr_loss (test)', actual_test_loss, epoch)
 
         if self.wandb_logger is not None:
@@ -117,12 +138,12 @@ class VanillaTrainer(AbstractTrainer):
                             'epoch': epoch
                         }, commit=False)
 
-                train_epoch_length = len(self.dataset[list(self.dataset)[0]])
+                self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])
                 for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
                     predictions, targets = self.train(param_idx, batch_idx)
 
-                test_epoch_length = len(self.dataset[list(self.dataset)[1]])
+                self.test_epoch_length = len(self.dataset[list(self.dataset)[1]])
                 for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
                     predictions, targets = self.test(param_idx, batch_idx)
@@ -133,7 +154,7 @@ class VanillaTrainer(AbstractTrainer):
                                            self.epoch_data["sr_loss"][0],
                                            self.optimizer)
 
-                self.write(epoch, train_epoch_length, test_epoch_length)
+                self.write(epoch)
                 self.reset()
 
 
@@ -151,10 +172,6 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.checkpoint = PTCheckpoint(config)
         self.dataset = dataset
         self.device = device
-        self.batch_data = {"sr_loss": [0, 0],
-                           "task_loss": [0, 0],
-                           "combined_loss": [0, 0],
-                           "correct": [0, 0]}  # First position for training scores, second position for test scores
         self.epoch_data = {"sr_loss": [0, 0],
                            "task_loss": [0, 0],  # The aux loss, original implementation is nll_loss
                            "combined_loss": [0, 0],
@@ -165,6 +182,10 @@ class AuxiliaryTrainer(AbstractTrainer):
     def train(self, data, param_idxs, batch_idx):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
+
+        data[0] = data[0].to(self.device)
+        data[1] = data[1].to(self.device)
+        param_idxs = param_idxs.to(self.device)
 
         # Create onehot vectors and parameter indexes for the entire batch
         idx_vectors = []
@@ -178,13 +199,13 @@ class AuxiliaryTrainer(AbstractTrainer):
         params = torch.tensor(params, device=self.device)
 
         # Both predictions and targets will be dictionaries that hold two elements
-        output = self.wrapper.model(idx_vectors, data[0].to(self.device))
+        output = self.wrapper.model(idx_vectors, data[0])
         predictions = {"param": output[0],
                        "aux": output[1]}
         for i, param_idx in enumerate(param_idxs):
             self.param_idx_map[param_idx.item()] = output[0][i]
-        aux_pred = torch.argmax(predictions["aux"], dim=1)  # get the index of the max log-probability
-        targets = {"param": params, "aux": data[-1].to(self.device)}
+        aux_pred = torch.argmax(predictions["aux"], dim=1) # get the index of the max log-probability
+        targets = {"param": params, "aux": data[-1]}
 
         loss = self.loss(predictions, targets)
 
@@ -203,6 +224,10 @@ class AuxiliaryTrainer(AbstractTrainer):
     def test(self, data, param_idxs, batch_idx):
         self.wrapper.model.eval()
 
+        data[0] = data[0].to(self.device)
+        data[1] = data[1].to(self.device)
+        param_idxs = param_idxs.to(self.device)
+
         # Create onehot vectors and parameter indexes for the entire batch
         idx_vectors = []
         params = []
@@ -214,13 +239,13 @@ class AuxiliaryTrainer(AbstractTrainer):
         idx_vectors = torch.stack((idx_vectors)).to(self.device)
         params = torch.tensor(params, device=self.device)
 
-        test_output = self.wrapper.model(idx_vectors, data[0].to(self.device))
+        test_output = self.wrapper.model(idx_vectors, data[0])
         predictions = {"param": test_output[0],
                         "aux": test_output[1]}
         for i, param_idx in enumerate(param_idxs):
             self.param_idx_map[param_idx.item()] = test_output[0][i]
-        aux_pred = torch.argmax(predictions["aux"], dim=1)  # get the indices of the max log-probability
-        targets = {"param": params, "aux": data[-1].to(self.device)}
+        aux_pred = torch.argmax(predictions["aux"], dim=1) # get the indices of the max log-probability
+        targets = {"param": params, "aux": data[-1]}
 
         loss = self.loss(predictions, targets)
 
