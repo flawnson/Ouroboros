@@ -125,14 +125,27 @@ def main():
     elif config["data_config"]["dataset"].casefold() == "cora":
         pass
     elif config["data_config"]["dataset"].casefold() == "mnist":
-        dataloaders = MNISTSplit(config, datasets, param_data, device).partition()
+        if (param_data is not None) and len(datasets) < len(param_data):
+            dataloaders = MNISTSplit(config, datasets, param_data, "param_data",
+                                     device).partition()  # MNIST split appears to work fine with CIFAR
+        else:
+            dataloaders = MNISTSplit(config, datasets, param_data, "aux_data", device).partition()
+
+        # Special case if Vanilla
         if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
             logger.info("Using QuineSplit for Vanilla")
             dataloaders = QuineSplit(config, datasets, param_data, device).partition()
-        if (param_data is not None) and (len(datasets) < len(param_data)): #if there's not enough MNIST data partition based on number of parameters
-            dataloaders = QuineSplit(config, datasets, param_data, device).partition()
+
     elif config["data_config"]["dataset"].casefold() == "cifar10":
-        dataloaders = MNISTSplit(config, datasets, param_data, device).partition()  # MNIST split appears to work fine with CIFAR
+        if (param_data is not None) and len(datasets) < len(param_data):
+            dataloaders = MNISTSplit(config, datasets, param_data, "param_data", device).partition()  # MNIST split appears to work fine with CIFAR
+        else:
+            dataloaders = MNISTSplit(config, datasets, param_data, "aux_data", device).partition()
+
+        # Special case if Vanilla
+        if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
+            logger.info("Using QuineSplit for Vanilla")
+            dataloaders = QuineSplit(config, datasets, param_data, device).partition()
     else:
         raise NotImplementedError(f"{config['data_config']['dataset']} is not a valid split")
     logger.info(f"Successfully split dataset and parameters")

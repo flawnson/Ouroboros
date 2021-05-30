@@ -6,6 +6,12 @@
   "log_level": "logging.INFO",
   "clean_log_dir": true,
   "log_dir": "saves/logs/auxiliary",
+  "wandb_logging":
+  {
+    "run_name": null,
+    "project": "ouroboros",
+    "entity": "ouroboros_ai"
+  },
   "device": "cuda",
   "data_config":
   {
@@ -13,14 +19,15 @@
     "concat": true,
     "data_kwargs": {
       "root": "data/datafiles/cifar10",
-      "download": false
+      "download": true
     },
     "data_path": "data/datafiles/housing_prices/train.csv",
     "split_type": "holdout",
     "num_splits": 5,
     "shuffle": true,
     "batch_size": 16,
-    "subset": null
+    "data_subset": 200,
+    "param_subset": null
   },
   "model_config":
   {
@@ -31,13 +38,13 @@
     "normalize": "torch.nn.functional.layer_norm",
     "normalize_kwargs": {},
     "dropout": 0.10,
-    "layer_sizes": [784, 40, 40]
+    "layer_sizes": [50, 10, 40]
   },
   "model_aug_config":
   {
     "model_augmentation": "auxiliary",
     "n_inputs": 2,
-    "n_hidden": 392,
+    "n_hidden": 25,
     "van_output_layers": [40, 1],
     "aux_output_layers": [40, 10],
     "reduction_method": "random"
@@ -53,7 +60,7 @@
   },
   "run_config":
   {
-    "num_epochs": 1000,
+    "num_epochs": 5,
     "checkpoint_intervals": 100,
     "clean_checkpoint_dir": true,
     "checkpoint_dir": "saves/checkpoints/auxiliary/",

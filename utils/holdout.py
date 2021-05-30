@@ -61,7 +61,8 @@ class AbstractSplit(ABC):
 
     def get_dataloaders(self, samplers: List[torch.utils.data.Sampler]) -> List:
         if self.config["model_aug_config"]["model_augmentation"] == "auxiliary":
-            return [DataLoader(CombineDataset(self.dataset, self.param_data),
+            combined_dataset = CombineDataset(self.dataset, self.param_data)
+            return [DataLoader(combined_dataset,
                                       batch_size=1,
                                       sampler=sampler) for sampler in samplers]
         elif self.config["model_aug_config"]["model_augmentation"] == "vanilla":
@@ -84,12 +85,13 @@ class AbstractSplit(ABC):
 
 
 class MNISTSplit(AbstractSplit):
-    def __init__(self, config, dataset, param_data, device):
+    def __init__(self, config, dataset, param_data, larger_dataset, device):
         super(MNISTSplit, self).__init__(config, dataset, param_data, device)
         self.config = config
         self.data_config = config["data_config"]
         self.dataset = dataset
         self.param_data = param_data  # Needed for Aux models
+        self.larger_dataset = larger_dataset
         self.device = device
 
     def holdout(self) -> Dict[str, DataLoader]:
@@ -102,7 +104,11 @@ class MNISTSplit(AbstractSplit):
             logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_SPLIT}")
 
         # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])
-        split_idx = list(ShuffleSplit(n_splits=1, train_size=split_size, random_state=self.config["seed"]).split(self.dataset, self.dataset.targets))
+        split_idx = None
+        if self.larger_dataset == "aux_data":
+            split_idx = list(ShuffleSplit(n_splits=1, train_size=split_size, random_state=self.config["seed"]).split(self.dataset, self.dataset.targets))
+        elif self.larger_dataset == "param_data":
+            split_idx = list(ShuffleSplit(n_splits=1, train_size=split_size, random_state=self.config["seed"]).split(self.param_data.params))
         samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx[0]]
         dataloaders = self.get_dataloaders(samplers)
 
@@ -175,7 +181,6 @@ class QuineSplit(AbstractSplit):
         # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])
         split_idx = list(ShuffleSplit(n_splits=1, train_size=split_size, random_state=self.config["seed"]).split(self.param_data.params))
         split_idx = split_idx[0]
-        print("split idx: ", split_idx)
         samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx]
         dataloaders = self.get_dataloaders(samplers)
 

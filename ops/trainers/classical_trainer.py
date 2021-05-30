@@ -143,11 +143,21 @@ class ClassicalTrainer(AbstractTrainer):
         train_loss = self.epoch_data["loss"][0] / (train_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('loss (train)', train_loss, epoch)
         self.tb_logger.scalar_summary('scores (train)', scores["acc"][0], epoch)
+        if self.wandb_logger is not None:
+            self.wandb_logger.log({
+                    'train/sr_loss': train_loss,
+                    'train/scores': scores["acc"][0]
+                }, step=epoch, commit=False)
 
         # Log values for testing
         test_loss = self.epoch_data["loss"][1] / (test_epoch_length // self.data_config["batch_size"])
         self.tb_logger.scalar_summary('loss (test)', test_loss, epoch)
         self.tb_logger.scalar_summary('scores (test)', scores["acc"][1], epoch)
+        if self.wandb_logger is not None:
+            self.wandb_logger.log({
+                    'test/sr_loss': test_loss,
+                    'test/scores': scores["acc"][1]
+                }, step=epoch, commit=True)
 
         logger.info("Successfully wrote logs to tensorboard")
 
@@ -169,6 +179,11 @@ class ClassicalTrainer(AbstractTrainer):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
+                if self.wandb_logger is not None:
+                    self.wandb_logger.log({
+                            'epoch': epoch
+                        }, commit=False)
+
 
                 train_epoch_length = len(self.dataset[list(self.dataset)[0]])
                 for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]]):
