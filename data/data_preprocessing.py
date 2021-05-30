@@ -70,10 +70,33 @@ def get_image_data(config: Dict) -> ConcatDataset:
 
     return dataset
 
+
 def get_text_data(config: Dict) -> ConcatDataset:
 
     logger.info(f"Downloading {config['data_config']['dataset']} data to {config['data_config']['data_kwargs']['root']}")
-    transform = tt.transforms.Compose([tv.transforms.ToTensor()])
+
+    #If specified, select only a subset for faster running (TAKES DOUBLE THE NUMBER IN CONFIG)
+    subset = config["data_config"].get("subset", None)
+    if isinstance(subset, int):
+        subset_indices = list(range(subset))
+        logger.info(f"Using a subset of the dataset sized: {subset}")
+    else:
+        subset_indices = []
+
+    try:
+        if config["data_config"]["dataset"].casefold() == "wikitext2":
+            for x in ["train", "valid", "test"]:
+                tt_dataset = tt.datasets.WikiText2(root=config["data_config"]["data_kwargs"]["root"],
+                                                   split=x)
+        elif config["data_config"]["dataset"].casefold() == "amazonreviewfull":
+            for x in ["train", "test"]:
+                tt_dataset = tt.datasets.WikiText2(root=config["data_config"]["data_kwargs"]["root"],
+                                                   split=x)
+        else:
+            raise NotImplementedError(f"{config['data_config']['dataset']} is not a dataset")
+    except Exception as e:
+        raise e
+
 
 
 
