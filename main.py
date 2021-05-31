@@ -19,7 +19,8 @@ from models.augmented.hypernetwork import MLPHyperNetwork, LinearHyperNetwork, R
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
-from data.linear_preprocessing import HousingDataset, get_image_data
+from data.linear_preprocessing import HousingDataset
+from data.data_preprocessing import get_image_data, get_graph_data, get_text_data
 from utils.holdout import MNISTSplit, QuineSplit
 from utils.checkpoint import load
 from optim.parameters import ModelParameters
@@ -56,9 +57,9 @@ def main():
         datasets = HousingDataset(config).dataset.to(device)
     elif config["data_config"]["dataset"].casefold() == "cora":
         datasets = get_graph_data(config)  # Cora only has one graph (index must be 0)
-    elif config["data_config"]["dataset"].casefold() == "mnist" or "cifar10" or "imagenet":
+    elif config["data_config"]["dataset"].casefold() in ("mnist", "cifar10", "imagenet"):
         datasets = get_image_data(config)
-    elif config["data_config"]["dataset"].casefold() == "wiki":
+    elif config["data_config"]["dataset"].casefold() in ("wikitext2", "amazonreviewfull"):
         datasets = get_text_data(config)
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")
