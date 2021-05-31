@@ -22,3 +22,9 @@ class CombineDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return max(len(self.datasets[0]), len(self.datasets[1]))
+
+    def get_aux_data_len(self):
+        return len(self.datasets[0])
+
+    def get_param_data_len(self):
+        return len(self.datasets[1])

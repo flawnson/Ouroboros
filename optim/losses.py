@@ -54,7 +54,7 @@ class QuineLoss:
         Returns:
             The loss value as a float.
         """
-        loss_task = F.nll_loss(self.predictions["aux"].unsqueeze(dim=0), self.targets["aux"]) #create dictionary indices
+        loss_task = F.nll_loss(self.predictions["aux"], self.targets["aux"]) #create dictionary indices
 
         return loss_task
 
@@ -85,7 +85,7 @@ def loss(config: Dict, model: torch.nn.Module, logits, targets) -> Union[Dict, f
     """
     optim_config = config["optim_config"]
     if type(model) == Classical:
-        return {"loss": eval(optim_config["loss_func"])(logits.unsqueeze(dim=0),
+        return {"loss": eval(optim_config["loss_func"])(logits,
                                                         targets,
                                                         **optim_config["loss_kwargs"])}
     if isinstance(model, Quine):

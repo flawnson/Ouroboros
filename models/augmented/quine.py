@@ -31,7 +31,6 @@ class Quine(ABC):
         idxs = idxs.item() if type(idxs) == torch.tensor else idxs
         onehot = torch.zeros(self.num_params, device=self.device)
         onehot[idxs] = 1
-        # onehots = [torch.zeros(self.num_params, device=self.device)[idx.item()] for idx in idxs]  # Was testing different batch sizes
         return onehot
 
     def indexer(self) -> List:
@@ -215,12 +214,12 @@ class Auxiliary(Vanilla, torch.nn.Module):
         """
         new_output = self.van_input(x)
         if y is not None:
-            y = y.reshape(-1)  # Flatten MNIST input in place
+            y = y.reshape(y.shape[0], -1)  # Flatten MNIST input in place
             output2 = self.aux_input(y)
-            new_output = torch.cat((new_output, output2))
+            new_output = torch.cat((new_output, output2), dim=1)
         else:
             # Substitutes data with random matrix during regeneration... Could probably do better
-            new_output = torch.cat((new_output, torch.rand(self.model_aug_config["n_hidden"]).to(self.device)))
+            new_output = torch.cat((new_output, torch.rand(self.model_aug_config["n_hidden"]).to(self.device)), dim=1)
 
         # run_logging.info("Input 1: ", output1)
         # run_logging.info("Input 2: ", output2)

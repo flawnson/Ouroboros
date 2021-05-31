@@ -18,7 +18,7 @@ class Classical(torch.nn.Module):
         pass
 
     def forward(self, x: torch.tensor) -> torch.tensor:
-        x = x.reshape(-1)  # Flatten MNIST input in place
+        x = x.reshape(x.shape[0], -1)  # Flatten MNIST input in place
         x = self.model(x)
 
         return x
