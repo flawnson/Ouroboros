@@ -63,15 +63,15 @@ class AbstractSplit(ABC):
         if self.config["model_aug_config"]["model_augmentation"] == "auxiliary":
             combined_dataset = CombineDataset(self.dataset, self.param_data)
             return [DataLoader(combined_dataset,
-                                      batch_size=1,
+                                      batch_size=self.config["data_config"]["batch_size"],
                                       sampler=sampler) for sampler in samplers]
         elif self.config["model_aug_config"]["model_augmentation"] == "vanilla":
             return [DataLoader(self.param_data,
-                               batch_size=1,
+                               batch_size=self.config["data_config"]["batch_size"],
                                sampler=sampler) for sampler in samplers]
         else:
             return [DataLoader(self.dataset,
-                               batch_size=1,
+                               batch_size=self.config["data_config"]["batch_size"],
                                sampler=sampler) for sampler in samplers]
 
     def partition(self):
