@@ -26,10 +26,11 @@
   {
     "model_dir": null,
     "model_type": "language",
-    "pooling": null,
-    "pooling_params": null,
-    "normalize": "torch.nn.functional.layer_norm",
-    "normalize_params": {},
+    "decoder_type": "linear",
+    "input_size": 200,
+    "num_heads": 8,
+    "hidden_size": 10,
+    "num_layers": 6,
     "dropout": 0.10,
     "layer_sizes": [784, 392, 196, 40]
   },

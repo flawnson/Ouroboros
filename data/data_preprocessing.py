@@ -4,6 +4,9 @@ import torchtext as tt
 
 from typing import *
 from logzero import logger
+from torchtext.data.utils import get_tokenizer
+from collections import Counter
+from torchtext.vocab import Vocab
 from torch.utils.data import ConcatDataset, ChainDataset, Subset
 
 
@@ -105,17 +108,21 @@ def get_text_data(config: Dict) -> ChainDataset:
         raise e
 
     to_concat = []
-    to_concat_targets = []
     for tt_dataset in all_datasets:
         if isinstance(subset, int):
             to_concat.append(Subset(tt_dataset, subset_indices))
         else:
             to_concat.append(tt_dataset)
 
-    # In case targets are not a tensor (like in CIFAR10)
-    to_concat_targets = [torch.tensor(x) for x in to_concat_targets]
-
     dataset = ChainDataset(to_concat)
+
+    # Following the tokenization and vocab building spec in PyTorch tutorial
+    tokenizer = get_tokenizer('basic_english')
+    counter = Counter()
+    for tt_dataset in all_datasets:
+        for line in tt_dataset:
+            counter.update(tokenizer(line))
+    dataset.vocab = Vocab(counter)
 
     return dataset
 

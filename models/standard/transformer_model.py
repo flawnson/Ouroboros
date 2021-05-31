@@ -53,7 +53,7 @@ class TransformerModel(torch.nn.Module):
     def __init__(self, config, datasets, device):
         super(TransformerModel, self).__init__()
         model_config = config["model_config"]
-        num_tokens = model_config["num_tokens"]
+        num_tokens = len(datasets.vocab.stoi)
         input_size = model_config["input_size"]
         num_heads = model_config["num_heads"]
         hidden_size = model_config["hidden_size"]
@@ -63,9 +63,9 @@ class TransformerModel(torch.nn.Module):
         encoder_layers = TransformerEncoderLayer(input_size, num_heads, hidden_size, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers, num_layers)
         self.encoder = torch.nn.Embedding(num_tokens, input_size)
-        if config["decoder_type"].casefold() == "linear":  # PyTorch's example in docs uses linear decoder
+        if model_config["decoder_type"].casefold() == "linear":  # PyTorch's example in docs uses linear decoder
             self.transformer_decoder = torch.nn.Linear(input_size, num_tokens)
-        elif config["decoder_type"].casefold() == "decoder":
+        elif model_config["decoder_type"].casefold() == "decoder":
             decoder_layers = TransformerDecoderLayer(input_size, num_heads, hidden_size, dropout)
             self.transformer_decoder = TransformerDecoder(input_size, num_tokens)
         self.ninp = input_size
