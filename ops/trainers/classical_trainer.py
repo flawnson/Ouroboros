@@ -169,6 +169,7 @@ class ClassicalTrainer(AbstractTrainer):
         for i in range(len(self.dataset)):
             self.epoch_data["loss"][i] = 0
             self.epoch_data["correct"][i] = 0
+            self.epoch_data["total"][i] = 0
 
         logger.info("States successfully reset for new epoch")
 

@@ -2,7 +2,7 @@
   "run_name": "Linear_cifar10_classical",
   "seed": 42,
   "run_type": "demo",
-  "logging": false,
+  "logging": true,
   "log_level": "logging.INFO",
   "clean_log_dir": true,
   "log_dir": "saves/logs/classical",
