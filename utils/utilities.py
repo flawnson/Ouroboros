@@ -28,7 +28,10 @@ def get_example_size(dataset: torch.utils.data.dataset) -> int:
             subset = torch.utils.data.Subset(dataset.datasets[dataset_idx], subset_indices)
             example = next(iter(torch.utils.data.DataLoader(subset, batch_size=1, num_workers=0, shuffle=False)))
             example_size = example[0].reshape(-1).shape[0]
-            return example_size
+            if example_size is None:
+                raise TypeError(f"Type {type(example_size)} not allowed to be used as int")
+            else:
+                return example_size
         except Exception as e:
             logger.exception(e)
             logger.info("Could not infer size of example, attempting to find manually defined size")
@@ -39,6 +42,8 @@ def get_example_size(dataset: torch.utils.data.dataset) -> int:
                 return 3072
             elif dataset_name == "imagenet":
                 return 3072
+            elif dataset_name == "wikitext2":
+                return 69
 
 
 def timed(func: Callable):

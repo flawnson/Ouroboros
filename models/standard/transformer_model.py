@@ -70,6 +70,8 @@ class TransformerModel(torch.nn.Module):
             self.transformer_decoder = TransformerDecoder(input_size, num_tokens)
         self.ninp = input_size
         self.init_weights()
+        # For auxiliary model (technically positional encoder has no trainable parameters only PyTorch buffers)
+        self.param_list = list(self.pos_encoder.parameters()) + list(self.transformer_encoder.parameters()) + list(self.transformer_decoder.parameters())
 
     def generate_square_subsequent_mask(self, sz):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
