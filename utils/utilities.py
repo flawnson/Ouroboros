@@ -42,8 +42,6 @@ def get_example_size(dataset: torch.utils.data.dataset) -> int:
                 return 3072
             elif dataset_name == "imagenet":
                 return 3072
-            elif dataset_name == "wikitext2":
-                return 69
 
 
 def timed(func: Callable):

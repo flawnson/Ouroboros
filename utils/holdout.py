@@ -202,3 +202,15 @@ class QuineSplit(AbstractSplit):
     def type_check(subject):
         pass
         # assert isinstance(subject, Quine) & isinstance(subject, Module), f"Subject: {type(subject)} is not a splittable type"
+
+
+def get_image_data_split():
+    pass
+
+
+def get_text_data_split():
+    pass
+
+
+
+

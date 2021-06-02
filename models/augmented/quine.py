@@ -173,6 +173,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
     def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dataset, device):
         super(Auxiliary, self).__init__(config, model, device)
         super(torch.nn.Module)
+        self.config = config
         self.config_aug_config = config["model_aug_config"]
         self.model = model
         self.dataset = dataset
@@ -181,25 +182,31 @@ class Auxiliary(Vanilla, torch.nn.Module):
         self.aux_output = self.build_aux_output()
 
     def build_aux_input(self) -> torch.nn.Sequential:
-        rand_proj_layer = torch.nn.Linear(get_example_size(self.dataset),
-                                          self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
-                                          bias=False)  # Modify so there are half as many hidden units
-        rand_proj_layer.weight.data = torch.tensor(self.reduction(get_example_size(self.dataset)), dtype=torch.float32)
-        for p in rand_proj_layer.parameters():
-            p.requires_grad_(False)
-        return torch.nn.Sequential(rand_proj_layer)
+        if self.config["model_config"]["model_type"] in ("linear", "image"):
+            rand_proj_layer = torch.nn.Linear(get_example_size(self.dataset),
+                                              self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
+                                              bias=False)  # Modify so there are half as many hidden units
+            rand_proj_layer.weight.data = torch.tensor(self.reduction(get_example_size(self.dataset)), dtype=torch.float32)
+            for p in rand_proj_layer.parameters():
+                p.requires_grad_(False)
+            return torch.nn.Sequential(rand_proj_layer)
+        elif self.config["model_config"]["model_type"] in "language":
+            return torch.nn.Sequential()
 
     def build_aux_output(self) -> torch.nn.Sequential:
         # TODO: Make cleaner
-        aux_predictor_layers = []
-        for in_size, out_size in zip(self.model_aug_config["aux_output_layers"], self.model_aug_config["aux_output_layers"][1:]):
-            layer = torch.nn.Linear(in_size, out_size, bias=True)
-            aux_predictor_layers.append(layer)
-            self.param_list.append(layer.weight)
-            self.param_list.append(layer.bias)
-        logsoftmax = torch.nn.LogSoftmax(dim=0) #should have no learnable weights
-        aux_predictor_layers.append(logsoftmax)
-        return torch.nn.Sequential(*aux_predictor_layers)
+        if self.config["model_config"]["model_type"] in ("linear", "image"):
+            aux_predictor_layers = []
+            for in_size, out_size in zip(self.model_aug_config["aux_output_layers"], self.model_aug_config["aux_output_layers"][1:]):
+                layer = torch.nn.Linear(in_size, out_size, bias=True)
+                aux_predictor_layers.append(layer)
+                self.param_list.append(layer.weight)
+                self.param_list.append(layer.bias)
+            logsoftmax = torch.nn.LogSoftmax(dim=0) #should have no learnable weights
+            aux_predictor_layers.append(logsoftmax)
+            return torch.nn.Sequential(*aux_predictor_layers)
+        elif self.config["model_config"]["model_type"] in "language":
+            return torch.nn.Sequential()
 
     def forward(self, x: torch.tensor, y: torch.tensor = None) -> Tuple[torch.tensor, torch.tensor]:
         """
