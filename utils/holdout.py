@@ -204,12 +204,36 @@ class QuineSplit(AbstractSplit):
         # assert isinstance(subject, Quine) & isinstance(subject, Module), f"Subject: {type(subject)} is not a splittable type"
 
 
-def get_image_data_split():
-    pass
+def get_image_data_split(config, datasets, param_data, device):
+    # Function works for both MNIST and CIFAR10 (untested for other datasets)
+    if (param_data is not None) and len(datasets) < len(param_data):
+        dataloaders = MNISTSplit(config, datasets, param_data, "param_data",
+                                 device).partition()  # MNIST split appears to work fine with CIFAR
+    else:
+        dataloaders = MNISTSplit(config, datasets, param_data, "aux_data", device).partition()
+
+    # Special case if Vanilla
+    if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
+        logger.info("Using QuineSplit for Vanilla")
+        dataloaders = QuineSplit(config, datasets, param_data, device).partition()
+
+    return dataloaders
 
 
-def get_text_data_split():
-    pass
+def get_text_data_split(config, datasets, param_data, device):
+    # Function works for both MNIST and CIFAR10 (untested for other datasets)
+    if (param_data is not None) and len(datasets) < len(param_data):
+        dataloaders = MNISTSplit(config, datasets, param_data, "param_data",
+                                 device).partition()  # MNIST split appears to work fine with CIFAR
+    else:
+        dataloaders = MNISTSplit(config, datasets, param_data, "aux_data", device).partition()
+
+    # Special case if Vanilla
+    if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
+        logger.info("Using QuineSplit for Vanilla")
+        dataloaders = QuineSplit(config, datasets, param_data, device).partition()
+
+    return dataloaders
 
 
 

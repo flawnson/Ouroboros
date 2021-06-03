@@ -21,7 +21,7 @@ from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset
 from data.data_preprocessing import get_image_data, get_graph_data, get_text_data
-from utils.holdout import MNISTSplit, QuineSplit
+from utils.holdout import get_image_data_split, get_text_data_split
 from utils.checkpoint import load
 from optim.parameters import ModelParameters
 from ops.trainers.trainer import trainer
@@ -122,32 +122,15 @@ def main():
         pass
     elif config["data_config"]["dataset"].casefold() == "house":
         pass
-    elif config["data_config"]["dataset"].casefold() == "cora":
+    elif config["data_config"]["dataset"].casefold() in ("cora", "reddit"):
         pass
-    elif config["data_config"]["dataset"].casefold() == "mnist":
-        if (param_data is not None) and len(datasets) < len(param_data):
-            dataloaders = MNISTSplit(config, datasets, param_data, "param_data",
-                                     device).partition()  # MNIST split appears to work fine with CIFAR
-        else:
-            dataloaders = MNISTSplit(config, datasets, param_data, "aux_data", device).partition()
-
-        # Special case if Vanilla
-        if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
-            logger.info("Using QuineSplit for Vanilla")
-            dataloaders = QuineSplit(config, datasets, param_data, device).partition()
-
-    elif config["data_config"]["dataset"].casefold() == "cifar10":
-        if (param_data is not None) and len(datasets) < len(param_data):
-            dataloaders = MNISTSplit(config, datasets, param_data, "param_data", device).partition()  # MNIST split appears to work fine with CIFAR
-        else:
-            dataloaders = MNISTSplit(config, datasets, param_data, "aux_data", device).partition()
-
-        # Special case if Vanilla
-        if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
-            logger.info("Using QuineSplit for Vanilla")
-            dataloaders = QuineSplit(config, datasets, param_data, device).partition()
+    elif config["data_config"]["dataset"].casefold() in ("mnist", "cifar10"):
+        dataloaders = get_image_data_split(config, datasets, param_data, device)
+    elif config["data_config"]["dataset"].casefold() in ("wikitext2", "amazonreviewfull"):
+        dataloaders = get_text_data_split(config, datasets, param_data, device)
     else:
-        raise NotImplementedError(f"{config['data_config']['dataset']} is not a valid split")
+        raise NotImplementedError(f"Either {config['data_config']['dataset']} or {config['model_config']['model_type']} "
+                                  f"does not have a valid split")
     logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###
