@@ -11,7 +11,7 @@ from torch.nn import Module
 from sklearn.model_selection import StratifiedKFold, train_test_split, ShuffleSplit
 from torch.utils.data import Dataset, DataLoader
 
-from data.combine_preprocessing import CombineDataset
+from data.combine_preprocessing import CombineImageDataset
 from models.augmented.quine import Quine
 
 DEFAULT_SPLIT = 0.70
@@ -61,7 +61,7 @@ class AbstractSplit(ABC):
 
     def get_dataloaders(self, samplers: List[torch.utils.data.Sampler]) -> List:
         if self.config["model_aug_config"]["model_augmentation"] == "auxiliary":
-            combined_dataset = CombineDataset(self.dataset, self.param_data)
+            combined_dataset = CombineImageDataset(self.dataset, self.param_data)
             return [DataLoader(combined_dataset,
                                       batch_size=self.config["data_config"]["batch_size"],
                                       sampler=sampler) for sampler in samplers]
@@ -106,9 +106,15 @@ class MNISTSplit(AbstractSplit):
         # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])
         split_idx = None
         if self.larger_dataset == "aux_data":
-            split_idx = list(ShuffleSplit(n_splits=1, train_size=split_size, random_state=self.config["seed"]).split(self.dataset, self.dataset.targets))
+            split_idx = list(ShuffleSplit(n_splits=1,
+                                          train_size=split_size,
+                                          random_state=self.config["seed"]).split(self.dataset,
+                                                                                  self.dataset.targets))
         elif self.larger_dataset == "param_data":
-            split_idx = list(ShuffleSplit(n_splits=1, train_size=split_size, random_state=self.config["seed"]).split(self.param_data.params))
+            split_idx = list(ShuffleSplit(n_splits=1,
+                                          train_size=split_size,
+                                          random_state=self.config["seed"]).split(self.param_data.params))
+
         samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx[0]]
         dataloaders = self.get_dataloaders(samplers)
 
