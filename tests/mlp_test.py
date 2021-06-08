@@ -11,7 +11,7 @@ from optim.losses import loss as loss_fun
 from data.linear_preprocessing import get_image_data
 from optim.algos import OptimizerObj, LRScheduler
 from utils.scores import scores
-from utils.holdout import MNISTSplit
+from utils.holdout import ImageDataSplit
 from utils.logging import PTTBLogger
 
 
@@ -59,7 +59,7 @@ def run():
 
     model = Model(config, device)
     datasets = get_image_data(config)
-    dataloaders = MNISTSplit(config, datasets, None, device).partition()  # MNIST split appears to work fine with CIFAR
+    dataloaders = ImageDataSplit(config, datasets, None, device).partition()  # MNIST split appears to work fine with CIFAR
     optimizer = OptimizerObj(config, model).optim_obj
     scheduler = LRScheduler(config, optimizer).schedule_obj
 

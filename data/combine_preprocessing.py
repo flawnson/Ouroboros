@@ -1,5 +1,7 @@
 import torch
 
+import optim
+
 
 class CombineImageDataset(torch.utils.data.Dataset):
     def __init__(self, *datasets):
@@ -9,16 +11,19 @@ class CombineImageDataset(torch.utils.data.Dataset):
 
         #Extract the relevant indices
         # Assumes that aux data is first and param data is second
+        # Iterate over MNIST and Model Params to return a sample of each (image and intger index)
 
-        #MNIST
-        aux_data_idx = i % len(self.datasets[0])
-        a = self.datasets[0][aux_data_idx] #aux data
+        out = []
+        for idx in range(len(self.datasets)):
+            param_data_idx = i % len(self.datasets[idx])
+            if isinstance(self.datasets[i], torch.utils.data.Dataset):
+                out.append(self.datasets[idx][param_data_idx])  # return an integer index
+            elif isinstance(self.datasets[i], optim.parameters.ModelParameters):
+                out.append(self.datasets[idx].params[param_data_idx])  # return an integer index
+            else:
+                raise TypeError(f"Provided dataset {self.dataset[i]} cannot be combined")
 
-        #Model Param (Quine)
-        param_data_idx = i % len(self.datasets[1])
-        b = self.datasets[1].params[param_data_idx] #return an integer index
-        
-        return (a, b) #all items in tuple should already be tensors
+        return out #all items in tuple should already be tensors
 
     def __len__(self):
         return max(len(self.datasets[0]), len(self.datasets[1]))
@@ -34,7 +39,7 @@ class CombineTextDataset(torch.utils.data.IterableDataset):
     def __init__(self, *datasets):
         self.datasets = datasets
 
-    def __iter__(self, i):
+    def __iter__(self):
         # Extract the relevant indices
         # Assumes that aux data is first and param data is second
 
@@ -46,7 +51,7 @@ class CombineTextDataset(torch.utils.data.IterableDataset):
         param_data_idx = i % len(self.datasets[1])
         b = self.datasets[1].params[param_data_idx]  # return an integer index
 
-        return (a, b)  # all items in tuple should already be tensors
+        yield (a, b)  # all items in tuple should already be tensors
 
     def __len__(self):
         return max(len(self.datasets[0]), len(self.datasets[1]))

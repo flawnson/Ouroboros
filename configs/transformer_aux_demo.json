@@ -19,7 +19,7 @@
     "concat": true,
     "data_kwargs": {
       "root": "data/datafiles/wikitext2",
-      "download": false
+      "download": true
     },
     "data_path": "data/datafiles/housing_prices/train.csv",
     "split_type": "holdout",
