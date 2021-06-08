@@ -4,7 +4,8 @@ import optim
 
 
 class CombineImageDataset(torch.utils.data.Dataset):
-    def __init__(self, *datasets):
+    def __init__(self, subset, *datasets):
+        self.subset = subset
         self.datasets = datasets
 
     def __getitem__(self, i):
@@ -15,11 +16,11 @@ class CombineImageDataset(torch.utils.data.Dataset):
 
         out = []
         for idx in range(len(self.datasets)):
-            param_data_idx = i % len(self.datasets[idx])
-            if isinstance(self.datasets[i], torch.utils.data.Dataset):
-                out.append(self.datasets[idx][param_data_idx])  # return an integer index
-            elif isinstance(self.datasets[i], optim.parameters.ModelParameters):
-                out.append(self.datasets[idx].params[param_data_idx])  # return an integer index
+            data_idx = i % len(self.datasets[idx])
+            if isinstance(self.datasets[idx], torch.utils.data.Dataset):
+                out.append(self.datasets[idx][data_idx])  # return an integer index
+            elif isinstance(self.datasets[idx], optim.parameters.ModelParameters):
+                out.append(self.datasets[idx].params[data_idx])  # return an integer index
             else:
                 raise TypeError(f"Provided dataset {self.dataset[i]} cannot be combined")
 
@@ -36,22 +37,22 @@ class CombineImageDataset(torch.utils.data.Dataset):
 
 
 class CombineTextDataset(torch.utils.data.IterableDataset):
-    def __init__(self, *datasets):
+    def __init__(self, subset, *datasets):
+        self.subset = subset
         self.datasets = datasets
 
     def __iter__(self):
-        # Extract the relevant indices
-        # Assumes that aux data is first and param data is second
+        return iter(self.datasets)  #all items in tuple should already be tensors
 
-        # MNIST
-        aux_data_idx = i % len(self.datasets[0])
-        a = self.datasets[0][aux_data_idx]  # aux data
-
-        # Model Param (Quine)
-        param_data_idx = i % len(self.datasets[1])
-        b = self.datasets[1].params[param_data_idx]  # return an integer index
-
-        yield (a, b)  # all items in tuple should already be tensors
+    # def __next__(self):
+    #     if self.current_pos == self.num_lines - 1:
+    #         raise StopIteration
+    #     item = next(self._iterator)
+    #     if self.current_pos is None:
+    #         self.current_pos = 0
+    #     else:
+    #         self.current_pos += 1
+    #     return item
 
     def __len__(self):
         return max(len(self.datasets[0]), len(self.datasets[1]))

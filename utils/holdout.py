@@ -60,15 +60,12 @@ class AbstractSplit(ABC):
         pass
 
     def get_dataset(self, subset: Optional[torch.utils.data.Subset]):
-        if subset is not None:
-            if self.config["model_config"]["model_type"] == "image":
-                return CombineImageDataset(self.dataset, self.param_data)
-            elif self.config["model_config"]["model_type"] == "language":
-                return CombineTextDataset(self.dataset, self.param_data)
-            else:
-                raise TypeError(f"Model type: {self.config['model_config']['model_type']} cannot combine with param_data")
+        if self.config["model_config"]["model_type"] in ("linear", "image"):
+            return CombineImageDataset(subset, self.dataset, self.param_data)
+        elif self.config["model_config"]["model_type"] == "language":
+            return CombineTextDataset(subset, self.dataset, self.param_data)
         else:
-            return subset
+            raise TypeError(f"Model type: {self.config['model_config']['model_type']} cannot combine with param_data")
 
     def get_dataloaders(self,
                         subsets: List[Optional[torch.utils.data.Subset]] = [None],
