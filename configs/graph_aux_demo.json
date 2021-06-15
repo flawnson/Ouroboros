@@ -1,5 +1,5 @@
 {
-  "run_name": "Linear_cifar10_auxiliary",
+  "run_name": "Graph_cifar10_auxiliary",
   "seed": 42,
   "run_type": "demo",
   "logging": true,
@@ -15,10 +15,10 @@
   },
   "data_config":
   {
-    "dataset": "cifar10",
+    "dataset": "cora",
     "concat": true,
     "data_kwargs": {
-      "root": "data/datafiles/cifar10",
+      "root": "data/datafiles/cora",
       "download": true
     },
     "data_path": "data/datafiles/housing_prices/train.csv",
@@ -32,7 +32,7 @@
   "model_config":
   {
     "model_dir": null,
-    "model_type": "linear",
+    "model_type": "graph",
     "pooling": null,
     "pooling_kwargs": null,
     "normalize": "torch.nn.functional.layer_norm",
@@ -68,7 +68,7 @@
     "regenerate": true
   },
   "score_config": {
-      "acc": null
+    "acc": null
   },
   "tuning_config": {
 
