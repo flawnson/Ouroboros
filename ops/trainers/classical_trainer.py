@@ -146,7 +146,7 @@ class ClassicalTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('scores (train)', scores["acc"][0], epoch)
         if self.wandb_logger is not None:
             self.wandb_logger.log({
-                    'train/sr_loss': train_loss,
+                    'train/loss': train_loss,
                     'train/scores': scores["acc"][0]
                 }, step=epoch, commit=False)
 
@@ -156,7 +156,7 @@ class ClassicalTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('scores (test)', scores["acc"][1], epoch)
         if self.wandb_logger is not None:
             self.wandb_logger.log({
-                    'test/sr_loss': test_loss,
+                    'test/loss': test_loss,
                     'test/scores': scores["acc"][1]
                 }, step=epoch, commit=True)
 
