@@ -33,7 +33,7 @@ class VanillaTrainer(AbstractTrainer):
         self.param_idx_map = dict({}) # Maps param_idx to value, to be used in regeneration
 
 
-    def train(self, param_idxs, batch_idx):
+    def train(self, param_idxs):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
 
@@ -67,7 +67,7 @@ class VanillaTrainer(AbstractTrainer):
         return predictions, targets
 
     @torch.no_grad()
-    def test(self, param_idxs, batch_idx):
+    def test(self, param_idxs):
         self.wrapper.model.eval()
 
         param_idxs = param_idxs.to(self.device)
@@ -141,12 +141,12 @@ class VanillaTrainer(AbstractTrainer):
                 self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])
                 for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    predictions, targets = self.train(param_idx, batch_idx)
+                    predictions, targets = self.train(param_idx)
 
                 self.test_epoch_length = len(self.dataset[list(self.dataset)[1]])
                 for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    predictions, targets = self.test(param_idx, batch_idx)
+                    predictions, targets = self.test(param_idx)
 
                 self.checkpoint.checkpoint(self.config,
                                            epoch,
@@ -179,7 +179,7 @@ class AuxiliaryTrainer(AbstractTrainer):
                            "total": [0, 0]}  # First position for training scores, second position for test scores
         self.param_idx_map = dict({}) # Maps param_idx to value, to be used in regeneration
 
-    def train(self, data, param_idxs, batch_idx):
+    def train(self, data, param_idxs):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
 
@@ -221,7 +221,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         return predictions, targets
 
     @torch.no_grad()
-    def test(self, data, param_idxs, batch_idx):
+    def test(self, data, param_idxs):
         self.wrapper.model.eval()
 
         data[0] = data[0].to(self.device)
@@ -328,12 +328,12 @@ class AuxiliaryTrainer(AbstractTrainer):
                 self.train_epoch_length = len(self.dataset[list(self.dataset)[0]]) # number of training batches
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    outputs, targets = self.train(data, param_idx, batch_idx)
+                    outputs, targets = self.train(data, param_idx)
 
                 self.test_epoch_length = len(self.dataset[list(self.dataset)[1]]) # number of testing batches
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    outputs, targets = self.test(data, param_idx, batch_idx)
+                    outputs, targets = self.test(data, param_idx)
 
                 # Scores cumulated and calculated per epoch, as done in Quine
                 epoch_scores = self.score()
@@ -344,6 +344,66 @@ class AuxiliaryTrainer(AbstractTrainer):
                 self.checkpoint.checkpoint(self.config,
                                            epoch,
                                            self.wrapper.model,
+                                           self.epoch_data["sr_loss"][0],
+                                           self.optimizer)
+
+                self.write(epoch, epoch_scores)
+                self.reset()
+
+
+class SequentialAuxiliaryTrainer(AbstractTrainer):
+    def __init__(self, config, model, dataset, device):
+        super(SequentialAuxiliaryTrainer, self).__init__(config, model, dataset, device)
+
+    def sequence_train(self, data):
+        self.model.train()
+        self.optimizer.zero_grad()
+
+    def param_train(self, param_idx):
+        self.model.train()
+        self.optimizer.zero_grad()
+
+    def sequence_test(self, data):
+        self.model.eval()
+
+    def param_test(self, param_idx):
+        self.model.eval()
+
+    @timed
+    def run_train(self):
+        if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
+            for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
+                logger.info(f"Epoch: {epoch}")
+                if self.wandb_logger is not None:
+                    self.wandb_logger.log({
+                        'epoch': epoch
+                    }, commit=False)
+
+                self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])  # number of training batches
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]][0]):
+                    logger.info(f"Running train batch: #{batch_idx}")
+                    outputs, targets = self.sequence_train(data)
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]][1]):
+                    logger.info(f"Running train batch: #{batch_idx}")
+                    outputs, targets = self.param_train(param_idx)
+
+                self.test_epoch_length = len(self.dataset[list(self.dataset)[1]])  # number of testing batches
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]][0]):
+                    logger.info(f"Running test batch: #{batch_idx}")
+                    outputs, targets = self.sequence_test(data)
+                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]][1]):
+                    logger.info(f"Running test batch: #{batch_idx}")
+                    outputs, targets = self.param_test(param_idx)
+
+                # Scores cumulated and calculated per epoch, as done in Quine
+                epoch_scores = self.score()
+
+                # Regeneration (per epoch) step if specified in config
+                if self.run_config["regenerate"]: self.model.regenerate(self.param_idx_map)
+
+                self.checkpoint.checkpoint(self.config,
+                                           epoch,
+                                           self.model,
                                            self.epoch_data["sr_loss"][0],
                                            self.optimizer)
 

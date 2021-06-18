@@ -6,10 +6,12 @@ from copy import deepcopy
 from logzero import logger
 from abc import ABC, abstractmethod
 
+from torch.utils.data import Dataset
 from utils.utilities import get_example_size
 from utils.reduction import Reduction
-from torch.utils.data import Dataset
 from utils.utilities import timed
+from models.standard.linear_model import LinearModel
+from models.standard.transformer_model import TransformerModel
 
 
 class Quine(ABC):
@@ -251,7 +253,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
         logger.info(f"Regenerating {self.num_params} parameters")
         for param_idx in index_list:
             logger.info(f"Regenerating parameter {param_idx}")
-            predicted_param = param_idx_map[param_idx] # extract the parameter value already calculated in training
+            predicted_param = param_idx_map[param_idx]  # extract the parameter value already calculated in training
             self.regenerate_param(param_idx, predicted_param)
         logger.info(f"Successfully regenerated weights")
 
@@ -261,3 +263,40 @@ class Auxiliary(Vanilla, torch.nn.Module):
         This method is meant to regenerate entire layers or models at a time rather than individual weights.
         """
         pass
+
+
+class SequentialAuxiliary(Vanilla, torch.nn.Module):
+    def __init__(self, config, model, dataset, device):
+        super(SequentialAuxiliary, self).__init__(config, model, dataset, device)
+        self.config = config
+        self.model = model
+        self.dataset = dataset
+        self.device = device
+
+    def forward(self, x):
+        x = self.model(x)
+
+        return x
+
+    @timed
+    @torch.no_grad()
+    def regenerate(self, param_idx_map):
+        """
+        The regenerate, implemented by following the original Quine paper.
+        Model parameters are kept in self.param_list and used for training and inference
+        Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter.
+        """
+        index_list = list(range(self.num_params))
+        logger.info(f"Regenerating {self.num_params} parameters")
+        for param_idx in index_list:
+            logger.info(f"Regenerating parameter {param_idx}")
+            predicted_param = param_idx_map[param_idx]  # extract the parameter value already calculated in training
+            self.regenerate_param(param_idx, predicted_param)
+        logger.info(f"Successfully regenerated weights")
+
+
+def get_auxiliary(config, model, datasets, device):
+    if isinstance(model, TransformerModel):
+        return SequentialAuxiliary(config, model, datasets, device)
+    elif isinstance(model, LinearModel):
+        return Auxiliary(config, model, datasets, device)

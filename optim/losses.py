@@ -7,7 +7,7 @@ from typing import *
 from logzero import logger
 from torch.nn.functional import nll_loss, l1_loss, mse_loss, cross_entropy, binary_cross_entropy, kl_div
 
-from models.standard.mlp_model import MLPModel
+from models.standard.linear_model import LinearModel
 from models.augmented.quine import Quine, Vanilla, Auxiliary
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros

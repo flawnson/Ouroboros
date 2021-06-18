@@ -10,7 +10,7 @@ import numpy as np
 from typing import *
 from logzero import logger
 from optim.algos import OptimizerObj
-from models.standard.mlp_model import MLPModel
+from models.standard.linear_model import LinearModel
 from utils.checkpoint import PTCheckpoint
 
 ### Configuring ###
@@ -35,7 +35,7 @@ def device():
 
 
 def test_checkpoint(config, device):
-    model = MLPModel(config, device).to(device)
+    model = LinearModel(config, device).to(device)
     optimizer = OptimizerObj(config, model).optim_obj
     checkpoint = PTCheckpoint(config)
     for epoch in range(0, 1000):

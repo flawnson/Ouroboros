@@ -12,9 +12,9 @@ from logzero import logger
 from torch.utils.data import DataLoader
 
 from models.standard.graph_model import GNNModel
-from models.standard.mlp_model import MLPModel
+from models.standard.linear_model import LinearModel
 from models.standard.transformer_model import TransformerModel
-from models.augmented.quine import Auxiliary, Vanilla
+from models.augmented.quine import get_auxiliary, Vanilla
 from models.augmented.hypernetwork import MLPHyperNetwork, LinearHyperNetwork, ResNetPrimaryNetwork
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
@@ -68,7 +68,7 @@ def main():
     ### Model preparation ###
     model: torch.nn.Module = None
     if config["model_config"]["model_type"].casefold() == "linear":
-        model = MLPModel(config, device).to(device)
+        model = LinearModel(config, device).to(device)
     elif config["model_config"]["model_type"].casefold() == "graph":
         model = GNNModel(config, datasets, device).to(device)
     elif config["model_config"]["model_type"].casefold() == "vision":
@@ -90,7 +90,7 @@ def main():
     elif config["model_aug_config"]["model_augmentation"].casefold() == "ouroboros":
         aug_model = Ouroboros(config, model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "auxiliary":
-        aug_model = Auxiliary(config, model, datasets, device).to(device)
+        aug_model = get_auxiliary(config, model, datasets, device).to(device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
         aug_model = Vanilla(config, model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "hypernetwork":

@@ -26,7 +26,12 @@ class GeneralScores:
 
     def accuracy(self):
         """ Loops over each set correct number to calculate accuracy"""
-        return [self.correct[x] / self.total[x] for x in range(len(self.correct))]
+        try:
+            return [self.correct[x] / self.total[x] for x in range(len(self.correct))]
+        except ZeroDivisionError as e:
+            logger.exception(e)
+            logger.info("Could not calculate accuracy, returning 0")
+            return 0
 
     def get_scores(self) -> Dict[str, List[float]]:
         scoreset = {"acc": self.accuracy()}

@@ -5,7 +5,7 @@ from logzero import logger
 
 from torch.utils.data import DataLoader
 
-from models.standard.mlp_model import MLPModel
+from models.standard.linear_model import LinearModel
 from models.augmented.quine import Auxiliary, Vanilla
 from models.augmented.ouroboros import Godel
 from models.augmented.classical import Classical
@@ -23,7 +23,7 @@ def trainer(config: Dict, model: torch.nn.Module, param_data: torch.nn.Module, d
     Returns:
         A trainer instance.
     """
-    if isinstance(model, (Classical, MLPModel)):
+    if isinstance(model, (Classical, LinearModel)):
         return ClassicalTrainer(config, model, dataloaders, device).run_train()
     elif isinstance(model, Auxiliary):
         return AuxiliaryTrainer(config, param_data, dataloaders, device).run_train()

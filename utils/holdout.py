@@ -9,9 +9,9 @@ from abc import ABC, abstractmethod
 from logzero import logger
 from torch.nn import Module
 from sklearn.model_selection import StratifiedKFold, train_test_split, ShuffleSplit
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Subset
 
-from data.combine_preprocessing import CombineImageDataset, CombineTextDataset
+from data.combine_preprocessing import CombineImageDataset, TextDataset
 from models.augmented.quine import Quine
 
 DEFAULT_SPLIT = 0.70
@@ -59,11 +59,11 @@ class AbstractSplit(ABC):
     def type_check(subject):
         pass
 
-    def get_dataset(self, subset: Optional[torch.utils.data.Subset]):
+    def get_datasets(self, subset: Optional[torch.utils.data.Subset]):
         if self.config["model_config"]["model_type"] in ("linear", "image"):
             return CombineImageDataset(subset, self.dataset, self.param_data)
         elif self.config["model_config"]["model_type"] == "language":
-            return CombineTextDataset(subset, self.dataset, self.param_data)
+            return TextDataset(subset, self.dataset)
         else:
             raise TypeError(f"Model type: {self.config['model_config']['model_type']} cannot combine with param_data")
 
@@ -71,7 +71,7 @@ class AbstractSplit(ABC):
                         subsets: List[Optional[torch.utils.data.Subset]] = [None],
                         samplers: List[Optional[torch.utils.data.Sampler]] = [None]) -> List[DataLoader]:
         if self.config["model_aug_config"]["model_augmentation"] == "auxiliary":
-            return [DataLoader(self.get_dataset(subset),
+            return [DataLoader(self.get_datasets(subset),
                                batch_size=self.config["data_config"]["batch_size"],
                                sampler=sampler) for subset, sampler in zip(subsets, samplers)]
         elif self.config["model_aug_config"]["model_augmentation"] == "vanilla":
@@ -292,6 +292,7 @@ def get_text_data_split(config, datasets, param_data, device):
     # Function works for both MNIST and CIFAR10 (untested for other datasets)
     larger_dataset = "param_data" if (param_data is not None) and len(datasets) < len(param_data) else "aux_data"
     dataloaders = TextDataSplit(config, datasets, param_data, larger_dataset, device).partition()  # MNIST split appears to work fine with CIFAR
+    dataloaders = {name: [dataloader, DataLoader(Subset(param_data, indices=dataloader.dataset.subset))] for name, dataloader in dataloaders.items()}
 
     # Special case if Vanilla
     if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":

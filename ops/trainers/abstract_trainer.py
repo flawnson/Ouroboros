@@ -11,6 +11,7 @@ from optim.algos import OptimizerObj, LRScheduler
 from optim.losses import loss
 from utils.scores import scores
 from utils.logging import PTTBLogger
+from utils.checkpoint import PTCheckpoint
 from utils.utilities import timed
 
 
@@ -42,6 +43,7 @@ class AbstractTrainer(ABC):
         self.optimizer = OptimizerObj(config, model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
         self.tb_logger = PTTBLogger(config)
+        self.checkpoint = PTCheckpoint(config)
 
         self.wandb_logger = None
         if config["logging"]:
