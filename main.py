@@ -73,7 +73,7 @@ def main():
         model = GNNModel(config, datasets, device).to(device)
     elif config["model_config"]["model_type"].casefold() == "vision":
         pass
-    elif config["model_config"]["model_type"].casefold() == "language":
+    elif config["model_config"]["model_type"].casefold() == "sequential":
         model = TransformerModel(config, datasets, device).to(device)
     elif config["model_config"]["model_type"].casefold() == "hypernetwork":
         pass

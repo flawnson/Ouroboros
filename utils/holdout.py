@@ -62,7 +62,7 @@ class AbstractSplit(ABC):
     def get_datasets(self, subset: Optional[torch.utils.data.Subset]):
         if self.config["model_config"]["model_type"] in ("linear", "image"):
             return CombineImageDataset(subset, self.dataset, self.param_data)
-        elif self.config["model_config"]["model_type"] == "language":
+        elif self.config["model_config"]["model_type"] == "sequential":
             return TextDataset(subset, self.dataset)
         else:
             raise TypeError(f"Model type: {self.config['model_config']['model_type']} cannot combine with param_data")

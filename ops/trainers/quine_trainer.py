@@ -32,7 +32,6 @@ class VanillaTrainer(AbstractTrainer):
         self.epoch_data = {"sr_loss": [0] * len(dataset)}
         self.param_idx_map = dict({}) # Maps param_idx to value, to be used in regeneration
 
-
     def train(self, param_idxs):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
@@ -359,53 +358,63 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
         self.model.train()
         self.optimizer.zero_grad()
 
+        print(1 + 1)
+
     def param_train(self, param_idx):
         self.model.train()
         self.optimizer.zero_grad()
+        print(1 + 2)
 
     def sequence_test(self, data):
         self.model.eval()
+        print(1 + 3)
 
     def param_test(self, param_idx):
         self.model.eval()
+        print(1 + 4)
+
+    def reset(self):
+        pass
+
+    def write(self):
+        pass
 
     @timed
     def run_train(self):
-        if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
-            for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
-                logger.info(f"Epoch: {epoch}")
-                if self.wandb_logger is not None:
-                    self.wandb_logger.log({
-                        'epoch': epoch
-                    }, commit=False)
+        for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
+            logger.info(f"Epoch: {epoch}")
+            if self.wandb_logger is not None:
+                self.wandb_logger.log({
+                    'epoch': epoch
+                }, commit=False)
 
-                self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])  # number of training batches
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]][0]):
-                    logger.info(f"Running train batch: #{batch_idx}")
-                    outputs, targets = self.sequence_train(data)
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]][1]):
-                    logger.info(f"Running train batch: #{batch_idx}")
-                    outputs, targets = self.param_train(param_idx)
+            self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])  # number of training batches
+            for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]][0]):
+                logger.info(f"Running train batch: #{batch_idx}")
+                outputs, targets = self.sequence_train(data)
+            for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]][1]):
+                logger.info(f"Running train batch: #{batch_idx}")
+                outputs, targets = self.param_train(param_idx)
 
-                self.test_epoch_length = len(self.dataset[list(self.dataset)[1]])  # number of testing batches
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]][0]):
-                    logger.info(f"Running test batch: #{batch_idx}")
-                    outputs, targets = self.sequence_test(data)
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]][1]):
-                    logger.info(f"Running test batch: #{batch_idx}")
-                    outputs, targets = self.param_test(param_idx)
+            self.test_epoch_length = len(self.dataset[list(self.dataset)[1]])  # number of testing batches
+            for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]][0]):
+                logger.info(f"Running test batch: #{batch_idx}")
+                outputs, targets = self.sequence_test(data)
+            for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]][1]):
+                logger.info(f"Running test batch: #{batch_idx}")
+                outputs, targets = self.param_test(param_idx)
 
-                # Scores cumulated and calculated per epoch, as done in Quine
-                epoch_scores = self.score()
+            # Scores cumulated and calculated per epoch, as done in Quine
+            epoch_scores = self.score()
 
-                # Regeneration (per epoch) step if specified in config
-                if self.run_config["regenerate"]: self.model.regenerate(self.param_idx_map)
+            # Regeneration (per epoch) step if specified in config
+            if self.run_config["regenerate"]: self.model.regenerate(self.param_idx_map)
 
-                self.checkpoint.checkpoint(self.config,
-                                           epoch,
-                                           self.model,
-                                           self.epoch_data["sr_loss"][0],
-                                           self.optimizer)
+            self.checkpoint.checkpoint(self.config,
+                                       epoch,
+                                       self.model,
+                                       self.epoch_data["sr_loss"][0],
+                                       self.optimizer)
 
-                self.write(epoch, epoch_scores)
-                self.reset()
+            self.write(epoch, epoch_scores)
+            self.reset()

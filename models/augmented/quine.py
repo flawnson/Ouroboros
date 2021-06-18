@@ -267,7 +267,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
 
 class SequentialAuxiliary(Vanilla, torch.nn.Module):
     def __init__(self, config, model, dataset, device):
-        super(SequentialAuxiliary, self).__init__(config, model, dataset, device)
+        super(SequentialAuxiliary, self).__init__(config, model, device)
         self.config = config
         self.model = model
         self.dataset = dataset
