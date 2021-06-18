@@ -19,13 +19,13 @@
     "concat": true,
     "data_kwargs": {
       "root": "data/datafiles/cifar10",
-      "download": false
+      "download": true
     },
     "data_path": "data/datafiles/housing_prices/train.csv",
     "split_type": "holdout",
     "num_splits": 5,
     "shuffle": true,
-    "batch_size": 16,
+    "batch_size": 128,
     "data_subset": null,
     "param_subset": null
   },
@@ -37,8 +37,8 @@
     "pooling_kwargs": null,
     "normalize": "torch.nn.functional.layer_norm",
     "normalize_kwargs": {},
-    "dropout": 0.10,
-    "layer_sizes": [784, 392, 146, 28, 10]
+    "dropout": 0.0,
+    "layer_sizes": [3072, 1024, 512, 64, 64, 10]
   },
   "model_aug_config":
   {
@@ -57,7 +57,7 @@
   },
   "run_config":
   {
-    "num_epochs": 500,
+    "num_epochs": 20,
     "checkpoint_intervals": 100,
     "clean_checkpoint_dir": true,
     "checkpoint_dir": "saves/checkpoints/classical/"
