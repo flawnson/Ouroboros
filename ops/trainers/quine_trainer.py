@@ -353,12 +353,21 @@ class AuxiliaryTrainer(AbstractTrainer):
 class SequentialAuxiliaryTrainer(AbstractTrainer):
     def __init__(self, config, model, dataset, device):
         super(SequentialAuxiliaryTrainer, self).__init__(config, model, dataset, device)
+        self.config = config
+        self.model = model
+        self.dataset = dataset
+        self.device = device
 
-    def sequence_train(self, data):
+    def sequence_train(self, data, src_mask):
         self.model.train()
         self.optimizer.zero_grad()
 
-        print(1 + 1)
+        if data.size(0) != self.config["data_config"]["batch_size"]:
+            src_mask = self.model.generate_square_subsequent_mask(data.size(0)).to(self.device)
+        output = self.model(data, src_mask)
+
+        loss = self.loss(output.view(-1, ntokens), targets)
+
 
     def param_train(self, param_idx):
         self.model.train()
@@ -388,19 +397,21 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
                     'epoch': epoch
                 }, commit=False)
 
+            src_mask = self.model.generate_square_subsequent_mask(self.config["data_config"]["batch_size"]).to(self.device)
+
             self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])  # number of training batches
-            for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]][0]):
+            for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]][0]):
                 logger.info(f"Running train batch: #{batch_idx}")
-                outputs, targets = self.sequence_train(data)
-            for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]][1]):
+                outputs, targets = self.sequence_train(data, src_mask)
+            for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[0]][1]):
                 logger.info(f"Running train batch: #{batch_idx}")
                 outputs, targets = self.param_train(param_idx)
 
             self.test_epoch_length = len(self.dataset[list(self.dataset)[1]])  # number of testing batches
-            for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]][0]):
+            for batch_idx, data in enumerate(self.dataset[list(self.dataset)[1]][0]):
                 logger.info(f"Running test batch: #{batch_idx}")
-                outputs, targets = self.sequence_test(data)
-            for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]][1]):
+                outputs, targets = self.sequence_test(data, src_mask)
+            for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[1]][1]):
                 logger.info(f"Running test batch: #{batch_idx}")
                 outputs, targets = self.param_test(param_idx)
 

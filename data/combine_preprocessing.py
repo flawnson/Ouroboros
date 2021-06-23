@@ -37,7 +37,7 @@ class CombineImageDataset(torch.utils.data.Dataset):
 
 
 class TextDataset(torch.utils.data.IterableDataset):
-    def __init__(self, subset, *datasets):
+    def __init__(self, subset, datasets):
         self.subset = subset
         self.datasets = datasets
 
