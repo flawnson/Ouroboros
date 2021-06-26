@@ -53,8 +53,9 @@ def main():
         datasets = PrimaryLabelset(config).dataset.to(device)
     elif config["data_config"]["dataset"].casefold() == "house":
         datasets = HousingDataset(config).dataset.to(device)
-    elif config["data_config"]["dataset"].casefold() == "cora":
+    elif config["data_config"]["dataset"].casefold() == "cora" or "":
         datasets = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
+        datasets = get_graph_data(config)
     elif config["data_config"]["dataset"].casefold() == "mnist" or "cifar10" or "imagenet":
         datasets = get_image_data(config)
     else:
