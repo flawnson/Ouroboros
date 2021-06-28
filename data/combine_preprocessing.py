@@ -4,8 +4,7 @@ import optim
 
 
 class CombineImageDataset(torch.utils.data.Dataset):
-    def __init__(self, subset, *datasets):
-        self.subset = subset
+    def __init__(self, *datasets):
         self.datasets = datasets
 
     def __getitem__(self, i):

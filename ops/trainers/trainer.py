@@ -28,7 +28,7 @@ def trainer(config: Dict, model: torch.nn.Module, param_data: torch.nn.Module, d
     elif isinstance(model, Auxiliary):
         return AuxiliaryTrainer(config, param_data, dataloaders, device).run_train()
     elif isinstance(model, SequentialAuxiliary):
-        return SequentialAuxiliaryTrainer(config, param_data, dataloaders, device).run_train()
+        return SequentialAuxiliaryTrainer(config, model, dataloaders, device).run_train()
     elif isinstance(model, Vanilla):
         return VanillaTrainer(config, param_data, dataloaders, device).run_train()
     elif isinstance(model, ResNetPrimaryNetwork):

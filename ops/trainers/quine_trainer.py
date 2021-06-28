@@ -366,13 +366,20 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
             src_mask = self.model.generate_square_subsequent_mask(data.size(0)).to(self.device)
         output = self.model(data, src_mask)
 
-        loss = self.loss(output.view(-1, ntokens), targets)
+        loss = self.loss(output.view(-1, len(data.vocab)), targets)
 
+        self.epoch_data["total"][0] += data[0].shape[0] #accumulate total number of samples in this batch
+        self.epoch_data["correct"][0] += aux_pred.eq(data[1].view_as(aux_pred)).sum().item()
+        self.epoch_data["sr_loss"][0] += loss["sr_loss"].item()  # accumulate
+        self.epoch_data["task_loss"][0] += loss["task_loss"].item()  # accumulate
+        self.epoch_data["combined_loss"][0] += loss["combined_loss"].item()  # accumulate
+
+        loss["combined_loss"].backward()
+        self.optimizer.step()
 
     def param_train(self, param_idx):
         self.model.train()
         self.optimizer.zero_grad()
-        print(1 + 2)
 
     def sequence_test(self, data):
         self.model.eval()
@@ -397,23 +404,23 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
                     'epoch': epoch
                 }, commit=False)
 
-            src_mask = self.model.generate_square_subsequent_mask(self.config["data_config"]["batch_size"]).to(self.device)
+            src_mask = self.model.model.generate_square_subsequent_mask(self.config["data_config"]["batch_size"]).to(self.device)
 
             self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])  # number of training batches
             for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]][0]):
-                logger.info(f"Running train batch: #{batch_idx}")
-                outputs, targets = self.sequence_train(data, src_mask)
+                logger.info(f"Running sequence train batch: #{batch_idx}")
+                self.sequence_train(data, src_mask)
             for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[0]][1]):
-                logger.info(f"Running train batch: #{batch_idx}")
-                outputs, targets = self.param_train(param_idx)
+                logger.info(f"Running param train batch: #{batch_idx}")
+                self.param_train(param_idx)
 
             self.test_epoch_length = len(self.dataset[list(self.dataset)[1]])  # number of testing batches
             for batch_idx, data in enumerate(self.dataset[list(self.dataset)[1]][0]):
-                logger.info(f"Running test batch: #{batch_idx}")
-                outputs, targets = self.sequence_test(data, src_mask)
+                logger.info(f"Running sequence test batch: #{batch_idx}")
+                self.sequence_test(data, src_mask)
             for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[1]][1]):
-                logger.info(f"Running test batch: #{batch_idx}")
-                outputs, targets = self.param_test(param_idx)
+                logger.info(f"Running param test batch: #{batch_idx}")
+                self.param_test(param_idx)
 
             # Scores cumulated and calculated per epoch, as done in Quine
             epoch_scores = self.score()

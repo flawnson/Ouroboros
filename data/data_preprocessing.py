@@ -5,9 +5,13 @@ import torchtext as tt
 from typing import *
 from logzero import logger
 from torchtext.data.utils import get_tokenizer
+from torchtext.vocab import build_vocab_from_iterator
+from itertools import tee
 from collections import Counter
 from torchtext.vocab import Vocab
 from torch.utils.data import ConcatDataset, ChainDataset, Subset
+
+from utils.utilities import initialize_iterable_dataset
 
 
 def get_image_data(config: Dict) -> ConcatDataset:
@@ -92,37 +96,25 @@ def get_text_data(config: Dict) -> ChainDataset:
     else:
         subset_indices = []
 
-    all_datasets = []
-    try:
-        if config["data_config"]["dataset"].casefold() == "wikitext2":
-            for x in ["train", "valid", "test"]:
-                 all_datasets.append(tt.datasets.WikiText2(root=config["data_config"]["data_kwargs"]["root"],
-                                                   split=x))
-        elif config["data_config"]["dataset"].casefold() == "amazonreviewfull":
-            for x in ["train", "test"]:
-                 all_datasets.append(tt.datasets.AmazonReviewFull(root=config["data_config"]["data_kwargs"]["root"],
-                                                                       split=x))
-        else:
-            raise NotImplementedError(f"{config['data_config']['dataset']} is not a dataset")
-    except Exception as e:
-        raise e
+    all_datasets: List[torch.utils.data.IterableDataset] = initialize_iterable_dataset(config)
 
-    to_concat = []
-    for tt_dataset in all_datasets:
-        if isinstance(subset, int):
-            to_concat.append(Subset(tt_dataset, subset_indices))
-        else:
-            to_concat.append(tt_dataset)
+    # to_concat = []
+    # for tt_dataset in all_datasets:
+    #     if isinstance(subset, int):
+    #         to_concat.append(Subset(tt_dataset, subset_indices))
+    #     else:
+    #         to_concat.append(tt_dataset)
 
-    dataset = ChainDataset(to_concat)
+    dataset = ChainDataset(all_datasets)
 
     # Following the tokenization and vocab building spec in PyTorch tutorial
     tokenizer = get_tokenizer('basic_english')
-    counter = Counter()
-    for tt_dataset in all_datasets:
-        for line in tt_dataset:
-            counter.update(tokenizer(line))
-    dataset.vocab = Vocab(counter)
+    vocab = build_vocab_from_iterator(map(tokenizer, dataset))  # Will automatically use Counter and Vocab objects
+    vocab.set_default_index(vocab["<unk>"])
+
+    all_datasets: List[torch.utils.data.IterableDataset] = initialize_iterable_dataset(config)
+    dataset = ChainDataset(all_datasets)
+    dataset.vocab = vocab
 
     return dataset
 

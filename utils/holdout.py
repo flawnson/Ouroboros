@@ -61,9 +61,10 @@ class AbstractSplit(ABC):
 
     def get_datasets(self, subset: Optional[torch.utils.data.Subset]):
         if self.config["model_config"]["model_type"] in ("linear", "image"):
-            return CombineImageDataset(subset, self.dataset, self.param_data)
+            return CombineImageDataset(self.dataset, self.param_data)
         elif self.config["model_config"]["model_type"] == "sequential":
-            return TextDataset(subset, self.dataset)
+            self.dataset.subset = subset
+            return self.dataset
         else:
             raise TypeError(f"Model type: {self.config['model_config']['model_type']} cannot combine with param_data")
 
@@ -288,7 +289,7 @@ def get_image_data_split(config, datasets, param_data, device):
     return dataloaders
 
 
-def get_text_data_split(config, datasets, param_data, device):
+def get_text_data_split(config, datasets, param_data, device) -> Dict[str, List]:
     # Function works for both MNIST and CIFAR10 (untested for other datasets)
     larger_dataset = "param_data" if (param_data is not None) and len(datasets) < len(param_data) else "aux_data"
     dataloaders = TextDataSplit(config, datasets, param_data, larger_dataset, device).partition()  # MNIST split appears to work fine with CIFAR

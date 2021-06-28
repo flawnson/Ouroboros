@@ -2,6 +2,7 @@ import os
 import time
 import torch
 import numpy as np
+import torchtext as tt
 
 from typing import *
 from logzero import logger
@@ -88,3 +89,21 @@ def make_clean_directories(beta, root_folder, iteration):
 
     return data_dir
 
+
+def initialize_iterable_dataset(config):
+    all_datasets = []
+    try:
+        if config["data_config"]["dataset"].casefold() == "wikitext2":
+            for x in ["train", "valid", "test"]:
+                all_datasets.append(tt.datasets.WikiText2(root=config["data_config"]["data_kwargs"]["root"],
+                                                          split=x))
+        elif config["data_config"]["dataset"].casefold() == "amazonreviewfull":
+            for x in ["train", "test"]:
+                all_datasets.append(tt.datasets.AmazonReviewFull(root=config["data_config"]["data_kwargs"]["root"],
+                                                                 split=x))
+        else:
+            raise NotImplementedError(f"{config['data_config']['dataset']} is not a dataset")
+    except Exception as e:
+        raise e
+
+    return all_datasets
