@@ -357,14 +357,22 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
         self.model = model
         self.dataset = dataset
         self.device = device
+        self.bptt_counter = 0
 
     def sequence_train(self, data, src_mask):
         self.model.train()
         self.optimizer.zero_grad()
 
-        if data.size(0) != self.config["data_config"]["batch_size"]:
-            src_mask = self.model.generate_square_subsequent_mask(data.size(0)).to(self.device)
+        data = torch.FloatTensor(data)
+        if data.size(0) != self.config["data_config"]["bptt"]:
+            src_mask = self.model.model.generate_square_subsequent_mask(data.size(0)).to(self.device)
+
+        i = self.bptt_counter * self.config["data_config"]["bptt"]
+        seq_len = min(self.config["data_config"]["bptt"], data.size(0) - 1 - i)
+        data = data[i:i + seq_len]
+        targets = data[i + 1:i + 1 + seq_len].reshape(-1)
         output = self.model(data, src_mask)
+        self.bptt_counter += 1
 
         loss = self.loss(output.view(-1, len(data.vocab)), targets)
 

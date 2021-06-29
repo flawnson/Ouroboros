@@ -16,6 +16,7 @@
   "data_config":
   {
     "dataset": "wikitext2",
+    "bptt": 35,
     "concat": true,
     "data_kwargs": {
       "root": "data/datafiles/wikitext2",

@@ -9,9 +9,10 @@ from torchtext.vocab import build_vocab_from_iterator
 from itertools import tee
 from collections import Counter
 from torchtext.vocab import Vocab
-from torch.utils.data import ConcatDataset, ChainDataset, Subset
+from torch.utils.data import ConcatDataset, IterableDataset, ChainDataset, Subset
 
 from utils.utilities import initialize_iterable_dataset
+from data.text_preprocessing import CustomIterableDataset
 
 
 def get_image_data(config: Dict) -> ConcatDataset:
@@ -113,7 +114,14 @@ def get_text_data(config: Dict) -> ChainDataset:
     vocab.set_default_index(vocab["<unk>"])
 
     all_datasets: List[torch.utils.data.IterableDataset] = initialize_iterable_dataset(config)
-    dataset = ChainDataset(all_datasets)
+
+    # Tokenize and wrap with IterableDataset for Chaining
+    datasets = []
+    for dataset in all_datasets:
+        dataset = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in dataset]
+        datasets.append(CustomIterableDataset(torch.cat(tuple(filter(lambda t: t.numel() > 0, dataset)))))
+
+    dataset = ChainDataset(datasets)
     dataset.vocab = vocab
 
     return dataset

@@ -11,7 +11,7 @@ from torch.nn import Module
 from sklearn.model_selection import StratifiedKFold, train_test_split, ShuffleSplit
 from torch.utils.data import Dataset, DataLoader, Subset
 
-from data.combine_preprocessing import CombineImageDataset, TextDataset
+from data.combine_preprocessing import CombineImageDataset
 from models.augmented.quine import Quine
 
 DEFAULT_SPLIT = 0.70

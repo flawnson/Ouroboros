@@ -35,14 +35,4 @@ class CombineImageDataset(torch.utils.data.Dataset):
         return len(self.datasets[1])
 
 
-class TextDataset(torch.utils.data.IterableDataset):
-    def __init__(self, subset, datasets):
-        self.subset = subset
-        self.datasets = datasets
-
-    def __iter__(self):
-        return iter(self.datasets)
-
-    def __len__(self):
-        return len(self.datasets)
 

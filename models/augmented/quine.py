@@ -273,8 +273,8 @@ class SequentialAuxiliary(Vanilla, torch.nn.Module):
         self.dataset = dataset
         self.device = device
 
-    def forward(self, x):
-        x = self.model(x)
+    def forward(self, x, src_mask):
+        x = self.model(x, src_mask)
 
         return x
 
