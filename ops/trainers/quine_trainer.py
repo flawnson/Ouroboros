@@ -106,7 +106,7 @@ class VanillaTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('sr_loss (train)', actual_train_loss, epoch)
 
         if self.wandb_logger is not None:
-            self.wandb_logger.log({
+            self.wandb_logger.logger.log({
                     'train/sr_loss': actual_train_loss,
                 }, step=epoch, commit=False)
 
@@ -115,7 +115,7 @@ class VanillaTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('sr_loss (test)', actual_test_loss, epoch)
 
         if self.wandb_logger is not None:
-            self.wandb_logger.log({
+            self.wandb_logger.logger.log({
                     'test/sr_loss': actual_test_loss,
                 }, step=epoch, commit=True)
 
@@ -133,7 +133,7 @@ class VanillaTrainer(AbstractTrainer):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
                 if self.wandb_logger is not None:
-                    self.wandb_logger.log({
+                    self.wandb_logger.logger.log({
                             'epoch': epoch
                         }, commit=False)
 
@@ -276,7 +276,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('scores (train)', scores["acc"][0], epoch)
 
         if self.wandb_logger is not None:
-            self.wandb_logger.log(data={
+            self.wandb_logger.logger.log(data={
                 'train/sr_loss': actual_sr_train_loss,
                 'train/task_loss': actual_task_train_loss,
                 'train/combined_loss': actual_combined_train_loss,
@@ -295,7 +295,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('scores (test)', scores["acc"][1], epoch)
 
         if self.wandb_logger is not None:
-            self.wandb_logger.log(data={
+            self.wandb_logger.logger.log(data={
                 'test/sr_loss': actual_sr_test_loss,
                 'test/task_loss': actual_task_test_loss,
                 'test/combined_loss': actual_combined_test_loss,
@@ -320,7 +320,7 @@ class AuxiliaryTrainer(AbstractTrainer):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
                 if self.wandb_logger is not None:
-                    self.wandb_logger.log({
+                    self.wandb_logger.logger.log({
                             'epoch': epoch
                         }, commit=False)
 
@@ -407,7 +407,7 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
         for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
             logger.info(f"Epoch: {epoch}")
             if self.wandb_logger is not None:
-                self.wandb_logger.log({
+                self.wandb_logger.logger.log({
                     'epoch': epoch
                 }, commit=False)
 

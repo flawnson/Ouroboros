@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from optim.algos import OptimizerObj, LRScheduler
 from optim.losses import loss
 from utils.scores import scores
-from utils.logging import PTTBLogger
+from utils.logging import PTTBLogger, WandBLogger
 from utils.checkpoint import PTCheckpoint
 from optim.parameters import ModelParameters
 from utils.utilities import timed
@@ -43,15 +43,9 @@ class AbstractTrainer(ABC):
         self.wrapper = model_wrapper
         self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
+        self.wandb_logger = WandBLogger(config)
         self.tb_logger = PTTBLogger(config)
         self.checkpoint = PTCheckpoint(config)
-
-        self.wandb_logger = None
-        if config["logging"]:
-            self.wandb_logger = wandb.init(name=config["wandb_logging"]["run_name"],
-                                           project=config["wandb_logging"]["project"],
-                                           entity=config["wandb_logging"]["entity"],
-                                           config=config)
         self.dataset = dataset
         self.device = device
 

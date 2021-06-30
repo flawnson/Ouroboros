@@ -3,6 +3,7 @@ Logging class/functions, inspired/copied from:
 https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/04-utils/tensorboard/logger.py
 """
 import os
+import wandb
 import shutil
 import pathlib
 import functools
@@ -112,3 +113,13 @@ class PTTBLogger(object):
     @allow_logging
     def close(self):
         self.writer.close()
+
+
+class WandBLogger(object):
+    def __init__(self, config):
+        self.config = config
+        self.logger = wandb.init(name=config["wandb_logging"]["run_name"],
+                      project=config["wandb_logging"]["project"],
+                      entity=config["wandb_logging"]["entity"],
+                      config=config) if config["logging"] else None
+
