@@ -363,7 +363,6 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
         self.model.train()
         self.optimizer.zero_grad()
 
-        data = torch.FloatTensor(data)
         if data.size(0) != self.config["data_config"]["bptt"]:
             src_mask = self.model.model.generate_square_subsequent_mask(data.size(0)).to(self.device)
 
@@ -412,8 +411,7 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
                     'epoch': epoch
                 }, commit=False)
 
-            src_mask = self.model.model.generate_square_subsequent_mask(self.config["data_config"]["batch_size"]).to(self.device)
-
+            src_mask = self.model.model.generate_square_subsequent_mask(self.config["data_config"]["bptt"]).to(self.device)
             self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])  # number of training batches
             for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]][0]):
                 logger.info(f"Running sequence train batch: #{batch_idx}")
