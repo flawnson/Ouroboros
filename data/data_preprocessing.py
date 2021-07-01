@@ -6,9 +6,9 @@ from typing import *
 from logzero import logger
 from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
-from itertools import tee
 from collections import Counter
 from torchtext.vocab import Vocab
+from torchtext.data.functional import to_map_style_dataset
 from torch.utils.data import ConcatDataset, IterableDataset, ChainDataset, Subset
 
 from utils.utilities import initialize_iterable_dataset
@@ -97,33 +97,34 @@ def get_text_data(config: Dict) -> ChainDataset:
     else:
         subset_indices = []
 
-    all_datasets: List[torch.utils.data.IterableDataset] = initialize_iterable_dataset(config)
-
-    # to_concat = []
-    # for tt_dataset in all_datasets:
-    #     if isinstance(subset, int):
-    #         to_concat.append(Subset(tt_dataset, subset_indices))
-    #     else:
-    #         to_concat.append(tt_dataset)
-
-    dataset = ChainDataset(all_datasets)
-
     # Following the tokenization and vocab building spec in PyTorch tutorial
+    all_iterable_datasets: List[torch.utils.data.IterableDataset] = initialize_iterable_dataset(config)
+    chain_dataset = ChainDataset(all_iterable_datasets)
     tokenizer = get_tokenizer('basic_english')
-    vocab = build_vocab_from_iterator(map(tokenizer, dataset))  # Will automatically use Counter and Vocab objects
+    vocab = build_vocab_from_iterator(map(tokenizer, chain_dataset))  # Will automatically use Counter and Vocab objects
     vocab.set_default_index(vocab["<unk>"])
 
-    all_datasets: List[torch.utils.data.IterableDataset] = initialize_iterable_dataset(config)
+    # Turning into map style datasets
+    all_iterable_datasets: List[torch.utils.data.IterableDataset] = initialize_iterable_dataset(config)
+    map_datasets = []
+    for iterable_dataset in all_iterable_datasets:
+        map_datasets.append(to_map_style_dataset(iterable_dataset))
 
-    # Tokenize and wrap with IterableDataset for Chaining
+    # Subsetting map style datasets if specified in config
+    to_concat = []
+    for tt_dataset in map_datasets:
+        if isinstance(subset, int):
+            to_concat.append(Subset(tt_dataset, subset_indices))
+        else:
+            to_concat.append(tt_dataset)
+
+    # Tokenize and wrap with Dataset object to Concat
     datasets = []
-    for dataset in all_datasets:
+    for dataset in to_concat:
         dataset = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in dataset]
-        datasets.append(CustomIterableDataset(torch.cat(tuple(filter(lambda t: t.numel() > 0, dataset)))))
+        datasets.append(torch.cat(tuple(filter(lambda t: t.numel() > 0, dataset))))
 
-    dataset = ChainDataset(datasets)
+    dataset = ConcatDataset(datasets)
     dataset.vocab = vocab
 
     return dataset
-
-
