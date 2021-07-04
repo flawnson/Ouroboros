@@ -1,7 +1,9 @@
 import torch
 
+import optim
 
-class CombineDataset(torch.utils.data.Dataset):
+
+class CombineImageDataset(torch.utils.data.Dataset):
     def __init__(self, *datasets):
         self.datasets = datasets
 
@@ -9,27 +11,28 @@ class CombineDataset(torch.utils.data.Dataset):
 
         #Extract the relevant indices
         # Assumes that aux data is first and param data is second
+        # Iterate over MNIST and Model Params to return a sample of each (image and intger index)
 
-        #MNIST
-        aux_data_idx = i % len(self.datasets[0])
-        a = self.datasets[0][aux_data_idx] #aux data
+        out = []
+        for idx in range(len(self.datasets)):
+            data_idx = i % len(self.datasets[idx])
+            if isinstance(self.datasets[idx], torch.utils.data.Dataset):
+                out.append(self.datasets[idx][data_idx])  # return an integer index
+            elif isinstance(self.datasets[idx], optim.parameters.ModelParameters):
+                out.append(self.datasets[idx].params[data_idx])  # return an integer index
+            else:
+                raise TypeError(f"Provided dataset {self.dataset[i]} cannot be combined")
 
-        #Model Param (Quine)
-        param_data_idx = i % len(self.datasets[1])
-        b = self.datasets[1].params[param_data_idx] #return an integer index
-        
-        return (a, b) #all items in tuple should already be tensors
+        return out #all items in tuple should already be tensors
 
     def __len__(self):
         return max(len(self.datasets[0]), len(self.datasets[1]))
 
-# # Old Quine implementation of CombineDataset
-# class CombineDataset(torch.utils.data.Dataset):
-#     def __init__(self, *datasets):
-#         self.datasets = datasets
-#
-#     def __getitem__(self, i):
-#         return tuple(d[i %len(d)] for d in self.datasets) #all items in tuple should already be tensors
-#
-#     def __len__(self):
-#         return max(len(d) for d in self.datasets)
+    def get_aux_data_len(self):
+        return len(self.datasets[0])
+
+    def get_param_data_len(self):
+        return len(self.datasets[1])
+
+
+

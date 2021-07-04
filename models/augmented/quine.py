@@ -6,10 +6,12 @@ from copy import deepcopy
 from logzero import logger
 from abc import ABC, abstractmethod
 
+from torch.utils.data import Dataset
 from utils.utilities import get_example_size
 from utils.reduction import Reduction
-from torch.utils.data import Dataset
 from utils.utilities import timed
+from models.standard.linear_model import LinearModel
+from models.standard.transformer_model import TransformerModel
 
 
 class Quine(ABC):
@@ -23,7 +25,7 @@ class Quine(ABC):
         self.cum_params_arr = np.cumsum(np.array([np.prod(p.shape) for p in self.param_list]))
         self.num_params = int(self.cum_params_arr[-1])
         #if we specify a smaller subset, use that amount instead
-        subset = config["data_config"]["subset"]
+        subset = config["data_config"]["param_subset"]
         if isinstance(subset, int):
             self.num_params = subset
 
@@ -31,7 +33,6 @@ class Quine(ABC):
         idxs = idxs.item() if type(idxs) == torch.tensor else idxs
         onehot = torch.zeros(self.num_params, device=self.device)
         onehot[idxs] = 1
-        # onehots = [torch.zeros(self.num_params, device=self.device)[idx.item()] for idx in idxs]  # Was testing different batch sizes
         return onehot
 
     def indexer(self) -> List:
@@ -88,6 +89,25 @@ class Quine(ABC):
             else:
                 subtract = n_params
         return param.view(-1)[normalized_idx]
+
+    def regenerate_param(self, idx: int, new_param: torch.tensor):
+        assert idx < self.num_params
+        subtract = 0
+        param_section = None
+        normalized_idx = None
+        for i, n_params in enumerate(self.cum_params_arr):
+            if idx < n_params:
+                param_section = self.param_list[i]
+                normalized_idx = idx - subtract
+                original_shape = param_section.size()
+                param_section.view(-1)[normalized_idx] = new_param
+                # Reshape back into original shape
+                param_section = param_section.reshape(original_shape)
+                self.param_list[i] = param_section
+                break
+            else:
+                subtract = n_params
+
 
     @abstractmethod
     def forward(self, x: torch.tensor, y: torch.tensor = None):
@@ -153,6 +173,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
     def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dataset, device):
         super(Auxiliary, self).__init__(config, model, device)
         super(torch.nn.Module)
+        self.config = config
         self.config_aug_config = config["model_aug_config"]
         self.model = model
         self.dataset = dataset
@@ -161,25 +182,31 @@ class Auxiliary(Vanilla, torch.nn.Module):
         self.aux_output = self.build_aux_output()
 
     def build_aux_input(self) -> torch.nn.Sequential:
-        rand_proj_layer = torch.nn.Linear(get_example_size(self.dataset),
-                                          self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
-                                          bias=False)  # Modify so there are half as many hidden units
-        rand_proj_layer.weight.data = torch.tensor(self.reduction(get_example_size(self.dataset)), dtype=torch.float32)
-        for p in rand_proj_layer.parameters():
-            p.requires_grad_(False)
-        return torch.nn.Sequential(rand_proj_layer)
+        if self.config["model_config"]["model_type"] in ("linear", "image"):
+            rand_proj_layer = torch.nn.Linear(get_example_size(self.dataset),
+                                              self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
+                                              bias=False)  # Modify so there are half as many hidden units
+            rand_proj_layer.weight.data = torch.tensor(self.reduction(get_example_size(self.dataset)), dtype=torch.float32)
+            for p in rand_proj_layer.parameters():
+                p.requires_grad_(False)
+            return torch.nn.Sequential(rand_proj_layer)
+        elif self.config["model_config"]["model_type"] in "language":
+            return torch.nn.Sequential()
 
     def build_aux_output(self) -> torch.nn.Sequential:
         # TODO: Make cleaner
-        aux_predictor_layers = []
-        for in_size, out_size in zip(self.model_aug_config["aux_output_layers"], self.model_aug_config["aux_output_layers"][1:]):
-            layer = torch.nn.Linear(in_size, out_size, bias=True)
-            aux_predictor_layers.append(layer)
-            self.param_list.append(layer.weight)
-            self.param_list.append(layer.bias)
-        logsoftmax = torch.nn.LogSoftmax(dim=0) #should have no learnable weights
-        aux_predictor_layers.append(logsoftmax)
-        return torch.nn.Sequential(*aux_predictor_layers)
+        if self.config["model_config"]["model_type"] in ("linear", "image"):
+            aux_predictor_layers = []
+            for in_size, out_size in zip(self.model_aug_config["aux_output_layers"], self.model_aug_config["aux_output_layers"][1:]):
+                layer = torch.nn.Linear(in_size, out_size, bias=True)
+                aux_predictor_layers.append(layer)
+                self.param_list.append(layer.weight)
+                self.param_list.append(layer.bias)
+            logsoftmax = torch.nn.LogSoftmax(dim=0) #should have no learnable weights
+            aux_predictor_layers.append(logsoftmax)
+            return torch.nn.Sequential(*aux_predictor_layers)
+        elif self.config["model_config"]["model_type"] in "language":
+            return torch.nn.Sequential()
 
     def forward(self, x: torch.tensor, y: torch.tensor = None) -> Tuple[torch.tensor, torch.tensor]:
         """
@@ -192,12 +219,12 @@ class Auxiliary(Vanilla, torch.nn.Module):
         """
         new_output = self.van_input(x)
         if y is not None:
-            y = y.reshape(-1)  # Flatten MNIST input in place
+            y = y.reshape(y.shape[0], -1)  # Flatten MNIST input in place
             output2 = self.aux_input(y)
-            new_output = torch.cat((new_output, output2))
+            new_output = torch.cat((new_output, output2), dim=1)
         else:
             # Substitutes data with random matrix during regeneration... Could probably do better
-            new_output = torch.cat((new_output, torch.rand(self.model_aug_config["n_hidden"]).to(self.device)))
+            new_output = torch.cat((new_output, torch.rand(self.model_aug_config["n_hidden"]).to(self.device)), dim=1)
 
         # run_logging.info("Input 1: ", output1)
         # run_logging.info("Input 2: ", output2)
@@ -212,28 +239,18 @@ class Auxiliary(Vanilla, torch.nn.Module):
 
     @timed
     @torch.no_grad()
-    def regenerate(self):
+    def regenerate(self, param_idx_map):
         """
         The regenerate, implemented by following the original Quine paper.
         Model parameters are kept in self.param_list and used for training and inference
         Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter.
         """
         index_list = list(range(self.num_params))
-        coordinates = self.indexer()
-        logger.info(f"Regenerating {len(coordinates)} parameters")
-        for param_idx, coo in zip(index_list, coordinates):
+        logger.info(f"Regenerating {self.num_params} parameters")
+        for param_idx in index_list:
             logger.info(f"Regenerating parameter {param_idx}")
-            with torch.no_grad():
-                idx_vector = torch.squeeze(self.to_onehot(param_idx))  # Pulling out the nested tensor
-                predicted_param, predicted_aux = self.forward(idx_vector, None)
-                new_params = deepcopy(self.param_list)
-                try:
-                    # To catch ases where the parameter tensor is of size 0
-                    new_params[coo[0]][coo[1]][coo[2]] = predicted_param
-                except Exception as e:
-                    logger.exception(e)
-                    new_params[coo[0]] = predicted_param
-                self.param_list = new_params
+            predicted_param = param_idx_map[param_idx]  # extract the parameter value already calculated in training
+            self.regenerate_param(param_idx, predicted_param)
         logger.info(f"Successfully regenerated weights")
 
     def multiregenerate(self):
@@ -242,3 +259,40 @@ class Auxiliary(Vanilla, torch.nn.Module):
         This method is meant to regenerate entire layers or models at a time rather than individual weights.
         """
         pass
+
+
+class SequentialAuxiliary(Vanilla, torch.nn.Module):
+    def __init__(self, config, model, dataset, device):
+        super(SequentialAuxiliary, self).__init__(config, model, device)
+        self.config = config
+        self.model = model
+        self.dataset = dataset
+        self.device = device
+
+    def forward(self, x, src_mask):
+        x = self.model(x, src_mask)
+
+        return x
+
+    @timed
+    @torch.no_grad()
+    def regenerate(self, param_idx_map):
+        """
+        The regenerate, implemented by following the original Quine paper.
+        Model parameters are kept in self.param_list and used for training and inference
+        Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter.
+        """
+        index_list = list(range(self.num_params))
+        logger.info(f"Regenerating {self.num_params} parameters")
+        for param_idx in index_list:
+            logger.info(f"Regenerating parameter {param_idx}")
+            predicted_param = param_idx_map[param_idx]  # extract the parameter value already calculated in training
+            self.regenerate_param(param_idx, predicted_param)
+        logger.info(f"Successfully regenerated weights")
+
+
+def get_auxiliary(config, model, datasets, device):
+    if isinstance(model, TransformerModel):
+        return SequentialAuxiliary(config, model, datasets, device)
+    elif isinstance(model, LinearModel):
+        return Auxiliary(config, model, datasets, device)

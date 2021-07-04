@@ -10,7 +10,7 @@ from typing import *
 from logzero import logger
 from abc import ABC, abstractmethod
 
-from models.standard.mlp_model import MLPModel
+from models.standard.linear_model import LinearModel
 
 
 class AbstractHyperNetwork(ABC, torch.nn.Module):

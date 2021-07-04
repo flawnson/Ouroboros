@@ -69,11 +69,21 @@ class HyperNetworkTrainer(AbstractTrainer):
         logger.info(f"Total Loss value: {epoch_scores['acc'][0]}")
         logger.info(f"Total Loss value: {self.epoch_data['loss'][0]}")
 
-        self.tb_logger.scalar_summary('loss (train)', self.epoch_data["loss"][0], epoch)
         self.tb_logger.scalar_summary('accuracy (train)', epoch_scores["acc"][0], epoch)
+        self.tb_logger.scalar_summary('loss (train)', self.epoch_data["loss"][0], epoch)
+        if self.wandb_logger is not None:
+            self.wandb_logger.log({
+                    'train/accuracy': epoch_scores["acc"][0],
+                    'train/loss': self.epoch_data["loss"][0]
+                }, step=epoch, commit=False)
 
-        self.tb_logger.scalar_summary('loss (test)', self.epoch_data["loss"][1], epoch)
         self.tb_logger.scalar_summary('accuracy (test)', epoch_scores["acc"][1], epoch)
+        self.tb_logger.scalar_summary('loss (test)', self.epoch_data["loss"][1], epoch)
+        if self.wandb_logger is not None:
+            self.wandb_logger.log({
+                    'test/accuracy': epoch_scores["acc"][1],
+                    'test/loss': self.epoch_data["loss"][1]
+                }, step=epoch, commit=True)
 
         logger.info("Successfully wrote logs to tensorboard")
 
@@ -88,6 +98,10 @@ class HyperNetworkTrainer(AbstractTrainer):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
+                if self.wandb_logger is not None:
+                    self.wandb_logger.log({
+                            'epoch': epoch
+                        }, commit=False)
 
                 for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
@@ -165,9 +179,19 @@ class DualHyperNetworkTrainer(AbstractTrainer):
 
         self.tb_logger.scalar_summary('accuracy (train)', epoch_scores["acc"][0], epoch)
         self.tb_logger.scalar_summary('loss (train)', self.epoch_data["loss"][0], epoch)
+        if self.wandb_logger is not None:
+            self.wandb_logger.log({
+                    'train/accuracy': epoch_scores["acc"][0],
+                    'train/loss': self.epoch_data["loss"][0]
+                }, step=epoch, commit=False)
 
-        self.tb_logger.scalar_summary('accuracy (train)', epoch_scores["acc"][1], epoch)
-        self.tb_logger.scalar_summary('loss (train)', self.epoch_data["loss"][1], epoch)
+        self.tb_logger.scalar_summary('accuracy (test)', epoch_scores["acc"][1], epoch)
+        self.tb_logger.scalar_summary('loss (test)', self.epoch_data["loss"][1], epoch)
+        if self.wandb_logger is not None:
+            self.wandb_logger.log({
+                    'test/accuracy': epoch_scores["acc"][1],
+                    'test/loss': self.epoch_data["loss"][1]
+                }, step=epoch, commit=True)
 
     def reset(self):
         for i in range(len(self.dataset)):
@@ -178,6 +202,10 @@ class DualHyperNetworkTrainer(AbstractTrainer):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
+                if self.wandb_logger is not None:
+                    self.wandb_logger.log({
+                            'epoch': epoch
+                        }, commit=False)
 
                 for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")

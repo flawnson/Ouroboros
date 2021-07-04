@@ -8,7 +8,7 @@ from typing import *
 from torch.nn import Linear
 
 
-class AbstractMLPModel(torch.nn.Module, ABC):
+class AbstractLinearModel(torch.nn.Module, ABC):
     def __init__(self, config: Dict, layer_dict: List, pooling: F, normalize: F, device: torch.device):
         """ Class for training and testing loops
         Args:
@@ -19,7 +19,7 @@ class AbstractMLPModel(torch.nn.Module, ABC):
         Returns:
             torch.tensor
         """
-        super(AbstractMLPModel, self).__init__()
+        super(AbstractLinearModel, self).__init__()
         self.config = config
         self.layers = torch.nn.ModuleList([self.factory(info) for info in layer_dict])
         self.pool = pooling if pooling else [None] * len(self.layers)
@@ -46,13 +46,13 @@ class AbstractMLPModel(torch.nn.Module, ABC):
         return x
 
 
-class MLPModel(AbstractMLPModel, ABC):
+class LinearModel(AbstractLinearModel, ABC):
     # Provide pooling arguments as kwargs (only needed for GlobalAttentionPooling and Set2Set (forward parameters should
     # be provided in the forward function of the model)
     def __init__(self, config: Dict, device: torch.device):
         self.model_config = config["model_config"]
         self.layer_sizes = self.model_config["layer_sizes"]
-        super(MLPModel, self).__init__(
+        super(LinearModel, self).__init__(
             config=self.model_config,
             layer_dict=[dict(name=nn.Linear.__name__,
                              in_features=in_size,

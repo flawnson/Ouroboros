@@ -1,5 +1,6 @@
 import torch
 
+import wandb
 from typing import *
 from logzero import logger
 from abc import ABC, abstractmethod
@@ -9,13 +10,15 @@ from torch.utils.data import DataLoader
 from optim.algos import OptimizerObj, LRScheduler
 from optim.losses import loss
 from utils.scores import scores
-from utils.logging import PTTBLogger
+from utils.logging import PTTBLogger, WandBLogger
+from utils.checkpoint import PTCheckpoint
+from optim.parameters import ModelParameters
 from utils.utilities import timed
 
 
 class AbstractTrainer(ABC):
 
-    def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dict[str, DataLoader], device: torch.device):
+    def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict[str, DataLoader], device: torch.device):
         """
         Initializes a ClassicalTrainer class.
 
@@ -37,21 +40,21 @@ class AbstractTrainer(ABC):
         """
         self.config = config
         self.run_config = config["run_config"]
-        self.model = model
-        self.optimizer = OptimizerObj(config, model).optim_obj
+        self.wrapper = model_wrapper
+        self.optimizer = OptimizerObj(config, self.wrapper.model).optim_obj
         self.scheduler = LRScheduler(config, self.optimizer).schedule_obj
+        self.wandb_logger = WandBLogger(config)
         self.tb_logger = PTTBLogger(config)
+        self.checkpoint = PTCheckpoint(config)
         self.dataset = dataset
         self.device = device
 
-    @abstractmethod
     def train(self):
         """
         Run data into model, collect output and target label for loss calculations.
         """
         pass
 
-    @abstractmethod
     @torch.no_grad()
     def test(self):
         """
