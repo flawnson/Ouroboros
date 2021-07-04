@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader
 from models.standard.graph_model import GNNModel
 from models.standard.linear_model import LinearModel
 from models.standard.transformer_model import TransformerModel
+from models.standard.resnet_model import ResNetModel
 from models.augmented.quine import get_auxiliary, Vanilla
 from models.augmented.hypernetwork import MLPHyperNetwork, LinearHyperNetwork, ResNetPrimaryNetwork
 from models.augmented.classical import Classical
@@ -72,7 +73,7 @@ def main():
     elif config["model_config"]["model_type"].casefold() == "graph":
         model = GNNModel(config, datasets, device).to(device)
     elif config["model_config"]["model_type"].casefold() == "vision":
-        pass
+        model = ResNetModel(config).to(device)
     elif config["model_config"]["model_type"].casefold() == "sequential":
         model = TransformerModel(config, datasets, device).to(device)
     elif config["model_config"]["model_type"].casefold() == "hypernetwork":
