@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/product.schema.json",
+  "title": "Linear Auxiliary Quine model",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "run_name": {
+      "description": "The name of the run used for logging",
+      "type": "string"
+    }
+
+  },
+  "required": [
+    "run_name",
+    "seed",
+    "run_type",
+    "logging",
+    "log_level",
+    "clean_log_dir",
+    "log_dir",
+    "wandb_logging",
+    "device"
+  ]
+}

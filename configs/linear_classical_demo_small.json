@@ -9,16 +9,16 @@
   "device": "cuda",
   "wandb_logging":
   {
-    "run_name": null,
+    "run_name": "classical_demo_small",
     "project": "ouroboros",
     "entity": "ouroboros_ai"
   },
   "data_config":
   {
-    "dataset": "cifar10",
+    "dataset": "mnist",
     "concat": true,
     "data_kwargs": {
-      "root": "data/datafiles/cifar10",
+      "root": "data/datafiles/mnist",
       "download": false
     },
     "data_path": "data/datafiles/housing_prices/train.csv",
@@ -26,8 +26,8 @@
     "num_splits": 5,
     "shuffle": true,
     "batch_size": 16,
-    "data_subset": 200,
-    "param_subset": 200
+    "data_subset": null,
+    "param_subset": null
   },
   "model_config":
   {
@@ -57,7 +57,7 @@
   },
   "run_config":
   {
-    "num_epochs": 10,
+    "num_epochs": 100,
     "checkpoint_intervals": 100,
     "clean_checkpoint_dir": true,
     "checkpoint_dir": "saves/checkpoints/classical/"

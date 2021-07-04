@@ -375,8 +375,8 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
 
         i = self.bptt_counter * self.config["data_config"]["bptt"]
         self.bptt_counter += 1
-        seq_len = min(self.config["data_config"]["bptt"], batch.size(0) - 1 - i)
-        data = batch[i:i + seq_len]
+        seq_len = min(self.config["data_config"]["bptt"], len(self.dataset[list(self.dataset)[0]][0]) - 1 - i)
+        data = self.dataset[list(self.dataset)[0]][0].dataset.subset[i:i + seq_len]
         targets = data[i + 1:i + 1 + seq_len].reshape(-1)
 
         if data.size(0) != self.config["data_config"]["bptt"]:
