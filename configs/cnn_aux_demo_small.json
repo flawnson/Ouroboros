@@ -32,14 +32,15 @@
   "model_config":
   {
     "model_dir": null,
-    "model_type": "linear",
+    "model_type": "image",
     "pooling": null,
     "pooling_kwargs": null,
     "normalize": "torch.nn.functional.layer_norm",
     "normalize_kwargs": {},
     "num_classes": 10,
     "block_type": "BasicBlock",
-    "num_blocks": [2, 2, 2, 2]
+    "num_blocks": [2, 2, 2, 2],
+    "sample_size": 3072
   },
   "model_aug_config":
   {

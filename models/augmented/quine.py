@@ -12,6 +12,7 @@ from utils.reduction import Reduction
 from utils.utilities import timed
 from models.standard.linear_model import LinearModel
 from models.standard.transformer_model import TransformerModel
+from models.standard.resnet_model import ResNetModel
 
 
 class Quine(ABC):
@@ -168,6 +169,66 @@ class Vanilla(Quine, torch.nn.Module):
                 self.param_list = new_params
         logger.info(f"Successfully regenerated weights")
 
+class CNNAuxiliary(Vanilla, torch.nn.Module):
+    def __init__(self, config, model, dataset, device):
+        super(CNNAuxiliary, self).__init__(config, model, device)
+        self.config = config
+        self.model = model
+        self.dataset = dataset
+        self.device = device
+        #Override vanilla input and output methods
+        self.van_input = self.build_van_input()
+        self.van_output = self.build_van_output()
+        self.aux_output = self.build_aux_output()
+
+    def build_van_input(self) -> torch.nn.Sequential:
+
+        # num_params -> 3072 (size of CIFAR sample)
+        rand_proj_layer = torch.nn.Linear(self.num_params,
+                                          get_example_size(self.dataset),
+                                          bias=False)  # Modify so there are half as many hidden units
+        rand_proj_layer.weight.data = torch.tensor(self.reduction(self.num_params), dtype=torch.float32)
+        for p in rand_proj_layer.parameters():
+            p.requires_grad_(False)
+        return torch.nn.Sequential(rand_proj_layer)
+
+    def build_van_output(self) -> torch.nn.Sequential:
+        weight_predictor_layers = []
+        # last cnn layer has 512*block.expansion nodes
+        layer = torch.nn.Linear(512*self.model.block_expansion, 1, bias=True)
+        weight_predictor_layers.append(layer)
+        self.param_list.append(layer.weight)
+        self.param_list.append(layer.bias)
+        return torch.nn.Sequential(*weight_predictor_layers)
+
+    def build_aux_output(self) -> torch.nn.Sequential:
+        # TODO: Make cleaner
+        if self.config["model_config"]["model_type"] in ("linear", "image"):
+            aux_predictor_layers = []
+            layer = torch.nn.Linear(512 * self.model.block_expansion, self.config["model_config"]["num_classes"], bias=True)
+            aux_predictor_layers.append(layer)
+            self.param_list.append(layer.weight)
+            self.param_list.append(layer.bias)
+            logsoftmax = torch.nn.LogSoftmax(dim=0)
+            aux_predictor_layers.append(logsoftmax)
+            return torch.nn.Sequential(*aux_predictor_layers)
+        elif self.config["model_config"]["model_type"] in "language":
+            return torch.nn.Sequential()
+
+    def forward(self, x: torch.tensor, y: torch.tensor = None) -> Dict:
+        projected_input = self.van_input(x) # param data projected
+        # reshape to 3*32*32 (CIFAR size)
+        projected_input = projected_input.reshape(get_example_size(self.dataset))
+
+        # concatenate resized param data with y, should be [batch_size, newinput + y, 32, 32]
+        new_input = torch.cat((projected_input, y), dim=1)
+        # feed into main network
+        output = self.model(new_input)
+
+        param = self.van_output(output)  # Param prediction network
+        aux_output = self.aux_output(output)  # Auxiliary prediction network
+        return param, aux_output
+
 
 class Auxiliary(Vanilla, torch.nn.Module):
     def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dataset, device):
@@ -294,5 +355,7 @@ class SequentialAuxiliary(Vanilla, torch.nn.Module):
 def get_auxiliary(config, model, datasets, device):
     if isinstance(model, TransformerModel):
         return SequentialAuxiliary(config, model, datasets, device)
+    elif isinstance(model, ResNetModel):
+        return CNNAuxiliary(config, model, datasets, device)
     elif isinstance(model, LinearModel):
         return Auxiliary(config, model, datasets, device)
