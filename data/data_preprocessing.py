@@ -1,3 +1,4 @@
+import dgl
 import torch
 import torchvision as tv
 import torchtext as tt
@@ -82,7 +83,41 @@ def get_image_data(config: Dict) -> ConcatDataset:
 
 
 def get_graph_data(config: Dict) -> ConcatDataset:
-    pass
+
+    logger.info(f"Downloading {config['data_config']['dataset']} data to {config['data_config']['data_kwargs']['root']}")
+
+    #If specified, select only a subset for faster running (TAKES DOUBLE THE NUMBER IN CONFIG)
+    subset = config["data_config"].get("subset", None)
+    if isinstance(subset, int):
+        subset_indices = list(range(subset))
+        logger.info(f"Using a subset of the dataset sized: {subset}")
+    else:
+        subset_indices = []
+
+    all_datasets = []
+    try:
+        if config["data_config"]["dataset"].casefold() == "cora":
+            all_datasets.append(dgl.data.CoraFullDataset(raw_dir=config["data_config"]["data_kwargs"]["root"],
+                                verbose=True))
+        elif config["data_config"]["dataset"].casefold() == "ppi":
+            for x in ["train", "valid", "test"]:
+                all_datasets.append(dgl.data.PPIDataset(mode=x,
+                                    raw_dir=config["data_config"]["data_kwargs"]["root"],
+                                    verbose=True))
+        elif config["data_config"]["dataset"].casefold().casefold() == "reddit":
+            all_datasets.append(dgl.data.CoraFullDataset(raw_dir=config["data_config"]["data_kwargs"]["root"],
+                                                        verbose=True))
+        else:
+            raise NotImplementedError(f"{config['data_config']['dataset']} is not a dataset")
+    except Exception as e:
+        raise e
+
+    if len(all_datasets) > 1:
+        # Combine datasets
+        pass
+
+    return None
+
 
 
 def get_text_data(config: Dict) -> ChainDataset:
