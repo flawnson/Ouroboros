@@ -2,6 +2,7 @@ import os
 import time
 import torch
 import numpy as np
+import torchtext as tt
 
 from typing import *
 from logzero import logger
@@ -28,9 +29,13 @@ def get_example_size(dataset: torch.utils.data.dataset) -> int:
             subset = torch.utils.data.Subset(dataset.datasets[dataset_idx], subset_indices)
             example = next(iter(torch.utils.data.DataLoader(subset, batch_size=1, num_workers=0, shuffle=False)))
             example_size = example[0].reshape(-1).shape[0]
-            return example_size
+            if example_size is None:
+                raise TypeError(f"Type {type(example_size)} not allowed to be used as int")
+            else:
+                return example_size
         except Exception as e:
             logger.exception(e)
+            logger.info("Could not infer size of example, attempting to find manually defined size")
             dataset_name = dataset.datasets[0].__class__.__name__.casefold()
             if dataset_name == "mnist":
                 return 784
@@ -84,3 +89,21 @@ def make_clean_directories(beta, root_folder, iteration):
 
     return data_dir
 
+
+def initialize_iterable_dataset(config):
+    all_datasets = []
+    try:
+        if config["data_config"]["dataset"].casefold() == "wikitext2":
+            for x in ["train", "valid", "test"]:
+                all_datasets.append(tt.datasets.WikiText2(root=config["data_config"]["data_kwargs"]["root"],
+                                                          split=x))
+        elif config["data_config"]["dataset"].casefold() == "amazonreviewfull":
+            for x in ["train", "test"]:
+                all_datasets.append(tt.datasets.AmazonReviewFull(root=config["data_config"]["data_kwargs"]["root"],
+                                                                 split=x))
+        else:
+            raise NotImplementedError(f"{config['data_config']['dataset']} is not a dataset")
+    except Exception as e:
+        raise e
+
+    return all_datasets

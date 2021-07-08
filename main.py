@@ -12,14 +12,16 @@ from logzero import logger
 from torch.utils.data import DataLoader
 
 from models.standard.graph_model import GNNModel
-from models.standard.mlp_model import MLPModel
-from models.augmented.quine import Auxiliary, Vanilla
+from models.standard.linear_model import LinearModel
+from models.standard.transformer_model import TransformerModel
+from models.augmented.quine import get_auxiliary, Vanilla
 from models.augmented.hypernetwork import MLPHyperNetwork, LinearHyperNetwork, ResNetPrimaryNetwork
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
-from data.linear_preprocessing import HousingDataset, get_image_data
-from utils.holdout import MNISTSplit, QuineSplit
+from data.linear_preprocessing import HousingDataset
+from data.data_preprocessing import get_image_data, get_graph_data, get_text_data
+from utils.holdout import get_image_data_split, get_text_data_split
 from utils.checkpoint import load
 from optim.parameters import ModelParameters
 from ops.trainers.trainer import trainer
@@ -53,11 +55,12 @@ def main():
         datasets = PrimaryLabelset(config).dataset.to(device)
     elif config["data_config"]["dataset"].casefold() == "house":
         datasets = HousingDataset(config).dataset.to(device)
-    elif config["data_config"]["dataset"].casefold() == "cora" or "":
-        datasets = dgl.data.CoraFull()[0]  # Cora only has one graph (index must be 0)
-        datasets = get_graph_data(config)
-    elif config["data_config"]["dataset"].casefold() == "mnist" or "cifar10" or "imagenet":
+    elif config["data_config"]["dataset"].casefold() == "cora":
+        datasets = get_graph_data(config)  # Cora only has one graph (index must be 0)
+    elif config["data_config"]["dataset"].casefold() in ("mnist", "cifar10", "imagenet"):
         datasets = get_image_data(config)
+    elif config["data_config"]["dataset"].casefold() in ("wikitext2", "amazonreviewfull"):
+        datasets = get_text_data(config)
     else:
         raise NotImplementedError(f"{config['dataset']} is not a dataset")
     logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
@@ -65,13 +68,13 @@ def main():
     ### Model preparation ###
     model: torch.nn.Module = None
     if config["model_config"]["model_type"].casefold() == "linear":
-        model = MLPModel(config, device).to(device)
+        model = LinearModel(config, device).to(device)
     elif config["model_config"]["model_type"].casefold() == "graph":
         model = GNNModel(config, datasets, device).to(device)
     elif config["model_config"]["model_type"].casefold() == "vision":
         pass
-    elif config["model_config"]["model_type"].casefold() == "language":
-        pass
+    elif config["model_config"]["model_type"].casefold() == "sequential":
+        model = TransformerModel(config, datasets, device).to(device)
     elif config["model_config"]["model_type"].casefold() == "hypernetwork":
         pass
     elif config["model_config"]["load_dir"]:
@@ -87,7 +90,7 @@ def main():
     elif config["model_aug_config"]["model_augmentation"].casefold() == "ouroboros":
         aug_model = Ouroboros(config, model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "auxiliary":
-        aug_model = Auxiliary(config, model, datasets, device).to(device)
+        aug_model = get_auxiliary(config, model, datasets, device).to(device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
         aug_model = Vanilla(config, model, device).to(device)
     elif config["model_aug_config"]["model_augmentation"].casefold() == "hypernetwork":
@@ -119,32 +122,15 @@ def main():
         pass
     elif config["data_config"]["dataset"].casefold() == "house":
         pass
-    elif config["data_config"]["dataset"].casefold() == "cora":
+    elif config["data_config"]["dataset"].casefold() in ("cora", "reddit"):
         pass
-    elif config["data_config"]["dataset"].casefold() == "mnist":
-        if (param_data is not None) and len(datasets) < len(param_data):
-            dataloaders = MNISTSplit(config, datasets, param_data, "param_data",
-                                     device).partition()  # MNIST split appears to work fine with CIFAR
-        else:
-            dataloaders = MNISTSplit(config, datasets, param_data, "aux_data", device).partition()
-
-        # Special case if Vanilla
-        if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
-            logger.info("Using QuineSplit for Vanilla")
-            dataloaders = QuineSplit(config, datasets, param_data, device).partition()
-
-    elif config["data_config"]["dataset"].casefold() == "cifar10":
-        if (param_data is not None) and len(datasets) < len(param_data):
-            dataloaders = MNISTSplit(config, datasets, param_data, "param_data", device).partition()  # MNIST split appears to work fine with CIFAR
-        else:
-            dataloaders = MNISTSplit(config, datasets, param_data, "aux_data", device).partition()
-
-        # Special case if Vanilla
-        if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
-            logger.info("Using QuineSplit for Vanilla")
-            dataloaders = QuineSplit(config, datasets, param_data, device).partition()
+    elif config["data_config"]["dataset"].casefold() in ("mnist", "cifar10"):
+        dataloaders = get_image_data_split(config, datasets, param_data, device)
+    elif config["data_config"]["dataset"].casefold() in ("wikitext2", "amazonreviewfull"):
+        dataloaders = get_text_data_split(config, datasets, param_data, device)
     else:
-        raise NotImplementedError(f"{config['data_config']['dataset']} is not a valid split")
+        raise NotImplementedError(f"Either {config['data_config']['dataset']} or {config['model_config']['model_type']} "
+                                  f"does not have a valid split")
     logger.info(f"Successfully split dataset and parameters")
 
     ### Pipeline ###

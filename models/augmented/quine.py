@@ -6,10 +6,12 @@ from copy import deepcopy
 from logzero import logger
 from abc import ABC, abstractmethod
 
+from torch.utils.data import Dataset
 from utils.utilities import get_example_size
 from utils.reduction import Reduction
-from torch.utils.data import Dataset
 from utils.utilities import timed
+from models.standard.linear_model import LinearModel
+from models.standard.transformer_model import TransformerModel
 
 
 class Quine(ABC):
@@ -173,6 +175,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
     def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dataset, device):
         super(Auxiliary, self).__init__(config, model, device)
         super(torch.nn.Module)
+        self.config = config
         self.config_aug_config = config["model_aug_config"]
         self.model = model
         self.dataset = dataset
@@ -181,25 +184,31 @@ class Auxiliary(Vanilla, torch.nn.Module):
         self.aux_output = self.build_aux_output()
 
     def build_aux_input(self) -> torch.nn.Sequential:
-        rand_proj_layer = torch.nn.Linear(get_example_size(self.dataset),
-                                          self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
-                                          bias=False)  # Modify so there are half as many hidden units
-        rand_proj_layer.weight.data = torch.tensor(self.reduction(get_example_size(self.dataset)), dtype=torch.float32)
-        for p in rand_proj_layer.parameters():
-            p.requires_grad_(False)
-        return torch.nn.Sequential(rand_proj_layer)
+        if self.config["model_config"]["model_type"] in ("linear", "image"):
+            rand_proj_layer = torch.nn.Linear(get_example_size(self.dataset),
+                                              self.model_aug_config["n_hidden"] // self.model_aug_config["n_inputs"],
+                                              bias=False)  # Modify so there are half as many hidden units
+            rand_proj_layer.weight.data = torch.tensor(self.reduction(get_example_size(self.dataset)), dtype=torch.float32)
+            for p in rand_proj_layer.parameters():
+                p.requires_grad_(False)
+            return torch.nn.Sequential(rand_proj_layer)
+        elif self.config["model_config"]["model_type"] in "language":
+            return torch.nn.Sequential()
 
     def build_aux_output(self) -> torch.nn.Sequential:
         # TODO: Make cleaner
-        aux_predictor_layers = []
-        for in_size, out_size in zip(self.model_aug_config["aux_output_layers"], self.model_aug_config["aux_output_layers"][1:]):
-            layer = torch.nn.Linear(in_size, out_size, bias=True)
-            aux_predictor_layers.append(layer)
-            self.param_list.append(layer.weight)
-            self.param_list.append(layer.bias)
-        logsoftmax = torch.nn.LogSoftmax(dim=0) #should have no learnable weights
-        aux_predictor_layers.append(logsoftmax)
-        return torch.nn.Sequential(*aux_predictor_layers)
+        if self.config["model_config"]["model_type"] in ("linear", "image"):
+            aux_predictor_layers = []
+            for in_size, out_size in zip(self.model_aug_config["aux_output_layers"], self.model_aug_config["aux_output_layers"][1:]):
+                layer = torch.nn.Linear(in_size, out_size, bias=True)
+                aux_predictor_layers.append(layer)
+                self.param_list.append(layer.weight)
+                self.param_list.append(layer.bias)
+            logsoftmax = torch.nn.LogSoftmax(dim=0) #should have no learnable weights
+            aux_predictor_layers.append(logsoftmax)
+            return torch.nn.Sequential(*aux_predictor_layers)
+        elif self.config["model_config"]["model_type"] in "language":
+            return torch.nn.Sequential()
 
     def forward(self, x: torch.tensor, y: torch.tensor = None) -> Tuple[torch.tensor, torch.tensor]:
         """
@@ -244,7 +253,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
         logger.info(f"Regenerating {self.num_params} parameters")
         for param_idx in index_list:
             logger.info(f"Regenerating parameter {param_idx}")
-            predicted_param = param_idx_map[param_idx] # extract the parameter value already calculated in training
+            predicted_param = param_idx_map[param_idx]  # extract the parameter value already calculated in training
             self.regenerate_param(param_idx, predicted_param)
         logger.info(f"Successfully regenerated weights")
 
@@ -254,3 +263,40 @@ class Auxiliary(Vanilla, torch.nn.Module):
         This method is meant to regenerate entire layers or models at a time rather than individual weights.
         """
         pass
+
+
+class SequentialAuxiliary(Vanilla, torch.nn.Module):
+    def __init__(self, config, model, dataset, device):
+        super(SequentialAuxiliary, self).__init__(config, model, device)
+        self.config = config
+        self.model = model
+        self.dataset = dataset
+        self.device = device
+
+    def forward(self, x, src_mask):
+        x = self.model(x, src_mask)
+
+        return x
+
+    @timed
+    @torch.no_grad()
+    def regenerate(self, param_idx_map):
+        """
+        The regenerate, implemented by following the original Quine paper.
+        Model parameters are kept in self.param_list and used for training and inference
+        Due to the iteration, the model uses the regenerated version of itself to regenerate the next parameter.
+        """
+        index_list = list(range(self.num_params))
+        logger.info(f"Regenerating {self.num_params} parameters")
+        for param_idx in index_list:
+            logger.info(f"Regenerating parameter {param_idx}")
+            predicted_param = param_idx_map[param_idx]  # extract the parameter value already calculated in training
+            self.regenerate_param(param_idx, predicted_param)
+        logger.info(f"Successfully regenerated weights")
+
+
+def get_auxiliary(config, model, datasets, device):
+    if isinstance(model, TransformerModel):
+        return SequentialAuxiliary(config, model, datasets, device)
+    elif isinstance(model, LinearModel):
+        return Auxiliary(config, model, datasets, device)

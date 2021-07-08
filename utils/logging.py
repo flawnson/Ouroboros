@@ -3,6 +3,7 @@ Logging class/functions, inspired/copied from:
 https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/04-utils/tensorboard/logger.py
 """
 import os
+import wandb
 import shutil
 import pathlib
 import functools
@@ -28,14 +29,12 @@ def allow_logging(func):
 
 def clean_log_dir(config, log_dir):
     if config["clean_log_dir"] and os.path.isdir(log_dir) and len(os.listdir(log_dir)) > 0:  # Clears dir of old event files if True
-        for f in os.listdir(log_dir):
-            try:
-                os.remove(os.path.join(log_dir, f))
-                logger.info("Successfully cleaned TB log directory")
-            except Exception as e:
-                logger.exception(e)
-                logger.info("Continuing run without deleting some files from log directory")
-        shutil.rmtree(log_dir, ignore_errors=True)  # If ignore error left False, raises PermissionError with log.log
+        try:
+            shutil.rmtree(log_dir, ignore_errors=True)  # If ignore error left False, raises PermissionError with log.log
+            logger.info("Successfully cleaned TB log directory")
+        except Exception as e:
+            logger.exception(e)
+            logger.info("Continuing run without deleting some files from log directory")
 
 
 class TFTBLogger(object):
@@ -114,3 +113,13 @@ class PTTBLogger(object):
     @allow_logging
     def close(self):
         self.writer.close()
+
+
+class WandBLogger(object):
+    def __init__(self, config):
+        self.config = config
+        self.logger = wandb.init(name=config["wandb_logging"]["run_name"],
+                      project=config["wandb_logging"]["project"],
+                      entity=config["wandb_logging"]["entity"],
+                      config=config) if config["logging"] else None
+

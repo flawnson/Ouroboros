@@ -1,14 +1,15 @@
 "File for all implemented loss functions"
 
 import torch
+import numpy as np
 import torch.nn.functional as F
 
 from typing import *
 from logzero import logger
 from torch.nn.functional import nll_loss, l1_loss, mse_loss, cross_entropy, binary_cross_entropy, kl_div
 
-from models.standard.mlp_model import MLPModel
-from models.augmented.quine import Quine, Vanilla, Auxiliary
+from models.standard.linear_model import LinearModel
+from models.augmented.quine import Quine, Vanilla, Auxiliary, SequentialAuxiliary
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
 from models.augmented.hypernetwork import ResNetPrimaryNetwork
@@ -47,6 +48,13 @@ class QuineLoss:
 
         return loss_sr
 
+    def sequential_sr_loss(self) -> float:
+        if self.config["train_mode"] == "param":
+            sequential_sr_loss = (torch.linalg.norm(self.predictions["param"] - self.targets["param"], ord=2)) ** 2
+            return sequential_sr_loss
+        else:
+            return np.NAN
+
     def task_loss(self) -> float:
         """
         Calculates the auxiliary task loss.
@@ -58,6 +66,14 @@ class QuineLoss:
 
         return loss_task
 
+    def sequential_task_loss(self) -> float:
+        #  Following example from https://pytorch.org/tutorials/beginner/transformer_tutorial.html
+        if self.config["train_mode"] == "aux":
+            sequential_task_loss = torch.nn.CrossEntropyLoss()(self.predictions["aux"], self.targets["aux"])
+            return sequential_task_loss
+        else:
+            return np.NAN
+
     def combined_loss(self) -> float:
         """
         Calculates the combined loss (self replicating + task loss)
@@ -68,6 +84,11 @@ class QuineLoss:
         loss_combined = self.sr_loss() + self.config["run_config"]["lambda"] * self.task_loss()
 
         return loss_combined
+
+    def sequential_combined_loss(self):
+        sequential_loss_combined = self.sequential_sr_loss() + self.config["run_config"]["lambda"] + self.sequential_task_loss()
+
+        return sequential_loss_combined
 
 
 def loss(config: Dict, model: torch.nn.Module, logits, targets) -> Union[Dict, float]:
@@ -96,6 +117,10 @@ def loss(config: Dict, model: torch.nn.Module, logits, targets) -> Union[Dict, f
             return {"sr_loss": quine_loss.sr_loss(),
                     "task_loss": quine_loss.task_loss(),
                     "combined_loss": quine_loss.combined_loss()}
+        elif type(model) is SequentialAuxiliary:
+            return {"sr_loss": quine_loss.sequential_sr_loss(),
+                    "task_loss": quine_loss.sequential_task_loss(),
+                    "combined_loss": quine_loss.sequential_combined_loss()}
     elif isinstance(model, Ouroboros):
         pass
     elif type(model) == ResNetPrimaryNetwork:

@@ -32,8 +32,7 @@ class VanillaTrainer(AbstractTrainer):
         self.epoch_data = {"sr_loss": [0] * len(dataset)}
         self.param_idx_map = dict({}) # Maps param_idx to value, to be used in regeneration
 
-
-    def train(self, param_idxs, batch_idx):
+    def train(self, param_idxs):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
 
@@ -67,7 +66,7 @@ class VanillaTrainer(AbstractTrainer):
         return predictions, targets
 
     @torch.no_grad()
-    def test(self, param_idxs, batch_idx):
+    def test(self, param_idxs):
         self.wrapper.model.eval()
 
         param_idxs = param_idxs.to(self.device)
@@ -107,7 +106,7 @@ class VanillaTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('sr_loss (train)', actual_train_loss, epoch)
 
         if self.wandb_logger is not None:
-            self.wandb_logger.log({
+            self.wandb_logger.logger.log({
                     'train/sr_loss': actual_train_loss,
                 }, step=epoch, commit=False)
 
@@ -116,7 +115,7 @@ class VanillaTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('sr_loss (test)', actual_test_loss, epoch)
 
         if self.wandb_logger is not None:
-            self.wandb_logger.log({
+            self.wandb_logger.logger.log({
                     'test/sr_loss': actual_test_loss,
                 }, step=epoch, commit=True)
 
@@ -134,19 +133,19 @@ class VanillaTrainer(AbstractTrainer):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
                 if self.wandb_logger is not None:
-                    self.wandb_logger.log({
+                    self.wandb_logger.logger.log({
                             'epoch': epoch
                         }, commit=False)
 
                 self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])
                 for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    predictions, targets = self.train(param_idx, batch_idx)
+                    predictions, targets = self.train(param_idx)
 
                 self.test_epoch_length = len(self.dataset[list(self.dataset)[1]])
                 for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    predictions, targets = self.test(param_idx, batch_idx)
+                    predictions, targets = self.test(param_idx)
 
                 self.checkpoint.checkpoint(self.config,
                                            epoch,
@@ -179,7 +178,7 @@ class AuxiliaryTrainer(AbstractTrainer):
                            "total": [0, 0]}  # First position for training scores, second position for test scores
         self.param_idx_map = dict({}) # Maps param_idx to value, to be used in regeneration
 
-    def train(self, data, param_idxs, batch_idx):
+    def train(self, data, param_idxs):
         self.wrapper.model.train()
         self.optimizer.zero_grad()
 
@@ -221,7 +220,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         return predictions, targets
 
     @torch.no_grad()
-    def test(self, data, param_idxs, batch_idx):
+    def test(self, data, param_idxs):
         self.wrapper.model.eval()
 
         data[0] = data[0].to(self.device)
@@ -277,7 +276,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('scores (train)', scores["acc"][0], epoch)
 
         if self.wandb_logger is not None:
-            self.wandb_logger.log(data={
+            self.wandb_logger.logger.log(data={
                 'train/sr_loss': actual_sr_train_loss,
                 'train/task_loss': actual_task_train_loss,
                 'train/combined_loss': actual_combined_train_loss,
@@ -296,7 +295,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('scores (test)', scores["acc"][1], epoch)
 
         if self.wandb_logger is not None:
-            self.wandb_logger.log(data={
+            self.wandb_logger.logger.log(data={
                 'test/sr_loss': actual_sr_test_loss,
                 'test/task_loss': actual_task_test_loss,
                 'test/combined_loss': actual_combined_test_loss,
@@ -321,19 +320,19 @@ class AuxiliaryTrainer(AbstractTrainer):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
                 if self.wandb_logger is not None:
-                    self.wandb_logger.log({
+                    self.wandb_logger.logger.log({
                             'epoch': epoch
                         }, commit=False)
 
                 self.train_epoch_length = len(self.dataset[list(self.dataset)[0]]) # number of training batches
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    outputs, targets = self.train(data, param_idx, batch_idx)
+                    outputs, targets = self.train(data, param_idx)
 
                 self.test_epoch_length = len(self.dataset[list(self.dataset)[1]]) # number of testing batches
                 for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    outputs, targets = self.test(data, param_idx, batch_idx)
+                    outputs, targets = self.test(data, param_idx)
 
                 # Scores cumulated and calculated per epoch, as done in Quine
                 epoch_scores = self.score()
@@ -349,3 +348,114 @@ class AuxiliaryTrainer(AbstractTrainer):
 
                 self.write(epoch, epoch_scores)
                 self.reset()
+
+
+class SequentialAuxiliaryTrainer(AbstractTrainer):
+    def __init__(self, config, model, dataset, device):
+        super(SequentialAuxiliaryTrainer, self).__init__(config, model, dataset, device)
+        self.config = config
+        self.model = model
+        self.dataset = dataset
+        self.device = device
+        self.bptt_counter = 0  # Must start at zero and increment by bptt each epoch
+        self.train_mode = None
+        self.epoch_data = {"sr_loss": [0, 0],
+                           "task_loss": [0, 0],  # The aux loss, original implementation is nll_loss
+                           "combined_loss": [0, 0],
+                           "correct": [0, 0],
+                           "total": [0, 0]}  # First position for training scores, second position for test scores
+
+    def loss(self, predictions, targets):
+        self.config["train_mode"] = self.train_mode
+        return loss(self.config, self.model, predictions, targets)
+
+    def sequence_train(self, batch, src_mask):
+        self.model.train()
+        self.optimizer.zero_grad()
+
+        i = self.bptt_counter * self.config["data_config"]["bptt"]
+        self.bptt_counter += 1
+        seq_len = min(self.config["data_config"]["bptt"], len(self.dataset[list(self.dataset)[0]][0]) - 1 - i)
+        data = self.dataset[list(self.dataset)[0]][0].dataset.subset[i:i + seq_len]
+        targets = data[i + 1:i + 1 + seq_len].reshape(-1)
+
+        if data.size(0) != self.config["data_config"]["bptt"]:
+            src_mask = self.model.model.generate_square_subsequent_mask(data.size(0)).to(self.device)
+
+        output = self.model(data, src_mask)
+        predictions = {"aux": output.view(-1, len(self.dataset[list(self.dataset)[0]][0].dataset.vocab))}
+        targets = {"aux": targets}
+
+        loss = self.loss(predictions, targets)
+
+        self.epoch_data["task_loss"][0] += loss["task_loss"].item()  # accumulate
+
+        loss["task_loss"].backward()
+        torch.nn.utils.clip_grad_norm_(self.model.model.parameters(), 0.5)
+        self.optimizer.step()
+
+    def param_train(self, param_idx):
+        self.model.train()
+        self.optimizer.zero_grad()
+
+    def sequence_test(self, data):
+        self.model.eval()
+        print(1 + 3)
+
+    def param_test(self, param_idx):
+        self.model.eval()
+        print(1 + 4)
+
+    def reset(self):
+        for i in range(len(self.dataset)):
+            self.epoch_data["task_loss"][i] = 0
+
+        logger.info("States successfully reset for new epoch")
+
+    def write(self):
+        pass
+
+    @timed
+    def run_train(self):
+        for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
+            logger.info(f"Epoch: {epoch}")
+            if self.wandb_logger is not None:
+                self.wandb_logger.logger.log({
+                    'epoch': epoch
+                }, commit=False)
+
+            src_mask = self.model.model.generate_square_subsequent_mask(self.config["data_config"]["bptt"]).to(self.device)
+            self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])  # number of training batches
+            self.train_mode = "aux"
+            for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]][0]):
+                logger.info(f"Running sequence train batch: #{batch_idx}")
+                self.sequence_train(data, src_mask)
+            self.train_mode = "param"
+            for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[0]][1]):
+                logger.info(f"Running param train batch: #{batch_idx}")
+                self.param_train(param_idx)
+
+            self.test_epoch_length = len(self.dataset[list(self.dataset)[1]])  # number of testing batches
+            self.train_mode = "aux"
+            for batch_idx, data in enumerate(self.dataset[list(self.dataset)[1]][0]):
+                logger.info(f"Running sequence test batch: #{batch_idx}")
+                self.sequence_test(data, src_mask)
+            self.train_mode = "param"
+            for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[1]][1]):
+                logger.info(f"Running param test batch: #{batch_idx}")
+                self.param_test(param_idx)
+
+            # Scores cumulated and calculated per epoch, as done in Quine
+            epoch_scores = self.score()
+
+            # Regeneration (per epoch) step if specified in config
+            if self.run_config["regenerate"]: self.model.regenerate(self.param_idx_map)
+
+            self.checkpoint.checkpoint(self.config,
+                                       epoch,
+                                       self.model,
+                                       self.epoch_data["sr_loss"][0],
+                                       self.optimizer)
+
+            self.write(epoch, epoch_scores)
+            self.reset()
