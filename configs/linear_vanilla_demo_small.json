@@ -16,7 +16,6 @@
   "data_config":
   {
     "dataset": "cifar10",
-    "concat": true,
     "data_kwargs": {
       "root": "data/datafiles/cifar",
       "download": false

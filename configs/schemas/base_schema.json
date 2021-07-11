@@ -8,8 +8,275 @@
     "run_name": {
       "description": "The name of the run used for logging",
       "type": "string"
+    },
+    "seed": {
+      "description": "The base seed used for all random operations during run",
+      "type": "integer"
+    },
+    "run_type": {
+      "description": "The type of pipeline to use in run",
+      "type": "string",
+      "pattern": "\\b(?:demo|tune|benchmark|chain|parallel)\\b"
+    },
+    "logging": {
+      "description": "Whether or not to log into files (models to .wb, console logs to .txt, results to .csv",
+      "type": "boolean"
+    },
+    "log_level": {
+      "description": "The verbosity of the console logging (Follows Python logging levels); string is evaluated",
+      "type": "string"
+    },
+    "clean_log_dir": {
+      "description": "Whether or not to clean the log dir of previous runs before recording new run logs",
+      "type": "boolean"
+    },
+    "log_dir": {
+      "description": "The directory in which to save log files",
+      "type": "string"
+    },
+    "device": {
+      "description": "The device to use for run (will also check if specified devices are available",
+      "type": "string"
+    },
+    "wandb_logging": {
+      "description": "Weights and Biases logging config",
+      "type": "object",
+      "properties": {
+        "run_name": {
+          "description": "The name of run to be used when logging on WandB",
+          "type": ["string", "null"]
+        },
+        "project": {
+          "description": "The name of the project to save the WandB logs to",
+          "type": "string"
+        },
+        "entity": {
+          "description": "The name of the group/entity that the project and subsequent run belongs to",
+          "type": "string"
+        }
+      }
+    },
+    "data_config": {
+      "description": "The data config (used primarily in data preprocessing",
+      "type": "object",
+      "properties": {
+        "dataset": {
+          "description": "The name of the dataset to use in run (casefolded inside code)",
+          "type": "string"
+        },
+        "data_kwargs": {
+          "description": "The kwargs that get fed directly to data class instantiation (names should match arguments)",
+          "type": "object",
+          "properties": {
+            "root": {
+              "description": "The root file dir to download the data into (only happens once, future runs will check if downloaded",
+              "type": "string"
+            },
+            "download": {
+              "description": "Whether or not to download the dataset",
+              "type": "boolean"
+            }
+          }
+        },
+        "data_path": {
+          "description": "Where to load the data from (if custom and not from library",
+          "type": "string"
+        },
+        "split_type": {
+          "description": "The type of split to apply to the dataset",
+          "type": "string",
+          "pattern": "\\b(?:demo|tune|benchmark|chain|parallel)\\b"
+        },
+        "num_splits": {
+          "description": "The number of splits to split dataset into",
+          "type": "integer"
+        },
+        "shuffle": {
+          "description": "Whether or not to shuffle dataset (not for sequential data)",
+          "type": "boolean"
+        },
+        "batch_size": {
+          "description": "The batch size to use in the DataLoader object",
+          "type": "integer"
+        },
+        "data_subset": {
+          "description": "The subset of data to use (meant for smaller/scaled down runs for faster evaluation)",
+          "type": ["integer", "null"]
+        },
+        "param_subset": {
+          "description": "The subset of parameters to use (meant for smaller/scaled down runs for faster evaluation)",
+          "type": ["integer", "null"]
+        }
+      },
+      "required": [
+        "dataset",
+        "data_kwargs",
+        "data_path",
+        "split_type",
+        "batch_size"
+      ]
+    },
+    "model_config": {
+      "description": "The config to use for defining and instantiating a new model to use for the pipeline",
+      "type": "object",
+      "properties": {
+        "model_dir": {
+          "description": "The directory of the pretrained model to use if specified",
+          "type": ["string", "null"]
+        },
+        "model_type": {
+          "description": "The type of model to instantiate",
+          "type": "string",
+          "pattern": "\\b(?:linear|image|language|graph)\\b"
+        },
+        "pooling": {
+          "description": "Type of pooling layer to use between model layers",
+          "type": ["string", "null"]
+        },
+        "pooling_kwargs": {
+          "description": "The pooling kwargs provided to the pooling layer init. Must match args of class init.",
+          "type": ["object", "null"]
+        },
+        "normalize": {
+          "description": "The normalizing layer to use between model layers",
+          "type": ["string", "null"]
+        },
+        "normalize_kwargs": {
+          "description": "The normalizing kwargs provided to the pooling layer init. Must match args of class init.",
+          "type": ["object", "null"]
+        },
+        "dropout": {
+          "description": "The dropout to use in each layer (cannot specify per layer, same dropout applies to all layers)",
+          "type": "number"
+        },
+        "layer_sizes": {
+          "description": "A list of layer sizes, each entry defines the size of a layer",
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      },
+      "required": [
+        "dataset",
+        "data_kwargs",
+        "data_path",
+        "split_type",
+        "batch_size"
+      ]
+    },
+    "model_aug_config": {
+      "description": "The config to use for defining and instantiating a new model augmentation to use for the pipeline",
+      "type": "object",
+      "properties": {
+        "model_augmentation": {
+          "description": "The name of the model augmentation to apply to the standard model",
+          "type": "string",
+          "pattern": "\\b(?:classical|auxiliary|vanilla)\\b"
+        },
+        "n_inputs": {
+          "description": "The number of inputs to the model (not the input size)",
+          "type": "integer"
+        },
+        "n_hidden": {
+          "description": "The hidden layer size (input of augmented model)",
+          "type": "integer"
+        },
+        "van_output_layers": {
+          "description": "The size of the vanilla (parameter) output layers",
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "aux_output_layer": {
+          "description": "The size of the vanilla (parameter) output layers",
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "reduction_method": {
+          "description": "The type of size reduction to use on the model input (the aux data is scaled down)",
+          "type": "string",
+          "pattern": "\\b(?:random|null)\\b"
+        }
+      }
+    },
+    "optim_config": {
+      "description": "The optimizer configuration to use in the run",
+      "type": "object",
+      "properties": {
+        "optimizer": {
+          "description": "Name of the optimizer to use in the run",
+          "type": "string",
+          "pattern": "\\b(?:adam|sgd|adagrad)\\b"
+        },
+        "optim_kwargs": {
+          "description": "The kwargs provided directly to the optimizer object",
+          "type": "object"
+        },
+        "scheduler": {
+          "description": "Name of the scheduler to sue in the run",
+          "type": "string"
+        },
+        "scheduler_kwargs": {
+          "description": "The kwargs provided directly to the optimizer",
+          "type": "object"
+        }
+      },
+      "required": [
+        "optimizer",
+        "optim_kwargs",
+        "scheduler",
+        "scheduler_kwargs"
+      ]
+    },
+    "run_config": {
+      "description": "The config used to define run specifications",
+      "type": "object",
+      "properties": {
+        "num_epochs": {
+          "description": "The number of epochs to train the model for",
+          "type": "integer"
+        },
+        "checkpoint_intervals": {
+          "description": "The epoch intervals at which the model will be checkpointed (save weights)",
+          "type": "integer"
+        },
+        "clean_checkpoint_dir": {
+          "description": "Whether or not to clean the checkpoint dir at this new run",
+          "type": "boolean"
+        },
+        "checkpoint_dir": {
+          "description": "The directory in which to save the checkpoint",
+          "type": "string"
+        },
+        "lambda": {
+          "description": "The lambda defined as specified in the original Quine paper",
+          "type": "integer"
+        },
+        "regenerate": {
+          "description": "Whether or not to regenerate the weights per epoch (the model can run with only regenerate or only BP or both",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "num_epochs",
+        "checkpoint_intervals",
+        "clean_checkpoint_dir",
+        "checkpoint_dir"
+      ]
+    },
+    "score_config": {
+      "description": "The configs to use during scoring",
+      "type": "object",
+      "properties": {
+        "acc": {
+          "description": "The accuracy of the model"
+        }
+      }
     }
-
   },
   "required": [
     "run_name",
@@ -19,7 +286,13 @@
     "log_level",
     "clean_log_dir",
     "log_dir",
+    "device",
     "wandb_logging",
-    "device"
+    "data_config",
+    "model_config",
+    "model_aug_config",
+    "optim_config",
+    "run_config",
+    "score_config"
   ]
 }

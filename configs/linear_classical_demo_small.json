@@ -16,7 +16,6 @@
   "data_config":
   {
     "dataset": "mnist",
-    "concat": true,
     "data_kwargs": {
       "root": "data/datafiles/mnist",
       "download": false
