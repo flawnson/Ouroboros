@@ -35,20 +35,15 @@
     "model_dir": null,
     "model_type": "sequential",
     "decoder_type": "linear",
-    "input_size": 120,
+    "input_size": 20,
     "num_heads": 2,
-    "hidden_size": 120,
+    "hidden_size": 20,
     "num_layers": 2,
     "dropout": 0.10
   },
   "model_aug_config":
   {
-    "model_augmentation": "auxiliary",
-    "n_inputs": 2,
-    "n_hidden": 392,
-    "van_output_layers": [40, 1],
-    "aux_output_layers": [40, 10],
-    "reduction_method": "random"
+    "model_augmentation": "auxiliary"
   },
   "optim_config":
   {

@@ -60,13 +60,13 @@ class TransformerModel(torch.nn.Module):
         num_layers = model_config["num_layers"]
         dropout = model_config["dropout"]
         self.pos_encoder = PositionalEncoding(input_size, dropout)
-        encoder_layers = TransformerEncoderLayer(input_size, num_heads, hidden_size, dropout)
+        encoder_layers = TransformerEncoderLayer(input_size, num_heads, hidden_size, dropout, batch_first=True)
         self.transformer_encoder = TransformerEncoder(encoder_layers, num_layers)
         self.encoder = torch.nn.Embedding(num_tokens, input_size)
         if model_config["decoder_type"].casefold() == "linear":  # PyTorch's example in docs uses linear decoder
             self.transformer_decoder = torch.nn.Linear(input_size, num_tokens)
         elif model_config["decoder_type"].casefold() == "decoder":
-            decoder_layers = TransformerDecoderLayer(input_size, num_heads, hidden_size, dropout)
+            decoder_layers = TransformerDecoderLayer(input_size, num_heads, hidden_size, dropout, batch_first=True)
             self.transformer_decoder = TransformerDecoder(input_size, num_tokens)
         self.ninp = input_size
         self.init_weights()

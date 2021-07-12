@@ -265,7 +265,15 @@ class Auxiliary(Vanilla, torch.nn.Module):
         pass
 
 
-class SequentialAuxiliary(Vanilla, torch.nn.Module):
+class SequentialVanilla(Quine):
+    def __init__(self, config: Dict, model: torch.nn.Module, device: torch.device):
+        super(SequentialVanilla, self).__init__(config, model, device)
+        self.model_aug_config = config["model_aug_config"]
+        self.model = model
+        self.device = device
+
+
+class SequentialAuxiliary(SequentialVanilla, torch.nn.Module):
     def __init__(self, config, model, dataset, device):
         super(SequentialAuxiliary, self).__init__(config, model, device)
         self.config = config

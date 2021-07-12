@@ -319,7 +319,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
-                if self.wandb_logger is not None:
+                if self.wandb_logger.logger is not None:
                     self.wandb_logger.logger.log({
                             'epoch': epoch
                         }, commit=False)
@@ -364,6 +364,7 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
                            "combined_loss": [0, 0],
                            "correct": [0, 0],
                            "total": [0, 0]}  # First position for training scores, second position for test scores
+        self.datatensor = torch.cat(self.dataset[list(self.dataset)[0]][0].dataset.datasets)
 
     def loss(self, predictions, targets):
         self.config["train_mode"] = self.train_mode
@@ -376,13 +377,13 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
         i = self.bptt_counter * self.config["data_config"]["bptt"]
         self.bptt_counter += 1
         seq_len = min(self.config["data_config"]["bptt"], len(self.dataset[list(self.dataset)[0]][0]) - 1 - i)
-        data = self.dataset[list(self.dataset)[0]][0].dataset.subset[i:i + seq_len]
-        targets = data[i + 1:i + 1 + seq_len].reshape(-1)
+        # data = self.datatensor[i:i + seq_len]
+        # targets = self.datatensor[i + 1:i + seq_len + 1].reshape(-1)
 
-        if data.size(0) != self.config["data_config"]["bptt"]:
-            src_mask = self.model.model.generate_square_subsequent_mask(data.size(0)).to(self.device)
+        if batch.size(1) != self.config["data_config"]["bptt"]:
+            src_mask = self.model.model.generate_square_subsequent_mask(batch.size(1)).to(self.device)
 
-        output = self.model(data, src_mask)
+        output = self.model(batch, src_mask)
         predictions = {"aux": output.view(-1, len(self.dataset[list(self.dataset)[0]][0].dataset.vocab))}
         targets = {"aux": targets}
 
