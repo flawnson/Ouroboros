@@ -65,7 +65,7 @@ class AbstractSplit(ABC):
         elif self.config["model_config"]["model_type"] == "sequential":
             # self.dataset.subsets = subsets
             self.dataset.samplers = samplers
-            return self.dataset
+            return list(zip(self.dataset, self.dataset.targets))
         else:
             raise TypeError(f"Model type: {self.config['model_config']['model_type']} cannot combine with param_data")
 
@@ -258,18 +258,18 @@ class TextDataSplit(AbstractSplit):
         # dataloaders = self.get_dataloaders(subsets=subsets, samplers=[None] * len(subsets))
 
         aux_split_idx = list(ShuffleSplit(n_splits=1,
-                                      train_size=split_size,
-                                      random_state=self.config["seed"]).split(self.dataset,
-                                                                              self.dataset.targets))
+                                          train_size=split_size,
+                                          random_state=self.config["seed"]).split(self.dataset,
+                                                                                  self.dataset.targets))
         param_split_idx = list(ShuffleSplit(n_splits=1,
-                                      train_size=split_size,
-                                      random_state=self.config["seed"]).split(self.param_data.params))
+                                            train_size=split_size,
+                                            random_state=self.config["seed"]).split(self.param_data.params))
 
         aux_samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in aux_split_idx[0]]
         param_samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in param_split_idx[0]]
         dataloaders = self.get_dataloaders(subsets=[None] * len(aux_samplers), samplers=aux_samplers)
         dataloaders = dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
-        dataloaders = {name: [dataloader, DataLoader(self.param_data.params, sampler=param_samplers)] for
+        dataloaders = {name: [dataloader, dataloader(self.param_data.params, sampler=param_samplers)] for
                        name, dataloader in dataloaders.items()}
 
         return dataloaders
@@ -277,14 +277,22 @@ class TextDataSplit(AbstractSplit):
     def kfold(self) -> Dict[str, DataLoader]:
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
-        splits = StratifiedKFold(n_splits=len(self.data_config["num_splits"]), shuffle=self.data_config["shuffle"])
+        aux_split_idx = StratifiedKFold(n_splits=self.data_config["num_splits"],
+                                 shuffle=self.data_config["shuffle"]).split(self.dataset, self.dataset.targets)
+        param_split_idx = StratifiedKFold(n_splits=1,
+                                          shuffle=self.data_config["shuffle"],
+                                          random_state=self.config["seed"]).split(self.param_data.params)
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split)
         # The .split() method from SKLearn returns a generator that generates 2 index arrays (for training and testing)
-        subsets = [torch.utils.data.Subset(self.dataset, idx) for idx in splits.split(self.dataset, self.dataset.targets)]
+        subsets = [torch.utils.data.Subset(self.dataset, idx) for idx in aux_split_idx]
+        param_samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in param_split_idx[0]]
         dataloaders = self.get_dataloaders(subsets=subsets, samplers=[None]*len(subsets))
+        dataloaders = dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
+        dataloaders = {name: [dataloader, dataloader(self.param_data.params, sampler=param_samplers)] for
+                       name, dataloader in dataloaders.items()}
 
-        return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
+        return dataloaders
 
     @staticmethod
     def type_check(subject):

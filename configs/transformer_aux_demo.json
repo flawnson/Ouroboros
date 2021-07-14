@@ -22,9 +22,9 @@
       "download": true
     },
     "data_path": "data/datafiles/housing_prices/train.csv",
-    "split_type": "holdout",
-    "num_splits": 5,
-    "shuffle": true,
+    "split_type": "stratified",
+    "num_splits": 1,
+    "shuffle": false,
     "batch_size": 16,
     "data_subset": null,
     "param_subset": null

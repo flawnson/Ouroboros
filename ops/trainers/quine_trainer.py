@@ -364,7 +364,7 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
                            "combined_loss": [0, 0],
                            "correct": [0, 0],
                            "total": [0, 0]}  # First position for training scores, second position for test scores
-        self.datatensor = torch.cat(self.dataset[list(self.dataset)[0]][0].dataset.datasets)
+        # self.datatensor = torch.cat(self.dataset[list(self.dataset)[0]][0].dataset.datasets)
 
     def loss(self, predictions, targets):
         self.config["train_mode"] = self.train_mode
