@@ -259,7 +259,8 @@ class TextDataSplit(AbstractSplit):
 
         aux_split_idx = list(ShuffleSplit(n_splits=1,
                                       train_size=split_size,
-                                      random_state=self.config["seed"]).split(self.dataset, self.dataset.targets))
+                                      random_state=self.config["seed"]).split(self.dataset,
+                                                                              self.dataset.targets))
         param_split_idx = list(ShuffleSplit(n_splits=1,
                                       train_size=split_size,
                                       random_state=self.config["seed"]).split(self.param_data.params))

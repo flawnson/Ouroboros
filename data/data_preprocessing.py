@@ -134,20 +134,17 @@ def get_text_data(config: Dict) -> ChainDataset:
         # Evenly divide the data across the bsz batches.
         bptt_datasets.append(dataset.view(config["data_config"]["bptt"], -1).t().contiguous())
 
-    # bptt_counter = 0
-    # batched_targets = []
-    # for dataset in bptt_datasets:
-    #     for idx in range(0, dataset.size(0) - 1, config["data_config"]["batch_size"]):
-    #         i = bptt_counter * config["data_config"]["batch_size"]
-    #         seq_len = min(config["data_config"]["batch_size"], len(dataset) - 1 - i)
-    #         batched_targets.append(dataset[i + 1:i + seq_len + 1].reshape(-1))
-    #         bptt_counter += 1
+    batched_targets = []
+    for dataset in tokenized_datasets:
+        targetset = []
+        for idx in range(0, dataset.size(0) - 1, config["data_config"]["bptt"]):
+            seq_len = min(config["data_config"]["bptt"], len(dataset) - 1 - idx)
+            targetset.append(dataset[idx + 1:idx + seq_len + 1].reshape(-1))
+        targetset.pop(-1)  # Removing extra leftover tokens at end of each targetset
+        batched_targets.append(targetset)
 
     dataset = ConcatDataset(bptt_datasets)
-    targetset = copy.deepcopy(bptt_datasets)
-    targetset[0] = targetset[0][1:]  # Ignoring first token of first dataset in targetset
-    targetset.append([0])
-    dataset.targets = ConcatDataset(targetset)
+    dataset.targets = ConcatDataset(batched_targets)
     dataset.vocab = vocab
 
     return dataset
