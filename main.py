@@ -9,6 +9,7 @@ import random
 import numpy as np
 from typing import *
 from logzero import logger
+from jsonschema import validate
 from torch.utils.data import DataLoader
 
 from models.standard.graph_model import GNNModel
@@ -22,6 +23,7 @@ from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset
 from data.data_preprocessing import get_image_data, get_graph_data, get_text_data
 from utils.holdout import get_image_data_split, get_text_data_split
+from utils.utilities import get_json_schema
 from utils.checkpoint import load
 from optim.parameters import ModelParameters
 from ops.trainers.trainer import trainer
@@ -41,6 +43,10 @@ def main():
     logzero.loglevel(eval(config["log_level"]))
     logger.info(f"Successfully retrieved config json. Running {config['run_name']} on {device}.")
     logger.info(f"Using PyTorch version: {torch.__version__}")
+
+    json_schema = get_json_schema(config)
+    logger.info(f"Validating configuration json against {config['schema']}")
+    validate(instance=config, schema=json_schema)
 
     #Set seeds
     seed = config["seed"]

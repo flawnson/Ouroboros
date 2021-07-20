@@ -1,5 +1,7 @@
 import os
+import json
 import time
+import math
 import torch
 import numpy as np
 import torchtext as tt
@@ -8,6 +10,8 @@ from typing import *
 from logzero import logger
 from functools import wraps
 from torch.utils.data import ConcatDataset
+
+DEFAULT_TRAIN_SPLIT = 0.70
 
 
 def get_example_size(dataset: torch.utils.data.dataset) -> int:
@@ -107,3 +111,38 @@ def initialize_iterable_dataset(config):
         raise e
 
     return all_datasets
+
+
+def get_split_sizes(data_config, dataset):
+    try:
+        if data_config["split_type"] == "kfold":  # Asks for n_splits that is a minimum of 2
+            split_size = data_config["num_splits"]
+        elif data_config["split_type"] == "shuffle":  # Asks for n_splits that can be 1
+            split_size = data_config["num_splits"]
+        elif data_config["split_type"] == "holdout":  # Asks for p, the size of the test set as an integer
+            split_size = math.floor(data_config["train_size"] * len(dataset))
+        else:
+            raise NotImplementedError(f"The specified split type:{data_config['split_type']} is not implemented")
+    except KeyError as e:
+        split_size = DEFAULT_TRAIN_SPLIT
+        logger.error(e)
+        logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_TRAIN_SPLIT}")
+
+    return split_size
+
+
+def get_json_schema(config):
+    if config["schema"]:
+        return json.load(config["schema"])
+    else:
+        return {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://example.com/product.schema.json",
+                "title": "Empty_schema",
+                "description": "In case no schema is defined, validate against this empty schema",
+                "type": "object"
+                }
+
+
+
+

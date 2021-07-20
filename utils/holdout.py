@@ -1,3 +1,4 @@
+import math
 import torch
 import random
 import logzero
@@ -8,17 +9,16 @@ from typing import *
 from abc import ABC, abstractmethod
 from logzero import logger
 from torch.nn import Module
-from sklearn.model_selection import StratifiedKFold, train_test_split, ShuffleSplit
+from sklearn.model_selection import StratifiedKFold, train_test_split, ShuffleSplit, LeavePOut
 from torch.utils.data import Dataset, DataLoader, Subset
 
 from data.combine_preprocessing import CombineImageDataset
 from models.augmented.quine import Quine
-
-DEFAULT_SPLIT = 0.70
+from utils.utilities import get_split_sizes
 
 
 class AbstractSplit(ABC):
-    def __init__(self, config, dataset, param_data, device):
+    def __init__(self, config: Dict, dataset, param_data, device: torch.device):
         self.config = config
         self.data_config = config["data_config"]
         self.dataset = dataset
@@ -26,17 +26,10 @@ class AbstractSplit(ABC):
         self.device = device
 
     @abstractmethod
-    def holdout(self):
-        try:
-            split_size = self.data_config["train_size"]
-            logger.info(f"Splitting dataset into {self.data_config['splits']['size']}")
-        except KeyError as e:
-            split_size = DEFAULT_SPLIT
-            logger.error(e)
-            logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_SPLIT}")
-
-        # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])
-        split_idx = list(ShuffleSplit(n_splits=1, train_size=split_size, random_state=self.config["seed"]).split(self.dataset, self.dataset.targets))
+    def shuffle(self):
+        split_idx = list(ShuffleSplit(**self.data_config["split_kwargs"],
+                                      random_state=self.config["seed"]).split(self.dataset,
+                                                                              self.dataset.targets))
         samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx]
         dataloaders = [DataLoader(self.dataset, sampler=sampler) for sampler in samplers]
         return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
@@ -45,7 +38,8 @@ class AbstractSplit(ABC):
     def kfold(self):
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
-        splits = StratifiedKFold(n_splits=len(self.data_config["num_splits"]), shuffle=self.data_config["shuffle"])
+        splits = StratifiedKFold(**self.data_config["split_kwargs"],
+                                 random_state=self.config["seed"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split)
         # The .split() method from SKLearn returns a generator that generates 2 index arrays (for training and testing)
@@ -63,7 +57,6 @@ class AbstractSplit(ABC):
         if self.config["model_config"]["model_type"] in ("linear", "image"):
             return CombineImageDataset(self.dataset, self.param_data)
         elif self.config["model_config"]["model_type"] == "sequential":
-            # self.dataset.subsets = subsets
             self.dataset.samplers = samplers
             return list(zip(self.dataset, self.dataset.targets))
         else:
@@ -87,10 +80,14 @@ class AbstractSplit(ABC):
 
     def partition(self):
         self.type_check(self.dataset)
-        if self.data_config["split_type"] == "stratified":
+        if self.data_config["split_type"] == "kfold":
             return self.kfold()
+        elif self.data_config["split_type"] == "shuffle":
+            return self.shuffle()
         elif self.data_config["split_type"] == "holdout":
             return self.holdout()
+        elif self.data_config["split_type"] == "binary":
+            return self.binary()
         else:
             raise NotImplementedError(f"Split-type: {self.data_config['split_type']} not understood")
 
@@ -105,25 +102,15 @@ class ImageDataSplit(AbstractSplit):
         self.larger_dataset = larger_dataset
         self.device = device
 
-    def holdout(self) -> Dict[str, DataLoader]:
-        try:
-            split_size = self.data_config["train_size"]
-            logger.info(f"Splitting dataset into {self.data_config['splits']['size']}")
-        except KeyError as e:
-            split_size = DEFAULT_SPLIT
-            logger.info(e)
-            logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_SPLIT}")
-
-        # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])
+    def shuffle(self) -> Dict[str, DataLoader]:
+        split_size = get_split_sizes(self.data_config, self.dataset)
         split_idx = None
         if self.larger_dataset == "aux_data":
-            split_idx = list(ShuffleSplit(n_splits=1,
-                                          train_size=split_size,
+            split_idx = list(ShuffleSplit(**self.data_config["split_kwargs"],
                                           random_state=self.config["seed"]).split(self.dataset,
                                                                                   self.dataset.targets))
         elif self.larger_dataset == "param_data":
-            split_idx = list(ShuffleSplit(n_splits=1,
-                                          train_size=split_size,
+            split_idx = list(ShuffleSplit(**self.data_config["split_kwargs"],
                                           random_state=self.config["seed"]).split(self.param_data.params))
 
         samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx[0]]
@@ -134,7 +121,7 @@ class ImageDataSplit(AbstractSplit):
     def kfold(self) -> Dict[str, DataLoader]:
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
-        splits = StratifiedKFold(n_splits=len(self.data_config["num_splits"]), shuffle=self.data_config["shuffle"])
+        splits = StratifiedKFold(**self.data_config["split_kwargs"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split)
         # The .split() method from SKLearn returns a generator that generates 2 index arrays (for training and testing)
@@ -156,13 +143,14 @@ class GraphSplit(AbstractSplit):
         self.model = model
         self.device = device
 
-    def holdout(self):
-        pass
+    def shuffle(self):
+        split_size = get_split_sizes(self.data_config, self.dataset)
 
     def kfold(self):
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
-        splits = StratifiedKFold(n_splits=len(self.data_config["num_splits"]), shuffle=self.data_config["shuffle"])
+        splits = StratifiedKFold(**self.data_config["split_kwargs"],
+                                 random_state=self.config["seed"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split
         y = [self.dataset[y][1] for y, d in enumerate(self.dataset)]
@@ -184,20 +172,13 @@ class QuineDataSplit(AbstractSplit):
         self.param_data = param_data  # Needed for Aux models
         self.device = device
 
-    def holdout(self):
+    def shuffle(self):
         # When splitting/partition, we split the indices of the params (which are ints)
         # In combineDataset, the param_data indices will be passed to get_param() in get_item
-        try:
-            split_size = self.data_config["train_size"]
-            logger.info(f"Splitting dataset into {self.data_config['splits']['size']}")
-        except KeyError as e:
-            split_size = DEFAULT_SPLIT
-            logger.error(e)
-            logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_SPLIT}")
+        split_size = get_split_sizes(self.data_config, self.dataset)
 
         # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])
-        split_idx = list(ShuffleSplit(n_splits=1,
-                                      train_size=split_size,
+        split_idx = list(ShuffleSplit(**self.data_config["split_kwargs"],
                                       random_state=self.config["seed"]).split(self.param_data.params))
         split_idx = split_idx[0]
         samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx]
@@ -208,7 +189,8 @@ class QuineDataSplit(AbstractSplit):
     def kfold(self) -> Dict[str, DataLoader]:
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
-        splits = StratifiedKFold(n_splits=len(self.data_config["num_splits"]), shuffle=self.data_config["shuffle"])
+        splits = StratifiedKFold(**self.data_config["split_kwargs"],
+                                 random_state=self.config["seed"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split)
         # The .split() method from SKLearn returns a generator that generates 2 index arrays (for training and testing)
@@ -233,43 +215,52 @@ class TextDataSplit(AbstractSplit):
         self.larger_dataset = larger_dataset
         self.device = device
 
+    def binary(self):
+        splits = train_test_split(self.dataset, self.dataset.targets, self.data_config["split_kwargs"], random_state=self.config["seed"])
+        datasets = [torch.utils.data.TensorDataset(torch.Tensor(list(zip(x, x)))) for x in iter(splits)]
+        dataloaders = [DataLoader(dataset, batch_size=self.config["data_config"]["batch_size"]) for dataset in datasets]
+        # Organizing datalaoders into dictionary
+        dataloaders = dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
+        # Creating dataloaders for the param_data
+        dataloaders = {name: [dataloader, DataLoader(self.param_data.params, sampler=param_samplers)] for
+                       name, dataloader in dataloaders.items()}
+
+        return
+
     def holdout(self):
+        aux_p = math.floor(self.data_config["split_kwargs"]["train_size"] * len(self.dataset))
+        aux_split_idx = LeavePOut(aux_p).split(self.dataset, self.dataset.targets)
+        param_p = self.data_config["split_kwargs"]["train_size"] * len(self.param_data)
+        param_split_idx = LeavePOut(param_p).split(self.dataset, self.dataset.targets)
+
+        aux_samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in aux_split_idx[0]]
+        param_samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in param_split_idx[0]]
+        # Getting datalaoders from the aux sampler
+        dataloaders = self.get_dataloaders(subsets=[None] * len(aux_samplers), samplers=aux_samplers)
+        # Organizing datalaoders into dictionary
+        dataloaders = dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
+        # Creating dataloaders for the param_data
+        dataloaders = {name: [dataloader, DataLoader(self.param_data.params, sampler=param_samplers)] for
+                       name, dataloader in dataloaders.items()}
+
+        return dataloaders
+
+    def shuffle(self):
         # When splitting/partition, we split the indices of the params (which are ints)
         # In combineDataset, the param_data indices will be passed to get_param() in get_item
-        try:
-            split_size = self.data_config["train_size"]
-            logger.info(f"Splitting dataset into {self.data_config['splits']['size']}")
-        except KeyError as e:
-            split_size = DEFAULT_SPLIT
-            logger.error(e)
-            logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_SPLIT}")
+        split_size = get_split_sizes(self.data_config, self.dataset)
 
-        # if self.larger_dataset == "aux_data":
-        #     subsets = torch.utils.data.dataset.random_split(self.dataset,
-        #                                                     [split_size*int(len(self.dataset)),
-        #                                                      len(self.dataset) - split_size*int(len(self.dataset))],
-        #                                                     torch.Generator().manual_seed(self.config["seed"]))
-        # elif self.larger_dataset == "param_data":
-        #     subsets = torch.utils.data.dataset.random_split(self.param_data.params,
-        #                                                     [int(split_size*len(self.param_data.params)),
-        #                                                      int(len(self.param_data.params)) - int(split_size*len(self.param_data.params))],
-        #                                                     torch.Generator().manual_seed(self.config["seed"]))
-        #
-        # dataloaders = self.get_dataloaders(subsets=subsets, samplers=[None] * len(subsets))
-
-        aux_split_idx = list(ShuffleSplit(n_splits=1,
-                                          train_size=split_size,
+        aux_split_idx = list(ShuffleSplit(**self.data_config["split_kwargs"],
                                           random_state=self.config["seed"]).split(self.dataset,
                                                                                   self.dataset.targets))
-        param_split_idx = list(ShuffleSplit(n_splits=1,
-                                            train_size=split_size,
+        param_split_idx = list(ShuffleSplit(**self.data_config["split_kwargs"],
                                             random_state=self.config["seed"]).split(self.param_data.params))
 
         aux_samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in aux_split_idx[0]]
         param_samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in param_split_idx[0]]
         dataloaders = self.get_dataloaders(subsets=[None] * len(aux_samplers), samplers=aux_samplers)
-        dataloaders = dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
-        dataloaders = {name: [dataloader, dataloader(self.param_data.params, sampler=param_samplers)] for
+        dataloaders = dict(zip([f"split_{x}" for x in range(1, len(dataloaders) + 1)], dataloaders))
+        dataloaders = {name: [dataloader, DataLoader(self.param_data.params, sampler=param_samplers)] for
                        name, dataloader in dataloaders.items()}
 
         return dataloaders
@@ -277,10 +268,9 @@ class TextDataSplit(AbstractSplit):
     def kfold(self) -> Dict[str, DataLoader]:
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
-        aux_split_idx = StratifiedKFold(n_splits=self.data_config["num_splits"],
-                                 shuffle=self.data_config["shuffle"]).split(self.dataset, self.dataset.targets)
-        param_split_idx = StratifiedKFold(n_splits=1,
-                                          shuffle=self.data_config["shuffle"],
+        aux_split_idx = StratifiedKFold(**self.data_config["split_kwargs"],
+                                        random_state=self.config["seed"]).split(self.dataset, self.dataset.targets)
+        param_split_idx = StratifiedKFold(**self.data_config["split_kwargs"],
                                           random_state=self.config["seed"]).split(self.param_data.params)
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split)
@@ -288,8 +278,8 @@ class TextDataSplit(AbstractSplit):
         subsets = [torch.utils.data.Subset(self.dataset, idx) for idx in aux_split_idx]
         param_samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in param_split_idx[0]]
         dataloaders = self.get_dataloaders(subsets=subsets, samplers=[None]*len(subsets))
-        dataloaders = dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
-        dataloaders = {name: [dataloader, dataloader(self.param_data.params, sampler=param_samplers)] for
+        dataloaders = dict(zip([f"split_{x}" for x in range(1, self.data_config["split_kwargs"]["n_splits"])], dataloaders))
+        dataloaders = {name: [dataloader, DataLoader(self.param_data.params, sampler=param_samplers)] for
                        name, dataloader in dataloaders.items()}
 
         return dataloaders

@@ -13,6 +13,10 @@
       "description": "The base seed used for all random operations during run",
       "type": "integer"
     },
+    "schema": {
+      "description": "The path to the json schema file (set as null if no validation)",
+      "type": ["string", "null"]
+    },
     "run_type": {
       "description": "The type of pipeline to use in run",
       "type": "string",
@@ -87,13 +91,19 @@
           "type": "string",
           "pattern": "\\b(?:demo|tune|benchmark|chain|parallel)\\b"
         },
-        "num_splits": {
-          "description": "The number of splits to split dataset into",
-          "type": "integer"
-        },
-        "shuffle": {
-          "description": "Whether or not to shuffle dataset (not for sequential data)",
-          "type": "boolean"
+        "split_kwargs": {
+          "description": "The kwargs that get passed directly into sklearn model selection object",
+          "type": "object",
+          "properties": {
+            "num_splits": {
+              "description": "The number of splits to split dataset into",
+              "type": "integer"
+            },
+            "shuffle": {
+              "description": "Whether or not to shuffle dataset (not for sequential data)",
+              "type": "boolean"
+            }
+          }
         },
         "batch_size": {
           "description": "The batch size to use in the DataLoader object",
@@ -113,6 +123,7 @@
         "data_kwargs",
         "data_path",
         "split_type",
+        "split_Kwargs",
         "batch_size"
       ]
     },
@@ -281,6 +292,7 @@
   "required": [
     "run_name",
     "seed",
+    "schema",
     "run_type",
     "logging",
     "log_level",
