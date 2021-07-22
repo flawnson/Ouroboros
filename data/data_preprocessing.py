@@ -145,7 +145,7 @@ def get_text_data(config: Dict) -> ChainDataset:
 
     dataset = ConcatDataset(bptt_datasets)
     dataset.targets = ConcatDataset(batched_targets)
-    dataset.vocab = vocab
+    config["vocab"] = vocab
 
     return dataset
 

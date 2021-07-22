@@ -94,7 +94,8 @@ class PTTBLogger(object):
 
             #save the config file
             with open(osp.join(self.log_dir, run_name, "config.json"), 'w', encoding='utf-8') as o:
-                json.dump(config, o, ensure_ascii=False, indent=4)
+                # Serialize non serializable config items with default argument (specifically for the Vocab object)
+                json.dump(config, o, ensure_ascii=False, indent=4, default=lambda s: '<not serializable>')
 
             #create log file for logzero
             logzero.logfile(osp.join(self.log_dir, run_name, "log.log"))

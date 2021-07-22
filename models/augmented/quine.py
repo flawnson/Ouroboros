@@ -286,6 +286,9 @@ class SequentialAuxiliary(SequentialVanilla, torch.nn.Module):
 
         return x
 
+    def regenerate_param(self, params):
+        pass
+
     @timed
     @torch.no_grad()
     def regenerate(self, param_idx_map):

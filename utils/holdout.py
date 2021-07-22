@@ -78,7 +78,7 @@ class AbstractSplit(ABC):
                                batch_size=self.config["data_config"]["batch_size"],
                                sampler=sampler) for sampler in samplers]
 
-    def partition(self):
+    def partition(self) -> Dict:
         self.type_check(self.dataset)
         if self.data_config["split_type"] == "kfold":
             return self.kfold()

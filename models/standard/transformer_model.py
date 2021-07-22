@@ -53,7 +53,7 @@ class TransformerModel(torch.nn.Module):
     def __init__(self, config, datasets, device):
         super(TransformerModel, self).__init__()
         model_config = config["model_config"]
-        num_tokens = len(datasets.vocab.get_stoi())  # Dictionary mapping tokens to indices
+        num_tokens = len(config["vocab"].get_stoi())  # Dictionary mapping tokens to indices
         input_size = model_config["input_size"]
         num_heads = model_config["num_heads"]
         hidden_size = model_config["hidden_size"]

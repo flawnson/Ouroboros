@@ -376,16 +376,13 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
 
         i = self.bptt_counter * self.config["data_config"]["bptt"]
         self.bptt_counter += 1
-        seq_len = min(self.config["data_config"]["bptt"], len(self.dataset[list(self.dataset)[0]][0]) - 1 - i)
-        # data = self.datatensor[i:i + seq_len]
-        # targets = self.datatensor[i + 1:i + seq_len + 1].reshape(-1)
 
-        if batch.size(1) != self.config["data_config"]["bptt"]:
+        if batch[0].size(1) != self.config["data_config"]["bptt"]:
             src_mask = self.model.model.generate_square_subsequent_mask(batch.size(1)).to(self.device)
 
-        output = self.model(batch, src_mask)
-        predictions = {"aux": output.view(-1, len(self.dataset[list(self.dataset)[0]][0].dataset.vocab))}
-        targets = {"aux": targets}
+        output = self.model(batch[0], src_mask)
+        predictions = {"aux": output.view(-1, len(self.config["vocab"]))}
+        targets = {"aux": batch[1].reshape(-1)}
 
         loss = self.loss(predictions, targets)
 
