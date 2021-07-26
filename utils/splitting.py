@@ -25,16 +25,47 @@ class AbstractSplit(ABC):
         self.param_data = param_data
         self.device = device
 
-    @abstractmethod
+    def binary(self):
+        splits = train_test_split(self.dataset,
+                                  self.dataset.targets,
+                                  self.data_config["split_kwargs"],
+                                  random_state=self.config["seed"])
+        datasets = [torch.utils.data.TensorDataset(torch.Tensor(list(zip(x, x)))) for x in iter(splits)]
+        dataloaders = [DataLoader(dataset, batch_size=self.config["data_config"]["batch_size"]) for dataset in datasets]
+        # Organizing datalaoders into dictionary
+        dataloaders = dict(zip([f"split_{x}" for x in range(1, len(dataloaders))], dataloaders))
+        # Creating dataloaders for the param_data
+        dataloaders = {name: [dataloader, DataLoader(self.param_data.params)] for
+                       name, dataloader in dataloaders.items()}
+
+        return dataloaders
+
+    def holdout(self):
+        aux_p = math.floor(self.data_config["split_kwargs"]["train_size"] * len(self.dataset))
+        aux_split_idx = LeavePOut(aux_p).split(self.dataset, self.dataset.targets)
+        param_p = self.data_config["split_kwargs"]["train_size"] * len(self.param_data)
+        param_split_idx = LeavePOut(param_p).split(self.dataset, self.dataset.targets)
+
+        aux_samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in aux_split_idx[0]]
+        param_samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in param_split_idx[0]]
+        # Getting datalaoders from the aux sampler
+        dataloaders = self.get_dataloaders(subsets=[None] * len(aux_samplers), samplers=aux_samplers)
+        # Organizing datalaoders into dictionary
+        dataloaders = dict(zip([f"split_{x}" for x in range(1, len(dataloaders))], dataloaders))
+        # Creating dataloaders for the param_data
+        dataloaders = {name: [dataloader, DataLoader(self.param_data.params, sampler=param_samplers)] for
+                       name, dataloader in dataloaders.items()}
+
+        return dataloaders
+
     def shuffle(self):
         split_idx = list(ShuffleSplit(**self.data_config["split_kwargs"],
                                       random_state=self.config["seed"]).split(self.dataset,
                                                                               self.dataset.targets))
         samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx]
         dataloaders = [DataLoader(self.dataset, sampler=sampler) for sampler in samplers]
-        return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
+        return dict(zip([f"split_{x}" for x in range(1, len(dataloaders))], dataloaders))
 
-    @abstractmethod
     def kfold(self):
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
@@ -46,7 +77,7 @@ class AbstractSplit(ABC):
         samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(self.dataset, self.dataset.targets)]
         dataloaders = self.get_dataloaders(subsets=[None]*len(samplers), samplers=samplers)
 
-        return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
+        return dict(zip([f"split_{x}" for x in range(1, len(dataloaders))], dataloaders))
 
     @staticmethod
     @abstractmethod
@@ -81,13 +112,13 @@ class AbstractSplit(ABC):
     def partition(self) -> Dict:
         self.type_check(self.dataset)
         if self.data_config["split_type"] == "kfold":
-            return self.kfold()
+            return self.kfold()  # Stratified k-fold
         elif self.data_config["split_type"] == "shuffle":
-            return self.shuffle()
+            return self.shuffle()  # Shuffle splitting
         elif self.data_config["split_type"] == "holdout":
-            return self.holdout()
+            return self.holdout()  # Hold p out
         elif self.data_config["split_type"] == "binary":
-            return self.binary()
+            return self.binary()  # Train test splitting
         else:
             raise NotImplementedError(f"Split-type: {self.data_config['split_type']} not understood")
 
@@ -116,7 +147,7 @@ class ImageDataSplit(AbstractSplit):
         samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx[0]]
         dataloaders = self.get_dataloaders(subsets=[None]*len(samplers), samplers=samplers)
 
-        return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
+        return dict(zip([f"split_{x}" for x in range(1, len(dataloaders))], dataloaders))
 
     def kfold(self) -> Dict[str, DataLoader]:
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
@@ -128,7 +159,7 @@ class ImageDataSplit(AbstractSplit):
         samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(self.dataset, self.dataset.targets)]
         dataloaders = self.get_dataloaders(subsets=[None]*len(samplers), samplers=samplers)
 
-        return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
+        return dict(zip([f"split_{x}" for x in range(1, len(dataloaders))], dataloaders))
 
     @staticmethod
     def type_check(subject):
@@ -184,7 +215,7 @@ class QuineDataSplit(AbstractSplit):
         samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in split_idx]
         dataloaders = self.get_dataloaders(subsets=[None]*len(samplers), samplers=samplers)
 
-        return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
+        return dict(zip([f"split_{x}" for x in range(1, len(dataloaders))], dataloaders))
 
     def kfold(self) -> Dict[str, DataLoader]:
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
@@ -197,7 +228,7 @@ class QuineDataSplit(AbstractSplit):
         samplers = [torch.utils.data.SubsetRandomSampler(idx) for idx in splits.split(self.dataset, self.dataset.targets)]
         dataloaders = self.get_dataloaders(subsets=[None]*len(samplers), samplers=samplers)
 
-        return dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
+        return dict(zip([f"split_{x}" for x in range(1, len(dataloaders))], dataloaders))
 
     @staticmethod
     def type_check(subject):
@@ -220,12 +251,12 @@ class TextDataSplit(AbstractSplit):
         datasets = [torch.utils.data.TensorDataset(torch.Tensor(list(zip(x, x)))) for x in iter(splits)]
         dataloaders = [DataLoader(dataset, batch_size=self.config["data_config"]["batch_size"]) for dataset in datasets]
         # Organizing datalaoders into dictionary
-        dataloaders = dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
+        dataloaders = dict(zip([f"split_{x}" for x in range(1, len(dataloaders))], dataloaders))
         # Creating dataloaders for the param_data
         dataloaders = {name: [dataloader, DataLoader(self.param_data.params, sampler=param_samplers)] for
                        name, dataloader in dataloaders.items()}
 
-        return
+        return dataloaders
 
     def holdout(self):
         aux_p = math.floor(self.data_config["split_kwargs"]["train_size"] * len(self.dataset))
@@ -238,7 +269,7 @@ class TextDataSplit(AbstractSplit):
         # Getting datalaoders from the aux sampler
         dataloaders = self.get_dataloaders(subsets=[None] * len(aux_samplers), samplers=aux_samplers)
         # Organizing datalaoders into dictionary
-        dataloaders = dict(zip([f"split_{x}" for x in range(1, self.data_config["num_splits"])], dataloaders))
+        dataloaders = dict(zip([f"split_{x}" for x in range(1, len(dataloaders))], dataloaders))
         # Creating dataloaders for the param_data
         dataloaders = {name: [dataloader, DataLoader(self.param_data.params, sampler=param_samplers)] for
                        name, dataloader in dataloaders.items()}

@@ -1,11 +1,13 @@
 {
   "run_name": "Linear_cifar10_auxiliary",
   "seed": 42,
+  "schema": null,
   "run_type": "demo",
   "logging": false,
   "log_level": "logging.INFO",
   "clean_log_dir": true,
   "log_dir": "saves/logs/auxiliary",
+  "device": "cuda",
   "wandb_logging":
   {
     "run_name": "aux_demo_small",
@@ -21,8 +23,11 @@
       "download": true
     },
     "data_path": "data/datafiles/housing_prices/train.csv",
-    "split_type": "holdout",
-    "num_splits": 5,
+    "split_type": "binary",
+    "split_kwargs": {
+      "test_size": 0.20,
+      "shuffle": true
+    },
     "shuffle": true,
     "batch_size": 16,
     "data_subset": null,

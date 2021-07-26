@@ -22,7 +22,7 @@ from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset
 from data.data_preprocessing import get_image_data, get_graph_data, get_text_data
-from utils.holdout import get_image_data_split, get_text_data_split
+from utils.splitting import get_image_data_split, get_text_data_split
 from utils.utilities import get_json_schema
 from utils.checkpoint import load
 from optim.parameters import ModelParameters

@@ -1,6 +1,7 @@
 {
   "run_name": "Linear_cifar10_auxiliary",
   "seed": 42,
+  "schema": null,
   "run_type": "demo",
   "logging": true,
   "log_level": "logging.INFO",
@@ -22,6 +23,10 @@
     },
     "data_path": "data/datafiles/housing_prices/train.csv",
     "split_type": "holdout",
+    "split_kwargs": {
+      "n_splits": 1,
+      "test_size": 0.20
+    },
     "num_splits": 5,
     "shuffle": true,
     "batch_size": 128,

@@ -11,7 +11,7 @@ from optim.losses import loss as loss_fun
 from data.linear_preprocessing import get_image_data
 from optim.algos import OptimizerObj, LRScheduler
 from utils.scores import scores
-from utils.holdout import ImageDataSplit
+from utils.splitting import ImageDataSplit
 from utils.logging import PTTBLogger
 
 
