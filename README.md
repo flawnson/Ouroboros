@@ -116,6 +116,7 @@ Splitting is corresponded with SKLearn's model selection classes and methods as 
 "kfold" == StratifiedKFold()
 ```
 
+Naturally, splits that require shuffling data do not apply to time series data and our sequential models.
 The pipeline currently supports train and test splits only (you cannot specify a validation set)
 
 ### Standard Models

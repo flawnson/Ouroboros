@@ -392,7 +392,7 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
         torch.nn.utils.clip_grad_norm_(self.model.model.parameters(), 0.5)
         self.optimizer.step()
 
-    def param_train(self, param_idx):
+    def param_train(self, batch):
         self.model.train()
         self.optimizer.zero_grad()
 

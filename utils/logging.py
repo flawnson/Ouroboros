@@ -6,6 +6,7 @@ import os
 import wandb
 import shutil
 import pathlib
+import logging
 import functools
 import os.path as osp
 from datetime import datetime
@@ -119,8 +120,11 @@ class PTTBLogger(object):
 class WandBLogger(object):
     def __init__(self, config):
         self.config = config
-        self.logger = wandb.init(name=config["wandb_logging"]["run_name"],
-                      project=config["wandb_logging"]["project"],
-                      entity=config["wandb_logging"]["entity"],
-                      config=config) if config["logging"] else None
-
+        if self.config["logging"]:
+            self.logger = wandb.init(name=config["wandb_logging"]["run_name"],
+                          project=config["wandb_logging"]["project"],
+                          entity=config["wandb_logging"]["entity"],
+                          config=config) if config["logging"] else None
+        else:
+            logging.getLogger("wandb").setLevel(logging.WARNING)
+            self.logger = None
