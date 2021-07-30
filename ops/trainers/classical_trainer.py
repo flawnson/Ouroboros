@@ -129,7 +129,13 @@ class ClassicalTrainer(AbstractTrainer):
         Returns:
             A score dictionary.
         """
-        return scores(self.config, self.dataset, self.epoch_data["total"], self.epoch_data["correct"], self.device)
+        return scores(self.config,
+                      self.dataset,
+                      self.epoch_data["predictions"],
+                      self.epoch_data["targets"],
+                      self.epoch_data["total"],
+                      self.epoch_data["correct"],
+                      self.device)
 
     def write(self, epoch: int, scores: Dict):
         """
@@ -145,7 +151,7 @@ class ClassicalTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('loss (train)', train_loss, epoch)
         self.tb_logger.scalar_summary('scores (train)', scores["acc"][0], epoch)
         if self.wandb_logger is not None:
-            self.wandb_logger.log({
+            self.wandb_logger.logger.log({
                     'train/loss': train_loss,
                     'train/scores': scores["acc"][0]
                 }, step=epoch, commit=False)
@@ -155,7 +161,7 @@ class ClassicalTrainer(AbstractTrainer):
         self.tb_logger.scalar_summary('loss (test)', test_loss, epoch)
         self.tb_logger.scalar_summary('scores (test)', scores["acc"][1], epoch)
         if self.wandb_logger is not None:
-            self.wandb_logger.log({
+            self.wandb_logger.logger.log({
                     'test/loss': test_loss,
                     'test/scores': scores["acc"][1]
                 }, step=epoch, commit=True)
@@ -182,7 +188,7 @@ class ClassicalTrainer(AbstractTrainer):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
                 if self.wandb_logger is not None:
-                    self.wandb_logger.log({
+                    self.wandb_logger.logger.log({
                             'epoch': epoch
                         }, commit=False)
 

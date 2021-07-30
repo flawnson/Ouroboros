@@ -9,9 +9,11 @@ from sklearn.metrics import f1_score, precision_score, recall_score, jaccard_sco
 
 
 class GeneralScores:
-    def __init__(self, config: Dict, dataset, total, correct, device: torch.device):
+    def __init__(self, config: Dict, dataset, predictions, targets, total, correct, device: torch.device):
         self.score_config = config["score_config"]
         self.dataset = dataset
+        self.predictions = predictions
+        self.targets = targets
         self.total = total
         self.correct = correct
         self.device = device
@@ -32,6 +34,9 @@ class GeneralScores:
             logger.exception(e)
             logger.info("Could not calculate accuracy, returning 0")
             return 0
+
+    def auroc(self):
+        return roc_auc_score()
 
     def get_scores(self) -> Dict[str, List[float]]:
         scoreset = {"acc": self.accuracy()}
@@ -109,7 +114,7 @@ class GraphScores:
         return {score_type: scoreset[score_type] for score_type in self.score_config.keys()}
 
 
-def scores(config: Dict, dataset, total, correct, device: torch.device) -> Dict:
+def scores(config: Dict, dataset, accumulator, device: torch.device) -> Dict:
     """
     Function to call the correct score class
 
@@ -123,10 +128,11 @@ def scores(config: Dict, dataset, total, correct, device: torch.device) -> Dict:
         Score object corresponding to the type of data (which then returns a dictionary of scores)
 
     """
+    predictions, targets, total, correct = accumulator["predictions"], accumulator["targets"], accumulator["total"]
     if config["data_config"]["dataset"].casefold() == "mnist" or "cifar" or "cifar10":
-        return GeneralScores(config, dataset, total, correct, device).get_scores()
+        return GeneralScores(config, dataset, predictions, targets, total, correct, device).get_scores()
     elif config["data_config"]["dataset"].casefold() == "cora":
-        return GraphScores(config, dataset, correct, device).get_scores()
+        return GraphScores(config, dataset, predictions, targets, correct, device).get_scores()
     else:
         raise NotImplementedError(f"{config['data_config']['dataset']} is not a data type")
 

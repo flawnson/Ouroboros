@@ -175,7 +175,9 @@ class AuxiliaryTrainer(AbstractTrainer):
                            "task_loss": [0, 0],  # The aux loss, original implementation is nll_loss
                            "combined_loss": [0, 0],
                            "correct": [0, 0],
-                           "total": [0, 0]}  # First position for training scores, second position for test scores
+                           "total": [0, 0],  # First position for training scores, second position for test scores
+                           "outputs": [],
+                           "targets": []}  # Only accumulate outputs and targets for aux data
         self.param_idx_map = dict({}) # Maps param_idx to value, to be used in regeneration
 
     def train(self, data, param_idxs):
@@ -213,6 +215,8 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.epoch_data["sr_loss"][0] += loss["sr_loss"].item()  # accumulate
         self.epoch_data["task_loss"][0] += loss["task_loss"].item()  # accumulate
         self.epoch_data["combined_loss"][0] += loss["combined_loss"].item()  # accumulate
+        self.epoch_data["outputs"][0] += predictions["aux"].item()
+        self.epoch_data["targets"][0] += targets["aux"].item()
 
         loss["combined_loss"].backward()
         self.optimizer.step()
@@ -253,13 +257,15 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.epoch_data["sr_loss"][1] += loss["sr_loss"].item() #accumulate for epoch
         self.epoch_data["task_loss"][1] += loss["task_loss"].item() #accumulate for epoch
         self.epoch_data["combined_loss"][1] += loss["combined_loss"].item() #accumulate for epoch
+        self.epoch_data["outputs"][1] += predictions["aux"].item()
+        self.epoch_data["targets"][1] += targets["aux"].item()
 
         return predictions, targets
 
     def loss(self, predictions, targets):
         return loss(self.config, self.wrapper.model, predictions, targets)
 
-    def score(self):
+    def score(self, outputs, targets):
         return scores(self.config, self.dataset, self.epoch_data["total"], self.epoch_data["correct"], self.device)
 
     def write(self, epoch: int, scores: Dict):
@@ -335,7 +341,7 @@ class AuxiliaryTrainer(AbstractTrainer):
                     outputs, targets = self.test(data, param_idx)
 
                 # Scores cumulated and calculated per epoch, as done in Quine
-                epoch_scores = self.score()
+                epoch_scores = self.score(outputs, targets)
 
                 # Regeneration (per epoch) step if specified in config
                 if self.run_config["regenerate"]: self.wrapper.model.regenerate(self.param_idx_map)

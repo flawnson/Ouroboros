@@ -14,7 +14,6 @@ from torch.utils.data import Dataset, DataLoader, Subset
 
 from data.combine_preprocessing import CombineImageDataset
 from models.augmented.quine import Quine
-from utils.utilities import get_split_sizes
 
 
 class AbstractSplit(ABC):
@@ -41,9 +40,9 @@ class AbstractSplit(ABC):
         return dataloaders
 
     def holdout(self):
-        aux_p = math.floor(self.data_config["split_kwargs"]["train_size"] * len(self.dataset))
+        aux_p = math.floor(self.data_config["split_kwargs"]["test_size"] * len(self.dataset))
         aux_split_idx = LeavePOut(aux_p).split(self.dataset, self.dataset.targets)
-        param_p = self.data_config["split_kwargs"]["train_size"] * len(self.param_data)
+        param_p = self.data_config["split_kwargs"]["test_size"] * len(self.param_data)
         param_split_idx = LeavePOut(param_p).split(self.dataset, self.dataset.targets)
 
         aux_samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in aux_split_idx[0]]
@@ -132,7 +131,6 @@ class ImageDataSplit(AbstractSplit):
         self.device = device
 
     def shuffle(self) -> Dict[str, DataLoader]:
-        split_size = get_split_sizes(self.data_config, self.dataset)
         split_idx = None
         if self.larger_dataset == "aux_data":
             split_idx = list(ShuffleSplit(**self.data_config["split_kwargs"],
@@ -173,7 +171,7 @@ class GraphDataSplit(AbstractSplit):
         self.device = device
 
     def shuffle(self):
-        split_size = get_split_sizes(self.data_config, self.dataset)
+        pass
 
     def kfold(self):
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
@@ -204,7 +202,6 @@ class QuineDataSplit(AbstractSplit):
     def shuffle(self):
         # When splitting/partition, we split the indices of the params (which are ints)
         # In combineDataset, the param_data indices will be passed to get_param() in get_item
-        split_size = get_split_sizes(self.data_config, self.dataset)
 
         # train_x, test_x, train_y, test_y = train_test_split(self.dataset, self.dataset.targets, train_size=split_size, random_state=self.config["seed"])
         split_idx = list(ShuffleSplit(**self.data_config["split_kwargs"],
@@ -257,9 +254,9 @@ class TextDataSplit(AbstractSplit):
         return dataloaders
 
     def holdout(self) -> Dict[str, List[DataLoader]]:
-        aux_p = math.floor(self.data_config["split_kwargs"]["train_size"] * len(self.dataset))
+        aux_p = math.floor(self.data_config["split_kwargs"]["test_size"] * len(self.dataset))
         aux_split_idx = LeavePOut(aux_p).split(self.dataset, self.dataset.targets)
-        param_p = self.data_config["split_kwargs"]["train_size"] * len(self.param_data)
+        param_p = self.data_config["split_kwargs"]["test_size"] * len(self.param_data)
         param_split_idx = LeavePOut(param_p).split(self.dataset, self.dataset.targets)
 
         aux_samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in aux_split_idx[0]]
@@ -277,7 +274,6 @@ class TextDataSplit(AbstractSplit):
     def shuffle(self) -> Dict[str, List[DataLoader]]:
         # When splitting/partition, we split the indices of the params (which are ints)
         # In combineDataset, the param_data indices will be passed to get_param() in get_item
-        split_size = get_split_sizes(self.data_config, self.dataset)
 
         aux_split_idx = list(ShuffleSplit(**self.data_config["split_kwargs"],
                                           random_state=self.config["seed"]).split(self.dataset,

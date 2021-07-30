@@ -19,15 +19,13 @@
     "dataset": "mnist",
     "data_kwargs": {
       "root": "data/datafiles/mnist",
-      "download": false
+      "download": true
     },
     "data_path": "data/datafiles/housing_prices/train.csv",
-    "split_type": "holdout",
+    "split_type": "shuffle",
     "split_kwargs": {
-      "n_splits": 1,
       "test_size": 0.20
     },
-    "num_splits": 5,
     "shuffle": true,
     "batch_size": 16,
     "data_subset": null,
@@ -42,7 +40,7 @@
     "normalize": "torch.nn.functional.layer_norm",
     "normalize_kwargs": {},
     "dropout": 0.10,
-    "layer_sizes": [3072, 40, 10]
+    "layer_sizes": [784, 3072, 512, 64, 64]
   },
   "model_aug_config":
   {

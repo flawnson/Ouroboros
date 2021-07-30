@@ -113,24 +113,6 @@ def initialize_iterable_dataset(config):
     return all_datasets
 
 
-def get_split_sizes(data_config, dataset):
-    try:
-        if data_config["split_type"] == "kfold":  # Asks for n_splits that is a minimum of 2
-            split_size = data_config["num_splits"]
-        elif data_config["split_type"] == "shuffle":  # Asks for n_splits that can be 1
-            split_size = data_config["num_splits"]
-        elif data_config["split_type"] == "holdout":  # Asks for p, the size of the test set as an integer
-            split_size = math.floor(data_config["train_size"] * len(dataset))
-        else:
-            raise NotImplementedError(f"The specified split type:{data_config['split_type']} is not implemented")
-    except KeyError as e:
-        split_size = DEFAULT_TRAIN_SPLIT
-        logger.error(e)
-        logger.info(f"Could not find split size in config, splitting dataset into {DEFAULT_TRAIN_SPLIT}")
-
-    return split_size
-
-
 def get_json_schema(config):
     if config["schema"]:
         return json.load(config["schema"])
