@@ -123,7 +123,7 @@ def main():
     logger.info(f"Successfully generated parameter data")
 
     ### Splitting dataset and parameters ###
-    dataloaders: List[DataLoader] = None
+    dataloaders: Dict[str, DataLoader] = None
     if config["data_config"]["dataset"] == "primary_labelset":
         pass
     elif config["data_config"]["dataset"].casefold() == "house":

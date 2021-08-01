@@ -266,7 +266,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         return loss(self.config, self.wrapper.model, predictions, targets)
 
     def score(self, outputs, targets):
-        return scores(self.config, self.dataset, self.epoch_data["total"], self.epoch_data["correct"], self.device)
+        return scores(self.config, self.dataset, self.epoch_data, self.device)
 
     def write(self, epoch: int, scores: Dict):
         logger.info(f"Train scores, Test scores: {scores}")
@@ -317,6 +317,8 @@ class AuxiliaryTrainer(AbstractTrainer):
             self.epoch_data["combined_loss"][i] = 0
             self.epoch_data["correct"][i] = 0
             self.epoch_data["total"][i] = 0
+            self.epoch_data["correct"] = []
+            self.epoch_data["total"] = []
 
         logger.info("States successfully reset for new epoch")
 

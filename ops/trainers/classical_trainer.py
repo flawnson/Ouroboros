@@ -129,13 +129,7 @@ class ClassicalTrainer(AbstractTrainer):
         Returns:
             A score dictionary.
         """
-        return scores(self.config,
-                      self.dataset,
-                      self.epoch_data["predictions"],
-                      self.epoch_data["targets"],
-                      self.epoch_data["total"],
-                      self.epoch_data["correct"],
-                      self.device)
+        return scores(self.config, self.dataset, self.epoch_data, self.device)
 
     def write(self, epoch: int, scores: Dict):
         """

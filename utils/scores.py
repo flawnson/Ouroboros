@@ -9,9 +9,8 @@ from sklearn.metrics import f1_score, precision_score, recall_score, jaccard_sco
 
 
 class GeneralScores:
-    def __init__(self, config: Dict, dataset, predictions, targets, total, correct, device: torch.device):
+    def __init__(self, config: Dict, predictions, targets, total, correct, device: torch.device):
         self.score_config = config["score_config"]
-        self.dataset = dataset
         self.predictions = predictions
         self.targets = targets
         self.total = total
@@ -36,7 +35,7 @@ class GeneralScores:
             return 0
 
     def auroc(self):
-        return roc_auc_score()
+        return roc_auc_score(self.targets["aux"], self.predictions["aux"], **self.score_config["auroc"])
 
     def get_scores(self) -> Dict[str, List[float]]:
         scoreset = {"acc": self.accuracy()}
@@ -128,9 +127,12 @@ def scores(config: Dict, dataset, accumulator, device: torch.device) -> Dict:
         Score object corresponding to the type of data (which then returns a dictionary of scores)
 
     """
-    predictions, targets, total, correct = accumulator["predictions"], accumulator["targets"], accumulator["total"]
+    predictions = accumulator["predictions"]
+    targets = accumulator["targets"]
+    total = accumulator["total"]
+    correct = accumulator["correct"]
     if config["data_config"]["dataset"].casefold() == "mnist" or "cifar" or "cifar10":
-        return GeneralScores(config, dataset, predictions, targets, total, correct, device).get_scores()
+        return GeneralScores(config, predictions, targets, total, correct, device).get_scores()
     elif config["data_config"]["dataset"].casefold() == "cora":
         return GraphScores(config, dataset, predictions, targets, correct, device).get_scores()
     else:

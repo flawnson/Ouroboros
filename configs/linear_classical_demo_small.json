@@ -65,7 +65,10 @@
     "checkpoint_dir": "saves/checkpoints/classical/"
   },
   "score_config": {
-      "acc": null
+    "acc": null,
+    "auroc": {
+      "average": "micro",
+      "multi_class": "ovr"}
   },
   "tuning_config": {
 

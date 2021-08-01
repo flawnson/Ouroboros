@@ -63,7 +63,7 @@ class HyperNetworkTrainer(AbstractTrainer):
         # self.epoch_data["accuracy"][1] = (100. * self.batch_data["correct"][1]) / total
 
     def score(self):
-        return scores(self.config, self.dataset, self.epoch_data["correct"], self.device)
+        return scores(self.config, self.dataset, self.epoch_data, self.device)
 
     def write(self, epoch, epoch_scores):
         logger.info(f"Total Loss value: {epoch_scores['acc'][0]}")

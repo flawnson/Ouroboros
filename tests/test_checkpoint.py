@@ -34,6 +34,8 @@ def device():
     logger.info(f"Running {config['run_name']} on {device}.")
 
 
+@timed
+@pytest.mark.parametrize("config,device", [config, device])
 def test_checkpoint(config, device):
     model = LinearModel(config, device).to(device)
     optimizer = OptimizerObj(config, model).optim_obj
