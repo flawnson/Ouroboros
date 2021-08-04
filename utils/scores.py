@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from sklearn.metrics import f1_score, precision_score, recall_score, jaccard_score, confusion_matrix, roc_auc_score
 
 
-class GeneralScores:
+class AbstractScores:
     def __init__(self, config: Dict, predictions, targets, total, correct, device: torch.device):
         self.score_config = config["score_config"]
         self.predictions = predictions
@@ -34,14 +34,27 @@ class GeneralScores:
             logger.info("Could not calculate accuracy, returning 0")
             return 0
 
+    def precision(self):
+        return precision_score(self.targets, np.argmax(self.predictions, axis=1), **self.score_config["precision"])
+
+    def recall(self):
+        return recall_score(self.targets, np.argmax(self.predictions, axis=1), **self.score_config["recall"])
+
     def auroc(self):
         return roc_auc_score(self.targets, self.predictions, **self.score_config["auroc"])
 
-    def get_scores(self) -> Dict[str, List[float]]:
-        scoreset = {"acc": self.accuracy(),
-                    "auroc": self.auroc()}
+    def f1_score(self):
+        return f1_score(self.targets, np.argmax(self.predictions, axis=1), **self.score_config["f1_score"])
 
-        return {score_type: scoreset[score_type] for score_type in self.score_config.keys()}
+    def get_scores(self) -> Dict[str, List[float]]:
+        scoreset = {"acc": self.accuracy,
+                    "auroc": self.auroc,
+                    "precision": self.precision,
+                    "recall": self.recall,
+                    "f1_score": self.f1_score}
+
+        return {score_type: scoreset[score_type]() for score_type, score_args in self.score_config.items()
+                if score_args is not None}
 
 
 class GraphScores:
@@ -133,7 +146,7 @@ def scores(config: Dict, dataset, accumulator, device: torch.device) -> Dict:
     total = accumulator["total"]
     correct = accumulator["correct"]
     if config["data_config"]["dataset"].casefold() == "mnist" or "cifar" or "cifar10":
-        return GeneralScores(config, predictions, targets, total, correct, device).get_scores()
+        return AbstractScores(config, predictions, targets, total, correct, device).get_scores()
     elif config["data_config"]["dataset"].casefold() == "cora":
         return GraphScores(config, dataset, predictions, targets, correct, device).get_scores()
     else:

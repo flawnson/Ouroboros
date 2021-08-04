@@ -284,7 +284,19 @@
       "type": "object",
       "properties": {
         "acc": {
-          "description": "The accuracy of the model"
+          "description": "The accuracy of the model predictions calculated per epoch"
+        },
+        "auroc": {
+          "description": "The auroc score of the model predictions calculated per epoch"
+        },
+        "f1_score": {
+          "description": "The f1_score of the model predictions calculated per epoch"
+        },
+        "precision": {
+          "description": "The f1_score of the model predictions calculated per epoch"
+        },
+        "recall": {
+          "description": "The f1_score of the model predictions calculated per epoch"
         }
       }
     }
