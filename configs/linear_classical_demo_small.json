@@ -68,7 +68,8 @@
     "acc": null,
     "auroc": {
       "average": "micro",
-      "multi_class": "ovr"}
+      "multi_class": "ovr"
+    }
   },
   "tuning_config": {
 

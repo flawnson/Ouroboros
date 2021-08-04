@@ -17,7 +17,7 @@ from utils.utilities import timed
 
 @pytest.fixture
 def config():
-    file = os.path.join("..", "configs", "linear_aux_demo.json")
+    file = os.path.join("..", "configs", "linear_aux_demo_small.json")
     config: Dict = json.load(open(file))
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
     logzero.loglevel(eval(config["log_level"]))
@@ -37,20 +37,23 @@ def device(config):
 @timed
 def test_scoring(config, device):
     NUM_SAMPLES = 500
+    NUM_CLASSES = 10
 
     epoch_data = {"predictions": [],
                   "targets": [],
                   "total": [0, 0],
                   "correct": [0, 0]}
 
-    epoch_data["predictions"] += np.random.randint(0, 10, NUM_SAMPLES).tolist()
-    epoch_data["targets"] += np.random.randint(0, 10, NUM_SAMPLES).tolist()
+    epoch_data["predictions"] += np.random.dirichlet(np.ones(NUM_CLASSES), size=NUM_SAMPLES).tolist()
+    epoch_data["targets"] += np.random.randint(0, NUM_CLASSES, NUM_SAMPLES).tolist()
     epoch_data["total"].append(NUM_SAMPLES)
-    epoch_data["correct"] += sum(np.equal(epoch_data["predictions"], epoch_data["targets"]))
+    epoch_data["correct"] += sum(np.equal(epoch_data["targets"], np.argmax(epoch_data["predictions"], axis=1)))
 
     score_dict = scores(config, None, epoch_data, device)  # No dataset needed for non-graph models
+    logger.info(score_dict)
 
     assert isinstance(score_dict, dict)
+    assert isinstance(score_dict["auroc"], float)
 
 
 

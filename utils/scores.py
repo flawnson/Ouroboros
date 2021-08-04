@@ -35,10 +35,11 @@ class GeneralScores:
             return 0
 
     def auroc(self):
-        return roc_auc_score(self.targets["aux"], self.predictions["aux"], **self.score_config["auroc"])
+        return roc_auc_score(self.targets, self.predictions, **self.score_config["auroc"])
 
     def get_scores(self) -> Dict[str, List[float]]:
-        scoreset = {"acc": self.accuracy()}
+        scoreset = {"acc": self.accuracy(),
+                    "auroc": self.auroc()}
 
         return {score_type: scoreset[score_type] for score_type in self.score_config.keys()}
 

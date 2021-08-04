@@ -9,9 +9,11 @@ import numpy as np
 
 from typing import *
 from logzero import logger
+
 from optim.algos import OptimizerObj
 from models.standard.linear_model import LinearModel
 from utils.checkpoint import PTCheckpoint
+from utils.utilities import timed
 
 ### Configuring ###
 
