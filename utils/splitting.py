@@ -285,8 +285,8 @@ class TextDataSplit(AbstractSplit):
         param_samplers = [torch.utils.data.SubsetRandomSampler(idx_array) for idx_array in param_split_idx[0]]
         dataloaders = self.get_dataloaders(aux_samplers)
         dataloaders = dict(zip([f"split_{x + 1}" for x in range(len(dataloaders) + 1)], dataloaders))
-        dataloaders = {name: [dataloader, DataLoader(self.param_data.params, sampler=param_samplers)] for
-                       name, dataloader in dataloaders.items()}
+        dataloaders = {name: [dataloader, DataLoader(self.param_data.params, sampler=sampler)] for
+                       (name, dataloader), sampler in zip(dataloaders.items(), param_samplers)}
 
         return dataloaders
 
