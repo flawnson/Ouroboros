@@ -54,7 +54,9 @@ class ClassicalTrainer(AbstractTrainer):
         self.device = device
         self.epoch_data = {"loss": [0] * len(dataset),
                            "correct": [0] * len(dataset),
-                           "total": [0] * len(dataset)}  # First position for training scores, second position for test scores
+                           "total": [0] * len(dataset),
+                           "predictions": [0] * len(dataset),
+                           "targets": [0] * len(dataset)}  # First position for training scores, second position for test scores
 
     def train(self, data, batch_idx):
         """
@@ -77,14 +79,14 @@ class ClassicalTrainer(AbstractTrainer):
         loss = self.loss(logits, data[1])
         predictions = torch.argmax(logits, dim=1) # get the index of the max log-probability
 
-        self.epoch_data["total"][0] += data[0].shape[0] #accumulate total number of samples in this batch
-        self.epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
         self.epoch_data["loss"][0] += loss["loss"].item()  # accumulate
+        self.epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
+        self.epoch_data["total"][0] += data[0].shape[0] #accumulate total number of samples in this batch
+        self.epoch_data["predictions"][0] += logits
+        self.epoch_data["targets"] += data[1]
 
         loss["loss"].backward()
         self.optimizer.step()
-
-        return logits, data[1]
 
     @torch.no_grad()
     def test(self, data, batch_idx):
@@ -106,10 +108,11 @@ class ClassicalTrainer(AbstractTrainer):
         loss = self.loss(logits, data[1])
         predictions = torch.argmax(logits, dim=1)
 
-        self.epoch_data["total"][1] += data[0].shape[0] #accumulate total number of samples in this batch
-        self.epoch_data["correct"][1] += predictions.eq(data[1].view_as(predictions)).sum().item()
         self.epoch_data["loss"][1] += loss["loss"].item()
-        return logits, data[1]
+        self.epoch_data["correct"][1] += predictions.eq(data[1].view_as(predictions)).sum().item()
+        self.epoch_data["total"][1] += data[0].shape[0] #accumulate total number of samples in this batch
+        self.epoch_data["predictions"][0] += logits
+        self.epoch_data["targets"] += data[1]
 
     def loss(self, predictions, targets) -> Dict:
         """

@@ -404,25 +404,29 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
         self.model.train()
         self.optimizer.zero_grad()
 
+        output = self.model(batch[0])
+        predictions = {"aux": output.view(-1, len(self.config["vocab"]))}
+        targets = {"aux": batch[1].reshape(-1)}
+
+        self.epoch_data["sr_loss"][0] += loss["sr_loss"].item()  # accumulate
+
     @torch.no_grad()
     def sequence_test(self, batch, src_mask):
         self.model.eval()
-        src_mask = self.model.generate_square_subsequent_mask(self.config["data_config"]["bptt"]).to(self.device)
 
         if batch[1].size(0) != self.config["data_config"]["bptt"]:
             src_mask = self.model.generate_square_subsequent_mask(batch[0].size(0)).to(self.device)
 
         output = self.model(batch[0], src_mask)
-
         predictions = {"aux": output.view(-1, len(self.config["vocab"]))}
         targets = {"aux": batch[1].reshape(-1)}
 
         loss = self.loss(predictions, targets)
+
         self.epoch_data["task_loss"][0] += loss["task_loss"].item()  # accumulate
 
     def param_test(self, param_idx):
         self.model.eval()
-        print(1 + 4)
 
     def reset(self):
         for i in range(len(self.dataset)):
