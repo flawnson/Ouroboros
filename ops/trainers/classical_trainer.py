@@ -82,9 +82,8 @@ class ClassicalTrainer(AbstractTrainer):
         self.epoch_data["loss"][0] += loss["loss"].item()  # accumulate
         self.epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
         self.epoch_data["total"][0] += data[0].shape[0] #accumulate total number of samples in this batch
-        self.epoch_data["predictions"][0] += logits
-        torch.Tensor(self.epoch_data["predictions"][0])
-        self.epoch_data["targets"][0] += data[-1]
+        self.epoch_data["predictions"][0] += logits.cpu().detach().tolist()
+        self.epoch_data["targets"][0] += data[-1].cpu().detach().tolist()
 
         loss["loss"].backward()
         self.optimizer.step()
@@ -112,8 +111,8 @@ class ClassicalTrainer(AbstractTrainer):
         self.epoch_data["loss"][1] += loss["loss"].item()
         self.epoch_data["correct"][1] += predictions.eq(data[1].view_as(predictions)).sum().item()
         self.epoch_data["total"][1] += data[0].shape[0] #accumulate total number of samples in this batch
-        self.epoch_data["predictions"][0] += logits
-        self.epoch_data["targets"] += data[1]
+        self.epoch_data["predictions"][1] += logits.cpu().detach().tolist()
+        self.epoch_data["targets"][1] += data[-1].cpu().detach().tolist()
 
     def loss(self, predictions, targets) -> Dict:
         """
