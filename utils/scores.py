@@ -35,7 +35,7 @@ class AbstractScores:
             return 0
 
     def precision(self):
-        return precision_score(self.targets, np.argmax(self.predictions, axis=1), **self.score_config["precision"])
+        return [precision_score(self.targets, torch.argmax(self.predictions[x], dim=1), **self.score_config["precision"]) for x in range(len(self.predictions))]
 
     def recall(self):
         return recall_score(self.targets, np.argmax(self.predictions, axis=1), **self.score_config["recall"])

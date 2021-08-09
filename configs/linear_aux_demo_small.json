@@ -40,13 +40,13 @@
     "normalize": "torch.nn.functional.layer_norm",
     "normalize_kwargs": {},
     "dropout": 0.10,
-    "layer_sizes": [3072, 512, 64]
+    "layer_sizes": [512, 64]
   },
   "model_aug_config":
   {
     "model_augmentation": "auxiliary",
     "n_inputs": 2,
-    "n_hidden": 1536,
+    "n_hidden": 256,
     "van_output_layers": [64, 1],
     "aux_output_layers": [64, 10],
     "reduction_method": "random"

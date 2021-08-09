@@ -55,8 +55,8 @@ class ClassicalTrainer(AbstractTrainer):
         self.epoch_data = {"loss": [0] * len(dataset),
                            "correct": [0] * len(dataset),
                            "total": [0] * len(dataset),
-                           "predictions": [0] * len(dataset),
-                           "targets": [0] * len(dataset)}  # First position for training scores, second position for test scores
+                           "predictions": [[], []],
+                           "targets": [[], []]}  # First position for training scores, second position for test scores
 
     def train(self, data, batch_idx):
         """
@@ -83,7 +83,8 @@ class ClassicalTrainer(AbstractTrainer):
         self.epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
         self.epoch_data["total"][0] += data[0].shape[0] #accumulate total number of samples in this batch
         self.epoch_data["predictions"][0] += logits
-        self.epoch_data["targets"] += data[1]
+        torch.Tensor(self.epoch_data["predictions"][0])
+        self.epoch_data["targets"][0] += data[-1]
 
         loss["loss"].backward()
         self.optimizer.step()
@@ -193,12 +194,12 @@ class ClassicalTrainer(AbstractTrainer):
                 self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])
                 for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    logits, targets = self.train(data, batch_idx)
+                    self.train(data, batch_idx)
 
                 self.test_epoch_length = len(self.dataset[list(self.dataset)[1]])
                 for batch_idx, data in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    logits, targets = self.test(data, batch_idx)
+                    self.test(data, batch_idx)
 
                 self.checkpoint.checkpoint(self.config,
                                            epoch,

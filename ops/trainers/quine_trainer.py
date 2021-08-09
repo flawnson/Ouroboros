@@ -176,8 +176,8 @@ class AuxiliaryTrainer(AbstractTrainer):
                            "combined_loss": [0, 0],
                            "correct": [0, 0],
                            "total": [0, 0],  # First position for training scores, second position for test scores
-                           "outputs": [],
-                           "targets": []}  # Only accumulate outputs and targets for aux data
+                           "predictions": [[], []],
+                           "targets": [[], []]}  # Only accumulate outputs and targets for aux data
         self.param_idx_map = dict({}) # Maps param_idx to value, to be used in regeneration
 
     def train(self, data, param_idxs):
@@ -200,11 +200,11 @@ class AuxiliaryTrainer(AbstractTrainer):
         params = torch.tensor(params, device=self.device)
 
         # Both predictions and targets will be dictionaries that hold two elements
-        output = self.wrapper.model(idx_vectors, data[0])
-        predictions = {"param": output[0],
-                       "aux": output[1]}
+        logits = self.wrapper.model(idx_vectors, data[0])
+        predictions = {"param": logits[0],
+                       "aux": logits[1]}
         for i, param_idx in enumerate(param_idxs):
-            self.param_idx_map[param_idx.item()] = output[0][i]
+            self.param_idx_map[param_idx.item()] = logits[0][i]
         aux_pred = torch.argmax(predictions["aux"], dim=1) # get the index of the max log-probability
         targets = {"param": params, "aux": data[-1]}
 
@@ -215,8 +215,8 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.epoch_data["sr_loss"][0] += loss["sr_loss"].item()  # accumulate
         self.epoch_data["task_loss"][0] += loss["task_loss"].item()  # accumulate
         self.epoch_data["combined_loss"][0] += loss["combined_loss"].item()  # accumulate
-        self.epoch_data["outputs"][0] += predictions["aux"].item()
-        self.epoch_data["targets"][0] += targets["aux"].item()
+        self.epoch_data["predictions"][0].append(logits[-1])
+        self.epoch_data["targets"][0].append(data[-1])
 
         loss["combined_loss"].backward()
         self.optimizer.step()
@@ -257,15 +257,15 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.epoch_data["sr_loss"][1] += loss["sr_loss"].item() #accumulate for epoch
         self.epoch_data["task_loss"][1] += loss["task_loss"].item() #accumulate for epoch
         self.epoch_data["combined_loss"][1] += loss["combined_loss"].item() #accumulate for epoch
-        self.epoch_data["outputs"][1] += predictions["aux"].item()
-        self.epoch_data["targets"][1] += targets["aux"].item()
+        self.epoch_data["predictions"][1].append(predictions["aux"])
+        self.epoch_data["targets"][1].append(targets["aux"])
 
         return predictions, targets
 
     def loss(self, predictions, targets):
         return loss(self.config, self.wrapper.model, predictions, targets)
 
-    def score(self, outputs, targets):
+    def score(self):
         return scores(self.config, self.dataset, self.epoch_data, self.device)
 
     def write(self, epoch: int, scores: Dict):
@@ -343,7 +343,7 @@ class AuxiliaryTrainer(AbstractTrainer):
                     outputs, targets = self.test(data, param_idx)
 
                 # Scores cumulated and calculated per epoch, as done in Quine
-                epoch_scores = self.score(outputs, targets)
+                epoch_scores = self.score()
 
                 # Regeneration (per epoch) step if specified in config
                 if self.run_config["regenerate"]: self.wrapper.model.regenerate(self.param_idx_map)
