@@ -69,7 +69,7 @@
     "regenerate": true
   },
   "score_config": {
-      "acc": null
+      "perplexity_score": {}
   },
   "tuning_config": {
 

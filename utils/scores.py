@@ -57,6 +57,28 @@ class AbstractScores:
                 if score_args is not None}
 
 
+class SequenceScores:
+    def __init__(self, config: Dict, predictions, targets, total, correct, device: torch.device):
+        self.score_config = config["score_config"]
+        self.predictions = predictions
+        self.targets = targets
+        self.total = total
+        self.correct = correct
+        self.device = device
+
+    def perplexity_score(self):
+        return [torch.exp(torch.nn.functional.cross_entropy(self.targets[x],
+                                                            self.predictions[x],
+                                                            **self.score_config["perplexity_score"]))
+                for x in range(len(self.predictions))]
+
+    def get_scores(self) -> Dict[str, List[float]]:
+        scoreset = {"perplexity_score": self.perplexity_score}
+
+        return {score_type: scoreset[score_type]() for score_type, score_args in self.score_config.items()
+                if score_args is not None}
+
+
 class GraphScores:
     # XXX: PLACEHOLDER; CODE IS NOT FUNCTIONAL
     def __init__(self, config: Dict, dataset, epoch_data, device: torch.device):
@@ -147,6 +169,8 @@ def scores(config: Dict, dataset, accumulator, device: torch.device) -> Dict:
     correct = accumulator["correct"]
     if config["data_config"]["dataset"].casefold() == "mnist" or "cifar" or "cifar10":
         return AbstractScores(config, predictions, targets, total, correct, device).get_scores()
+    if config["data_config"]["dataset"].casefold() == "wikitext2":
+        return SequenceScores(config, predictions, targets, total, correct, device).get_scores()
     elif config["data_config"]["dataset"].casefold() == "cora":
         return GraphScores(config, dataset, predictions, targets, correct, device).get_scores()
     else:
