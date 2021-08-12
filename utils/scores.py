@@ -167,7 +167,7 @@ def scores(config: Dict, dataset, accumulator, device: torch.device) -> Dict:
     targets = accumulator["targets"]
     total = accumulator["total"]
     correct = accumulator["correct"]
-    if config["data_config"]["dataset"].casefold() == "mnist" or "cifar" or "cifar10":
+    if config["data_config"]["dataset"].casefold() in ["mnist", "cifar", "cifar10"]:
         return AbstractScores(config, predictions, targets, total, correct, device).get_scores()
     if config["data_config"]["dataset"].casefold() == "wikitext2":
         return SequenceScores(config, predictions, targets, total, correct, device).get_scores()

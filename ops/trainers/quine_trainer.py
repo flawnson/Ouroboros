@@ -215,8 +215,8 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.epoch_data["sr_loss"][0] += loss["sr_loss"].item()  # accumulate
         self.epoch_data["task_loss"][0] += loss["task_loss"].item()  # accumulate
         self.epoch_data["combined_loss"][0] += loss["combined_loss"].item()  # accumulate
-        self.epoch_data["predictions"][0].append(logits[-1])
-        self.epoch_data["targets"][0].append(data[-1])
+        self.epoch_data["predictions"][0] += logits[-1].cpu().detach().tolist()
+        self.epoch_data["targets"][0] += data[-1].cpu().detach().tolist()
 
         loss["combined_loss"].backward()
         self.optimizer.step()
@@ -242,11 +242,11 @@ class AuxiliaryTrainer(AbstractTrainer):
         idx_vectors = torch.stack((idx_vectors)).to(self.device)
         params = torch.tensor(params, device=self.device)
 
-        test_output = self.wrapper.model(idx_vectors, data[0])
-        predictions = {"param": test_output[0],
-                        "aux": test_output[1]}
+        logits = self.wrapper.model(idx_vectors, data[0])
+        predictions = {"param": logits[0],
+                        "aux": logits[1]}
         for i, param_idx in enumerate(param_idxs):
-            self.param_idx_map[param_idx.item()] = test_output[0][i]
+            self.param_idx_map[param_idx.item()] = logits[0][i]
         aux_pred = torch.argmax(predictions["aux"], dim=1) # get the indices of the max log-probability
         targets = {"param": params, "aux": data[-1]}
 
@@ -257,8 +257,8 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.epoch_data["sr_loss"][1] += loss["sr_loss"].item() #accumulate for epoch
         self.epoch_data["task_loss"][1] += loss["task_loss"].item() #accumulate for epoch
         self.epoch_data["combined_loss"][1] += loss["combined_loss"].item() #accumulate for epoch
-        self.epoch_data["predictions"][1].append(predictions["aux"])
-        self.epoch_data["targets"][1].append(targets["aux"])
+        self.epoch_data["predictions"][1] += logits[-1].cpu().detach().tolist()
+        self.epoch_data["targets"][1] += data[-1].cpu().detach().tolist()
 
         return predictions, targets
 
@@ -427,6 +427,9 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
 
     def param_test(self, param_idx):
         self.model.eval()
+
+    def score(self):
+        return scores(self.config, self.dataset, self.epoch_data, self.device)
 
     def reset(self):
         for i in range(len(self.dataset)):

@@ -147,7 +147,7 @@ class ClassicalTrainer(AbstractTrainer):
         train_loss = self.epoch_data["loss"][0] / self.train_epoch_length
         self.tb_logger.scalar_summary('loss (train)', train_loss, epoch)
         self.tb_logger.scalar_summary('scores (train)', scores["acc"][0], epoch)
-        if self.wandb_logger is not None:
+        if self.wandb_logger.logger is not None:
             self.wandb_logger.logger.log({
                     'train/loss': train_loss,
                     'train/scores': scores["acc"][0]
@@ -157,7 +157,7 @@ class ClassicalTrainer(AbstractTrainer):
         test_loss = self.epoch_data["loss"][1] / self.test_epoch_length
         self.tb_logger.scalar_summary('loss (test)', test_loss, epoch)
         self.tb_logger.scalar_summary('scores (test)', scores["acc"][1], epoch)
-        if self.wandb_logger is not None:
+        if self.wandb_logger.logger is not None:
             self.wandb_logger.logger.log({
                     'test/loss': test_loss,
                     'test/scores': scores["acc"][1]
@@ -184,7 +184,7 @@ class ClassicalTrainer(AbstractTrainer):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
-                if self.wandb_logger is not None:
+                if self.wandb_logger.logger is not None:
                     self.wandb_logger.logger.log({
                             'epoch': epoch
                         }, commit=False)
