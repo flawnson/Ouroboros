@@ -138,14 +138,14 @@ class VanillaTrainer(AbstractTrainer):
                         }, commit=False)
 
                 self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])
-                for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[0]]):
+                for batch_idx, param_idxs in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    predictions, targets = self.train(param_idx)
+                    predictions, targets = self.train(param_idxs)
 
                 self.test_epoch_length = len(self.dataset[list(self.dataset)[1]])
-                for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[1]]):
+                for batch_idx, param_idxs in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    predictions, targets = self.test(param_idx)
+                    predictions, targets = self.test(param_idxs)
 
                 self.checkpoint.checkpoint(self.config,
                                            epoch,
@@ -333,14 +333,14 @@ class AuxiliaryTrainer(AbstractTrainer):
                         }, commit=False)
 
                 self.train_epoch_length = len(self.dataset[list(self.dataset)[0]]) # number of training batches
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
+                for batch_idx, (data, param_idxs) in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    outputs, targets = self.train(data, param_idx)
+                    outputs, targets = self.train(data, param_idxs)
 
                 self.test_epoch_length = len(self.dataset[list(self.dataset)[1]]) # number of testing batches
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
+                for batch_idx, (data, param_idxs) in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    outputs, targets = self.test(data, param_idx)
+                    outputs, targets = self.test(data, param_idxs)
 
                 # Scores cumulated and calculated per epoch, as done in Quine
                 epoch_scores = self.score()
