@@ -311,3 +311,5 @@ def get_auxiliary(config, model, datasets, device):
         return SequentialAuxiliary(config, model, datasets, device)
     elif isinstance(model, LinearModel):
         return Auxiliary(config, model, datasets, device)
+    else:
+        raise NotImplementedError(f"Aux model does not exist for provided model type {type(model)}")

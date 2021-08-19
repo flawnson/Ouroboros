@@ -178,7 +178,7 @@ class AuxiliaryTrainer(AbstractTrainer):
                            "total": [0, 0],  # First position for training scores, second position for test scores
                            "predictions": [[], []],
                            "targets": [[], []]}  # Only accumulate outputs and targets for aux data
-        self.param_idx_map = dict({}) # Maps param_idx to value, to be used in regeneration
+        self.param_idx_map = dict({})  # Maps param_idx to value, to be used in regeneration
 
     def train(self, data, param_idxs):
         self.wrapper.model.train()

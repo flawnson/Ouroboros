@@ -24,6 +24,8 @@ from models.augmented.quine import get_auxiliary, Vanilla
 from models.augmented.hypernetwork import MLPHyperNetwork, LinearHyperNetwork, ResNetPrimaryNetwork
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
+from optim.parameters import ModelParameters
+from utils.splitting import get_image_data_split, get_text_data_split
 
 
 @pytest.fixture
@@ -63,6 +65,8 @@ def datasets(config):
         raise NotImplementedError(f"{config['dataset']} is not a dataset")
     logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
 
+    return datasets
+
 
 @pytest.fixture
 def model(config, datasets, device):
@@ -84,8 +88,11 @@ def model(config, datasets, device):
         raise NotImplementedError(f"{config['model_config']['model_type']} is not a model type")
     logger.info(f"Successfully built the {config['model_config']['model_type']} model type")
 
+    return model
+
+
 @pytest.fixture
-def aug_model(config, datasets, device):
+def aug_model(config, model, datasets, device):
     ### Model augmentation ### (for none, use classical, all augmentations are model agnostic)
     aug_model: torch.nn.Module = None
     if config["model_aug_config"]["model_augmentation"].casefold() == "classical":
@@ -107,10 +114,59 @@ def aug_model(config, datasets, device):
         raise NotImplementedError(f"{config['model_aug_config']['model_augmentation']} is not a model augmentation")
     logger.info(f"Successfully built the {config['model_aug_config']['model_augmentation']} augmentation")
 
+    return aug_model
+
+
+@pytest.fixture
+def param_data(config, aug_model, datasets, device):
+    ### Param data preprocessing ###
+    param_data: ModelParameters = None
+    if config["model_aug_config"]["model_augmentation"].casefold() == "classical":
+        pass
+    elif config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
+        param_data = ModelParameters(config, aug_model, device)
+    elif config["model_aug_config"]["model_augmentation"].casefold() == "auxiliary":
+        param_data = ModelParameters(config, aug_model, device)
+    else:
+        logger.info(f"{config['model_aug_config']['model_augmentation']} does not require param data")
+    logger.info(f"Successfully generated parameter data")
+
+    return param_data
+
+
+@pytest.fixture
+def dataloaders(config, model, aug_model, datasets, param_data, device):
+    ### Splitting dataset and parameters ###
+    dataloaders: Dict[str, DataLoader] = None
+    if config["data_config"]["dataset"] == "primary_labelset":
+        pass
+    elif config["data_config"]["dataset"].casefold() == "house":
+        pass
+    elif config["data_config"]["dataset"].casefold() in ("cora", "reddit"):
+        pass
+    elif config["data_config"]["dataset"].casefold() in ("mnist", "cifar10"):
+        dataloaders = get_image_data_split(config, datasets, param_data, device)
+    elif config["data_config"]["dataset"].casefold() in ("wikitext2", "amazonreviewfull"):
+        dataloaders = get_text_data_split(config, datasets, param_data, device)
+    else:
+        raise NotImplementedError(f"Either {config['data_config']['dataset']} or {config['model_config']['model_type']} "
+                                  f"does not have a valid split")
+    logger.info(f"Successfully split dataset and parameters")
+
+    return dataloaders
+
 
 @timed
-def test_regenerating(config, device, aug_model, datasets):
-    for batch_idx, (data, param_idxs) in enumerate(datasets[list(datasets)[0]]):
+def test_regenerating(config, device, aug_model, dataloaders):
+    param_idx_map = dict({})  # Maps param_idx to value, to be used in regeneration
+    logits = torch.rand(1, 1)
+
+    for batch_idx, (data, param_idxs) in enumerate(dataloaders[list(dataloaders)[0]]):
         for i, param_idx in enumerate(param_idxs):
             param_idx_map[param_idx.item()] = logits[0][i]
+
     aug_model().regenerate(param_idx_map)
+
+
+
+
