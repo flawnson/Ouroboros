@@ -42,8 +42,7 @@ class AbstractLinearModel(torch.nn.Module, ABC):
             x = F.relu(x)
             x = normalization(x, normalized_shape=list(x.size()), **self.config["normalize_kwargs"]) if normalization else x
             x = F.dropout(x, p=self.config["dropout"], training=self.training)
-        x = torch.nn.functional.log_softmax(z, dim=0)
-        return x
+        return z
 
 
 class LinearModel(AbstractLinearModel, ABC):

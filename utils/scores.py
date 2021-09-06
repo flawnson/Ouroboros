@@ -41,7 +41,8 @@ class AbstractScores:
         return [recall_score(self.targets[x], np.argmax(self.predictions[x], axis=1), **self.score_config["recall"]) for x in range(len(self.predictions))]
 
     def auroc(self):
-        return [roc_auc_score(self.targets[x], self.predictions[x], **self.score_config["auroc"]) for x in range(len(self.predictions))]
+        # return [roc_auc_score(self.targets[x], self.predictions[x], **self.score_config["auroc"]) for x in range(len(self.predictions))]
+        pass
 
     def f1_score(self):
         return [f1_score(self.targets[x], np.argmax(self.predictions[x], axis=1), **self.score_config["f1_score"]) for x in range(len(self.predictions))]

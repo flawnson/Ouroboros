@@ -9,6 +9,7 @@ import numpy as np
 
 from torch.utils.data import DataLoader
 from typing import *
+from tqdm import trange
 from logzero import logger
 
 from utils.scores import scores
@@ -159,13 +160,15 @@ def dataloaders(config, model, aug_model, datasets, param_data, device):
 @timed
 def test_regenerating(config, device, aug_model, dataloaders):
     param_idx_map = dict({})  # Maps param_idx to value, to be used in regeneration
-    logits = torch.rand(1, 1)
+    logits = torch.rand(16, 1)
 
-    for batch_idx, (data, param_idxs) in enumerate(dataloaders[list(dataloaders)[0]]):
-        for i, param_idx in enumerate(param_idxs):
-            param_idx_map[param_idx.item()] = logits[0][i]
+    for epoch in trange(0, config["run_config"]["num_epochs"], desc="Epochs"):
+        logger.info(f"Epoch: {epoch}")
+        for batch_idx, (data, param_idxs) in enumerate(dataloaders[list(dataloaders)[0]]):
+            for i, param_idx in enumerate(param_idxs):
+                param_idx_map[param_idx.item()] = logits[i]
 
-    aug_model().regenerate(param_idx_map)
+        aug_model.regenerate(param_idx_map)
 
 
 

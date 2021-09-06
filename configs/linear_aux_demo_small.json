@@ -28,7 +28,7 @@
     },
     "shuffle": true,
     "batch_size": 16,
-    "data_subset": null,
+    "data_subset": 1000,
     "param_subset": null
   },
   "model_config":
