@@ -317,8 +317,6 @@ class AuxiliaryTrainer(AbstractTrainer):
             self.epoch_data["combined_loss"][i] = 0
             self.epoch_data["correct"][i] = 0
             self.epoch_data["total"][i] = 0
-            self.epoch_data["correct"] = []
-            self.epoch_data["total"] = []
 
         logger.info("States successfully reset for new epoch")
 

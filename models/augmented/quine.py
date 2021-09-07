@@ -78,6 +78,7 @@ class Quine(ABC):
         """
         return Reduction(self.model_aug_config, data_size).reduce()
 
+    @torch.no_grad()
     def get_param(self, idx: int) -> torch.tensor:
         assert idx < self.num_params
         subtract = 0
@@ -92,6 +93,7 @@ class Quine(ABC):
                 subtract = n_params
         return param.view(-1)[normalized_idx]
 
+    @torch.no_grad()
     def regenerate_param(self, idx: int, new_param: torch.tensor):
         assert idx < self.num_params
         subtract = 0
@@ -204,7 +206,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
                 aux_predictor_layers.append(layer)
                 self.param_list.append(layer.weight)
                 self.param_list.append(layer.bias)
-            logsoftmax = torch.nn.LogSoftmax(dim=0) #should have no learnable weights
+            logsoftmax = torch.nn.Softmax(dim=1) #should have no learnable weights
             aux_predictor_layers.append(logsoftmax)
             return torch.nn.Sequential(*aux_predictor_layers)
         elif self.config["model_config"]["model_type"] in "language":
