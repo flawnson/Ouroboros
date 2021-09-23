@@ -35,17 +35,17 @@ class AbstractScores:
             return 0
 
     def precision(self):
-        return [precision_score(self.targets[x], np.argmax(self.predictions[x], axis=1), **self.score_config["precision"]) for x in range(len(self.predictions))]
+        return [precision_score(self.targets[x], np.argmax(self.predictions[x], axis=-1), **self.score_config["precision"]) for x in range(len(self.predictions))]
 
     def recall(self):
-        return [recall_score(self.targets[x], np.argmax(self.predictions[x], axis=1), **self.score_config["recall"]) for x in range(len(self.predictions))]
+        return [recall_score(self.targets[x], np.argmax(self.predictions[x], axis=-1), **self.score_config["recall"]) for x in range(len(self.predictions))]
 
     def auroc(self):
         # return [roc_auc_score(self.targets[x], self.predictions[x], **self.score_config["auroc"]) for x in range(len(self.predictions))]
         pass
 
     def f1_score(self):
-        return [f1_score(self.targets[x], np.argmax(self.predictions[x], axis=1), **self.score_config["f1_score"]) for x in range(len(self.predictions))]
+        return [f1_score(self.targets[x], np.argmax(self.predictions[x], axis=-1), **self.score_config["f1_score"]) for x in range(len(self.predictions))]
 
     def get_scores(self) -> Dict[str, List[float]]:
         scoreset = {"acc": self.accuracy,

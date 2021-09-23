@@ -44,8 +44,10 @@ def test_scoring(config, device):
                   "total": [0, 0],
                   "correct": [0, 0]}
 
-    epoch_data["predictions"] += np.random.dirichlet(np.ones(NUM_CLASSES), size=NUM_SAMPLES).tolist()
-    epoch_data["targets"] += np.random.randint(0, NUM_CLASSES, NUM_SAMPLES).tolist()
+    for i in range(NUM_SAMPLES):
+        epoch_data["predictions"].append(np.random.dirichlet(np.ones(NUM_CLASSES), size=NUM_SAMPLES).tolist())
+    for i in range(NUM_SAMPLES):
+        epoch_data["targets"].append(np.random.randint(0, NUM_CLASSES, NUM_SAMPLES).tolist())
     epoch_data["total"].append(NUM_SAMPLES)
     epoch_data["correct"] += sum(np.equal(epoch_data["targets"], np.argmax(epoch_data["predictions"], axis=1)))
 
