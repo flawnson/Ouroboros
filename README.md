@@ -102,6 +102,23 @@ Run:
 python main.py -c "path_to_config_file.json"
 ```
 
+### Configuration
+Configs are validated by a json schema to ensure only properly defined config files are run.
+There are a few configurations that are passed directly (unpacked) into function arguments and must therefore follow the
+function's signature. For example, the split_kwargs config must correspond with the scikitlearn.
+
+Splitting is corresponded with SKLearn's model selection classes and methods as such:
+
+```python
+"binary" == train_test_split()
+"holdout" == LeavePOut()
+"shuffle" == ShuffleSplit()
+"kfold" == StratifiedKFold()
+```
+
+Naturally, splits that require shuffling data do not apply to time series data and our sequential models.
+The pipeline currently supports train and test splits only (you cannot specify a validation set)
+
 ### Standard Models
 There are 2 standard models implemented (Transformer and CNN in development):
 * MLP

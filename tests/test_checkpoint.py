@@ -9,9 +9,11 @@ import numpy as np
 
 from typing import *
 from logzero import logger
+
 from optim.algos import OptimizerObj
 from models.standard.linear_model import LinearModel
 from utils.checkpoint import PTCheckpoint
+from utils.utilities import timed
 
 ### Configuring ###
 
@@ -34,6 +36,8 @@ def device():
     logger.info(f"Running {config['run_name']} on {device}.")
 
 
+@timed
+@pytest.mark.parametrize("config,device", [config, device])
 def test_checkpoint(config, device):
     model = LinearModel(config, device).to(device)
     optimizer = OptimizerObj(config, model).optim_obj

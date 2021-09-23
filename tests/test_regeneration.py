@@ -1,60 +1,55 @@
-import argparse
+import os
+import json
+import torch
+import pytest
 import logzero
 import logging
-import json
-import dgl
-
-import torch
-import random
+import argparse
 import numpy as np
-from typing import *
-from logzero import logger
-from jsonschema import validate
-from torch.utils.data import DataLoader
 
+from torch.utils.data import DataLoader
+from typing import *
+from tqdm import trange
+from logzero import logger
+
+from utils.scores import scores
+from utils.utilities import timed
+from data.graph_preprocessing import PrimaryLabelset
+from data.linear_preprocessing import HousingDataset
+from data.data_preprocessing import get_image_data, get_graph_data, get_text_data
 from models.standard.graph_model import GNNModel
 from models.standard.linear_model import LinearModel
 from models.standard.transformer_model import TransformerModel
+from utils.checkpoint import load
 from models.augmented.quine import get_auxiliary, Vanilla
 from models.augmented.hypernetwork import MLPHyperNetwork, LinearHyperNetwork, ResNetPrimaryNetwork
 from models.augmented.classical import Classical
 from models.augmented.ouroboros import Ouroboros
-from data.graph_preprocessing import PrimaryLabelset
-from data.linear_preprocessing import HousingDataset
-from data.data_preprocessing import get_image_data, get_graph_data, get_text_data
-from utils.splitting import get_image_data_split, get_text_data_split
-from utils.utilities import get_json_schema
-from utils.checkpoint import load
 from optim.parameters import ModelParameters
-from ops.trainers.trainer import trainer
-from ops.tune import Tuner
-from ops.benchmark import Benchmarker
+from utils.splitting import get_image_data_split, get_text_data_split
 
 
-def main():
-    ### Configuring ###
-    parser = argparse.ArgumentParser(description="Config file parser")
-    parser.add_argument("-c", "--config", help="json config file", type=str)
-    parser.add_argument("-s", "--scheme", help="json schema file", type=str)
-    args = parser.parse_args()
-
-    config: Dict = json.load(open(args.config))
+@pytest.fixture
+def config():
+    file = os.path.join("..", "configs", "linear_aux_demo_small.json")
+    config: Dict = json.load(open(file))
     device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
     logzero.loglevel(eval(config["log_level"]))
     logger.info(f"Successfully retrieved config json. Running {config['run_name']} on {device}.")
-    logger.info(f"Using PyTorch version: {torch.__version__}")
 
-    json_schema = get_json_schema(config)
-    logger.info(f"Validating configuration json against {config['schema']}")
-    validate(instance=config, schema=json_schema)
+    return config
 
-    #Set seeds
-    seed = config["seed"]
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
 
+@pytest.fixture  # Can pass params directly as a list but would rather use parameterize
+def device(config):
+    device = torch.device("cuda" if config["device"] == "cuda" and torch.cuda.is_available() else "cpu")
+    logger.info(f"Running {config['run_name']} on {device}.")
+
+    return device
+
+
+@pytest.fixture
+def datasets(config):
     ### Aux Data preprocessing ###
     datasets: Union[torch.utils.data.Dataset, List] = None
     if config["data_config"]["dataset"].casefold() == "primary_labelset":
@@ -71,6 +66,11 @@ def main():
         raise NotImplementedError(f"{config['dataset']} is not a dataset")
     logger.info(f"Successfully built the {config['data_config']['dataset']} dataset")
 
+    return datasets
+
+
+@pytest.fixture
+def model(config, datasets, device):
     ### Model preparation ###
     model: torch.nn.Module = None
     if config["model_config"]["model_type"].casefold() == "linear":
@@ -89,6 +89,11 @@ def main():
         raise NotImplementedError(f"{config['model_config']['model_type']} is not a model type")
     logger.info(f"Successfully built the {config['model_config']['model_type']} model type")
 
+    return model
+
+
+@pytest.fixture
+def aug_model(config, model, datasets, device):
     ### Model augmentation ### (for none, use classical, all augmentations are model agnostic)
     aug_model: torch.nn.Module = None
     if config["model_aug_config"]["model_augmentation"].casefold() == "classical":
@@ -110,6 +115,11 @@ def main():
         raise NotImplementedError(f"{config['model_aug_config']['model_augmentation']} is not a model augmentation")
     logger.info(f"Successfully built the {config['model_aug_config']['model_augmentation']} augmentation")
 
+    return aug_model
+
+
+@pytest.fixture
+def param_data(config, aug_model, datasets, device):
     ### Param data preprocessing ###
     param_data: ModelParameters = None
     if config["model_aug_config"]["model_augmentation"].casefold() == "classical":
@@ -122,6 +132,11 @@ def main():
         logger.info(f"{config['model_aug_config']['model_augmentation']} does not require param data")
     logger.info(f"Successfully generated parameter data")
 
+    return param_data
+
+
+@pytest.fixture
+def dataloaders(config, model, aug_model, datasets, param_data, device):
     ### Splitting dataset and parameters ###
     dataloaders: Dict[str, DataLoader] = None
     if config["data_config"]["dataset"] == "primary_labelset":
@@ -139,14 +154,22 @@ def main():
                                   f"does not have a valid split")
     logger.info(f"Successfully split dataset and parameters")
 
-    ### Pipeline ###
-    if config["run_type"].casefold() == "demo":
-        trainer(config, aug_model, param_data, dataloaders, device)
-    if config["run_type"].casefold() == "tune":
-        Tuner(config, aug_model, param_data, dataloaders, device)
-    if config["run_type"].casefold() == "benchmark":
-        Benchmarker(config, aug_model, param_data, dataloaders, device)
+    return dataloaders
 
 
-if __name__ == "__main__":
-    main()
+@timed
+def test_regenerating(config, device, aug_model, dataloaders):
+    param_idx_map = dict({})  # Maps param_idx to value, to be used in regeneration
+    logits = torch.rand(16, 1)
+
+    for epoch in trange(0, config["run_config"]["num_epochs"], desc="Epochs"):
+        logger.info(f"Epoch: {epoch}")
+        for batch_idx, (data, param_idxs) in enumerate(dataloaders[list(dataloaders)[0]]):
+            for i, param_idx in enumerate(param_idxs):
+                param_idx_map[param_idx.item()] = logits[i]
+
+        aug_model.regenerate(param_idx_map)
+
+
+
+

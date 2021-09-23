@@ -8,10 +8,11 @@ from abc import ABC, abstractmethod
 from sklearn.metrics import f1_score, precision_score, recall_score, jaccard_score, confusion_matrix, roc_auc_score
 
 
-class GeneralScores:
-    def __init__(self, config: Dict, dataset, total, correct, device: torch.device):
+class AbstractScores:
+    def __init__(self, config: Dict, predictions, targets, total, correct, device: torch.device):
         self.score_config = config["score_config"]
-        self.dataset = dataset
+        self.predictions = predictions
+        self.targets = targets
         self.total = total
         self.correct = correct
         self.device = device
@@ -33,10 +34,50 @@ class GeneralScores:
             logger.info("Could not calculate accuracy, returning 0")
             return 0
 
-    def get_scores(self) -> Dict[str, List[float]]:
-        scoreset = {"acc": self.accuracy()}
+    def precision(self):
+        return [precision_score(self.targets[x], np.argmax(self.predictions[x], axis=-1), **self.score_config["precision"]) for x in range(len(self.predictions))]
 
-        return {score_type: scoreset[score_type] for score_type in self.score_config.keys()}
+    def recall(self):
+        return [recall_score(self.targets[x], np.argmax(self.predictions[x], axis=-1), **self.score_config["recall"]) for x in range(len(self.predictions))]
+
+    def auroc(self):
+        # return [roc_auc_score(self.targets[x], self.predictions[x], **self.score_config["auroc"]) for x in range(len(self.predictions))]
+        pass
+
+    def f1_score(self):
+        return [f1_score(self.targets[x], np.argmax(self.predictions[x], axis=-1), **self.score_config["f1_score"]) for x in range(len(self.predictions))]
+
+    def get_scores(self) -> Dict[str, List[float]]:
+        scoreset = {"acc": self.accuracy,
+                    "auroc": self.auroc,
+                    "precision": self.precision,
+                    "recall": self.recall,
+                    "f1_score": self.f1_score}
+
+        return {score_type: scoreset[score_type]() for score_type, score_args in self.score_config.items()
+                if score_args is not None}
+
+
+class SequenceScores:
+    def __init__(self, config: Dict, predictions, targets, total, correct, device: torch.device):
+        self.score_config = config["score_config"]
+        self.predictions = predictions
+        self.targets = targets
+        self.total = total
+        self.correct = correct
+        self.device = device
+
+    def perplexity_score(self):
+        return [torch.exp(torch.nn.functional.cross_entropy(self.targets[x],
+                                                            self.predictions[x],
+                                                            **self.score_config["perplexity_score"]))
+                for x in range(len(self.predictions))]
+
+    def get_scores(self) -> Dict[str, List[float]]:
+        scoreset = {"perplexity_score": self.perplexity_score}
+
+        return {score_type: scoreset[score_type]() for score_type, score_args in self.score_config.items()
+                if score_args is not None}
 
 
 class GraphScores:
@@ -109,7 +150,7 @@ class GraphScores:
         return {score_type: scoreset[score_type] for score_type in self.score_config.keys()}
 
 
-def scores(config: Dict, dataset, total, correct, device: torch.device) -> Dict:
+def scores(config: Dict, dataset, accumulator, device: torch.device) -> Dict:
     """
     Function to call the correct score class
 
@@ -123,10 +164,16 @@ def scores(config: Dict, dataset, total, correct, device: torch.device) -> Dict:
         Score object corresponding to the type of data (which then returns a dictionary of scores)
 
     """
-    if config["data_config"]["dataset"].casefold() == "mnist" or "cifar" or "cifar10":
-        return GeneralScores(config, dataset, total, correct, device).get_scores()
+    predictions = accumulator["predictions"]
+    targets = accumulator["targets"]
+    total = accumulator["total"]
+    correct = accumulator["correct"]
+    if config["data_config"]["dataset"].casefold() in ["mnist", "cifar", "cifar10"]:
+        return AbstractScores(config, predictions, targets, total, correct, device).get_scores()
+    if config["data_config"]["dataset"].casefold() == "wikitext2":
+        return SequenceScores(config, predictions, targets, total, correct, device).get_scores()
     elif config["data_config"]["dataset"].casefold() == "cora":
-        return GraphScores(config, dataset, correct, device).get_scores()
+        return GraphScores(config, dataset, predictions, targets, correct, device).get_scores()
     else:
         raise NotImplementedError(f"{config['data_config']['dataset']} is not a data type")
 

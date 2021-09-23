@@ -78,6 +78,7 @@ class Quine(ABC):
         """
         return Reduction(self.model_aug_config, data_size).reduce()
 
+    @torch.no_grad()
     def get_param(self, idx: int) -> torch.tensor:
         assert idx < self.num_params
         subtract = 0
@@ -92,6 +93,7 @@ class Quine(ABC):
                 subtract = n_params
         return param.view(-1)[normalized_idx]
 
+    @torch.no_grad()
     def regenerate_param(self, idx: int, new_param: torch.tensor):
         assert idx < self.num_params
         subtract = 0
@@ -204,7 +206,7 @@ class Auxiliary(Vanilla, torch.nn.Module):
                 aux_predictor_layers.append(layer)
                 self.param_list.append(layer.weight)
                 self.param_list.append(layer.bias)
-            logsoftmax = torch.nn.LogSoftmax(dim=0) #should have no learnable weights
+            logsoftmax = torch.nn.Softmax(dim=1) #should have no learnable weights
             aux_predictor_layers.append(logsoftmax)
             return torch.nn.Sequential(*aux_predictor_layers)
         elif self.config["model_config"]["model_type"] in "language":
@@ -265,7 +267,15 @@ class Auxiliary(Vanilla, torch.nn.Module):
         pass
 
 
-class SequentialAuxiliary(Vanilla, torch.nn.Module):
+class SequentialVanilla(Quine):
+    def __init__(self, config: Dict, model: torch.nn.Module, device: torch.device):
+        super(SequentialVanilla, self).__init__(config, model, device)
+        self.model_aug_config = config["model_aug_config"]
+        self.model = model
+        self.device = device
+
+
+class SequentialAuxiliary(SequentialVanilla, torch.nn.Module):
     def __init__(self, config, model, dataset, device):
         super(SequentialAuxiliary, self).__init__(config, model, device)
         self.config = config
@@ -273,10 +283,13 @@ class SequentialAuxiliary(Vanilla, torch.nn.Module):
         self.dataset = dataset
         self.device = device
 
-    def forward(self, x, src_mask):
+    def forward(self, x, src_mask=None):
         x = self.model(x, src_mask)
 
         return x
+
+    def regenerate_param(self, params):
+        pass
 
     @timed
     @torch.no_grad()
@@ -300,3 +313,5 @@ def get_auxiliary(config, model, datasets, device):
         return SequentialAuxiliary(config, model, datasets, device)
     elif isinstance(model, LinearModel):
         return Auxiliary(config, model, datasets, device)
+    else:
+        raise NotImplementedError(f"Aux model does not exist for provided model type {type(model)}")

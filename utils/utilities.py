@@ -1,5 +1,7 @@
 import os
+import json
 import time
+import math
 import torch
 import numpy as np
 import torchtext as tt
@@ -8,6 +10,8 @@ from typing import *
 from logzero import logger
 from functools import wraps
 from torch.utils.data import ConcatDataset
+
+DEFAULT_TRAIN_SPLIT = 0.70
 
 
 def get_example_size(dataset: torch.utils.data.dataset) -> int:
@@ -107,3 +111,20 @@ def initialize_iterable_dataset(config):
         raise e
 
     return all_datasets
+
+
+def get_json_schema(config):
+    if config["schema"]:
+        return json.load(config["schema"])
+    else:
+        return {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://example.com/product.schema.json",
+                "title": "Empty_schema",
+                "description": "In case no schema is defined, validate against this empty schema",
+                "type": "object"
+                }
+
+
+
+

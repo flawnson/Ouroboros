@@ -3,6 +3,6 @@
   "properties": {
 
   },
-  "required": []
-
+  "required": [],
+  "additionalProperties": false
 }

@@ -1,4 +1,5 @@
 import dgl
+import copy
 import torch
 import torchvision as tv
 import torchtext as tt
@@ -154,12 +155,35 @@ def get_text_data(config: Dict) -> ChainDataset:
             to_concat.append(tt_dataset)
 
     # Tokenize and wrap with Dataset object to Concat
-    datasets = []
+    tokenized_datasets = []
     for dataset in to_concat:
         dataset = [torch.tensor(vocab(tokenizer(item)), dtype=torch.long) for item in dataset]
-        datasets.append(torch.cat(tuple(filter(lambda t: t.numel() > 0, dataset))))
+        tokenized_datasets.append(torch.cat(tuple(filter(lambda t: t.numel() > 0, dataset))))
 
-    dataset = ConcatDataset(datasets)
-    dataset.vocab = vocab
+    bptt_datasets = []
+    for dataset in tokenized_datasets:
+        # Divide the dataset into bsz parts.
+        nbatch = dataset.size(0) // config["data_config"]["bptt"]
+        # Trim off any extra elements that wouldn't cleanly fit (remainders).
+        dataset = dataset.narrow(0, 0, nbatch * config["data_config"]["bptt"])
+        # Evenly divide the data across the bsz batches.
+        bptt_datasets.append(dataset.view(config["data_config"]["bptt"], -1).t().contiguous())
+
+    batched_targets = []
+    for dataset in tokenized_datasets:
+        targetset = []
+        for idx in range(0, dataset.size(0) - 1, config["data_config"]["bptt"]):
+            seq_len = min(config["data_config"]["bptt"], len(dataset) - 1 - idx)
+            targetset.append(dataset[idx + 1:idx + seq_len + 1].reshape(-1))
+        targetset.pop(-1)  # Removing extra leftover tokens at end of each targetset
+        batched_targets.append(targetset)
+
+    dataset = ConcatDataset(bptt_datasets)
+    dataset.targets = ConcatDataset(batched_targets)
+    config["vocab"] = vocab
 
     return dataset
+
+
+
+

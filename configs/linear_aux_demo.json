@@ -1,6 +1,7 @@
 {
   "run_name": "Linear_cifar10_auxiliary",
   "seed": 42,
+  "schema": null,
   "run_type": "demo",
   "logging": true,
   "log_level": "logging.INFO",
@@ -9,21 +10,23 @@
   "device": "cuda",
   "wandb_logging":
   {
-    "run_name": null,
+    "run_name": "aux_demo",
     "project": "ouroboros",
     "entity": "ouroboros_ai"
   },
   "data_config":
   {
     "dataset": "cifar10",
-    "concat": true,
     "data_kwargs": {
       "root": "data/datafiles/cifar10",
       "download": true
     },
     "data_path": "data/datafiles/housing_prices/train.csv",
-    "split_type": "holdout",
-    "num_splits": 5,
+    "split_type": "shuffle",
+    "split_kwargs": {
+      "train_size": 0.80,
+      "test_size": 0.20
+    },
     "shuffle": true,
     "batch_size": 128,
     "data_subset": null,

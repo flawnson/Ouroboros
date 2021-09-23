@@ -8,7 +8,7 @@ import numpy as np
 from typing import *
 from logzero import logger
 from utils.scores import scores
-from utils.holdout import AbstractSplit
+from utils.splitting import AbstractSplit
 from utils.utilities import timed
 from models.augmented.quine import Quine
 

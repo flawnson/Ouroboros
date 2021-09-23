@@ -138,14 +138,14 @@ class VanillaTrainer(AbstractTrainer):
                         }, commit=False)
 
                 self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])
-                for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[0]]):
+                for batch_idx, param_idxs in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    predictions, targets = self.train(param_idx)
+                    predictions, targets = self.train(param_idxs)
 
                 self.test_epoch_length = len(self.dataset[list(self.dataset)[1]])
-                for batch_idx, param_idx in enumerate(self.dataset[list(self.dataset)[1]]):
+                for batch_idx, param_idxs in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    predictions, targets = self.test(param_idx)
+                    predictions, targets = self.test(param_idxs)
 
                 self.checkpoint.checkpoint(self.config,
                                            epoch,
@@ -175,8 +175,10 @@ class AuxiliaryTrainer(AbstractTrainer):
                            "task_loss": [0, 0],  # The aux loss, original implementation is nll_loss
                            "combined_loss": [0, 0],
                            "correct": [0, 0],
-                           "total": [0, 0]}  # First position for training scores, second position for test scores
-        self.param_idx_map = dict({}) # Maps param_idx to value, to be used in regeneration
+                           "total": [0, 0],  # First position for training scores, second position for test scores
+                           "predictions": [[], []],
+                           "targets": [[], []]}  # Only accumulate outputs and targets for aux data
+        self.param_idx_map = dict({})  # Maps param_idx to value, to be used in regeneration
 
     def train(self, data, param_idxs):
         self.wrapper.model.train()
@@ -198,11 +200,11 @@ class AuxiliaryTrainer(AbstractTrainer):
         params = torch.tensor(params, device=self.device)
 
         # Both predictions and targets will be dictionaries that hold two elements
-        output = self.wrapper.model(idx_vectors, data[0])
-        predictions = {"param": output[0],
-                       "aux": output[1]}
+        logits = self.wrapper.model(idx_vectors, data[0])
+        predictions = {"param": logits[0],
+                       "aux": logits[1]}
         for i, param_idx in enumerate(param_idxs):
-            self.param_idx_map[param_idx.item()] = output[0][i]
+            self.param_idx_map[param_idx.item()] = logits[0][i]
         aux_pred = torch.argmax(predictions["aux"], dim=1) # get the index of the max log-probability
         targets = {"param": params, "aux": data[-1]}
 
@@ -213,6 +215,8 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.epoch_data["sr_loss"][0] += loss["sr_loss"].item()  # accumulate
         self.epoch_data["task_loss"][0] += loss["task_loss"].item()  # accumulate
         self.epoch_data["combined_loss"][0] += loss["combined_loss"].item()  # accumulate
+        self.epoch_data["predictions"][0] += logits[-1].cpu().detach().tolist()
+        self.epoch_data["targets"][0] += data[-1].cpu().detach().tolist()
 
         loss["combined_loss"].backward()
         self.optimizer.step()
@@ -238,11 +242,11 @@ class AuxiliaryTrainer(AbstractTrainer):
         idx_vectors = torch.stack((idx_vectors)).to(self.device)
         params = torch.tensor(params, device=self.device)
 
-        test_output = self.wrapper.model(idx_vectors, data[0])
-        predictions = {"param": test_output[0],
-                        "aux": test_output[1]}
+        logits = self.wrapper.model(idx_vectors, data[0])
+        predictions = {"param": logits[0],
+                        "aux": logits[1]}
         for i, param_idx in enumerate(param_idxs):
-            self.param_idx_map[param_idx.item()] = test_output[0][i]
+            self.param_idx_map[param_idx.item()] = logits[0][i]
         aux_pred = torch.argmax(predictions["aux"], dim=1) # get the indices of the max log-probability
         targets = {"param": params, "aux": data[-1]}
 
@@ -253,6 +257,8 @@ class AuxiliaryTrainer(AbstractTrainer):
         self.epoch_data["sr_loss"][1] += loss["sr_loss"].item() #accumulate for epoch
         self.epoch_data["task_loss"][1] += loss["task_loss"].item() #accumulate for epoch
         self.epoch_data["combined_loss"][1] += loss["combined_loss"].item() #accumulate for epoch
+        self.epoch_data["predictions"][1] += logits[-1].cpu().detach().tolist()
+        self.epoch_data["targets"][1] += data[-1].cpu().detach().tolist()
 
         return predictions, targets
 
@@ -260,7 +266,7 @@ class AuxiliaryTrainer(AbstractTrainer):
         return loss(self.config, self.wrapper.model, predictions, targets)
 
     def score(self):
-        return scores(self.config, self.dataset, self.epoch_data["total"], self.epoch_data["correct"], self.device)
+        return scores(self.config, self.dataset, self.epoch_data, self.device)
 
     def write(self, epoch: int, scores: Dict):
         logger.info(f"Train scores, Test scores: {scores}")
@@ -319,20 +325,20 @@ class AuxiliaryTrainer(AbstractTrainer):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
-                if self.wandb_logger is not None:
+                if self.wandb_logger.logger is not None:
                     self.wandb_logger.logger.log({
                             'epoch': epoch
                         }, commit=False)
 
                 self.train_epoch_length = len(self.dataset[list(self.dataset)[0]]) # number of training batches
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[0]]):
+                for batch_idx, (data, param_idxs) in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    outputs, targets = self.train(data, param_idx)
+                    outputs, targets = self.train(data, param_idxs)
 
                 self.test_epoch_length = len(self.dataset[list(self.dataset)[1]]) # number of testing batches
-                for batch_idx, (data, param_idx) in enumerate(self.dataset[list(self.dataset)[1]]):
+                for batch_idx, (data, param_idxs) in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    outputs, targets = self.test(data, param_idx)
+                    outputs, targets = self.test(data, param_idxs)
 
                 # Scores cumulated and calculated per epoch, as done in Quine
                 epoch_scores = self.score()
@@ -364,6 +370,7 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
                            "combined_loss": [0, 0],
                            "correct": [0, 0],
                            "total": [0, 0]}  # First position for training scores, second position for test scores
+        # self.datatensor = torch.cat(self.dataset[list(self.dataset)[0]][0].dataset.datasets)
 
     def loss(self, predictions, targets):
         self.config["train_mode"] = self.train_mode
@@ -375,16 +382,13 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
 
         i = self.bptt_counter * self.config["data_config"]["bptt"]
         self.bptt_counter += 1
-        seq_len = min(self.config["data_config"]["bptt"], len(self.dataset[list(self.dataset)[0]][0]) - 1 - i)
-        data = self.dataset[list(self.dataset)[0]][0].dataset.subset[i:i + seq_len]
-        targets = data[i + 1:i + 1 + seq_len].reshape(-1)
 
-        if data.size(0) != self.config["data_config"]["bptt"]:
-            src_mask = self.model.model.generate_square_subsequent_mask(data.size(0)).to(self.device)
+        if batch[0].size(1) != self.config["data_config"]["bptt"]:
+            src_mask = self.model.model.generate_square_subsequent_mask(batch.size(1)).to(self.device)
 
-        output = self.model(data, src_mask)
-        predictions = {"aux": output.view(-1, len(self.dataset[list(self.dataset)[0]][0].dataset.vocab))}
-        targets = {"aux": targets}
+        output = self.model(batch[0], src_mask)
+        predictions = {"aux": output.view(-1, len(self.config["vocab"]))}
+        targets = {"aux": batch[1].reshape(-1)}
 
         loss = self.loss(predictions, targets)
 
@@ -394,17 +398,36 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
         torch.nn.utils.clip_grad_norm_(self.model.model.parameters(), 0.5)
         self.optimizer.step()
 
-    def param_train(self, param_idx):
+    def param_train(self, batch):
         self.model.train()
         self.optimizer.zero_grad()
 
-    def sequence_test(self, data):
+        output = self.model(batch[0])
+        predictions = {"aux": output.view(-1, len(self.config["vocab"]))}
+        targets = {"aux": batch[1].reshape(-1)}
+
+        self.epoch_data["sr_loss"][0] += loss["sr_loss"].item()  # accumulate
+
+    @torch.no_grad()
+    def sequence_test(self, batch, src_mask):
         self.model.eval()
-        print(1 + 3)
+
+        if batch[1].size(0) != self.config["data_config"]["bptt"]:
+            src_mask = self.model.generate_square_subsequent_mask(batch[0].size(0)).to(self.device)
+
+        output = self.model(batch[0], src_mask)
+        predictions = {"aux": output.view(-1, len(self.config["vocab"]))}
+        targets = {"aux": batch[1].reshape(-1)}
+
+        loss = self.loss(predictions, targets)
+
+        self.epoch_data["task_loss"][0] += loss["task_loss"].item()  # accumulate
 
     def param_test(self, param_idx):
         self.model.eval()
-        print(1 + 4)
+
+    def score(self):
+        return scores(self.config, self.dataset, self.epoch_data, self.device)
 
     def reset(self):
         for i in range(len(self.dataset)):

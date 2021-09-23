@@ -48,6 +48,7 @@ class AbstractTrainer(ABC):
         self.checkpoint = PTCheckpoint(config)
         self.dataset = dataset
         self.device = device
+        self.epoch_data = {}
 
     def train(self):
         """
@@ -74,13 +75,13 @@ class AbstractTrainer(ABC):
         """
         return loss(self.config, self.model, predictions, targets)
 
-    def score(self, predictions, targets):
+    def score(self):
         """
         Calculates score.
         Returns:
             A score dictionary.
         """
-        return scores(self.config, predictions, targets, self.device)
+        return scores(self.config, self.dataset, self.epoch_data, self.device)
 
     @abstractmethod
     def write(self, epoch: int):

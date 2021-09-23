@@ -54,7 +54,9 @@ class ClassicalTrainer(AbstractTrainer):
         self.device = device
         self.epoch_data = {"loss": [0] * len(dataset),
                            "correct": [0] * len(dataset),
-                           "total": [0] * len(dataset)}  # First position for training scores, second position for test scores
+                           "total": [0] * len(dataset),
+                           "predictions": [[], []],
+                           "targets": [[], []]}  # First position for training scores, second position for test scores
 
     def train(self, data, batch_idx):
         """
@@ -77,14 +79,14 @@ class ClassicalTrainer(AbstractTrainer):
         loss = self.loss(logits, data[1])
         predictions = torch.argmax(logits, dim=1) # get the index of the max log-probability
 
-        self.epoch_data["total"][0] += data[0].shape[0] #accumulate total number of samples in this batch
-        self.epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
         self.epoch_data["loss"][0] += loss["loss"].item()  # accumulate
+        self.epoch_data["correct"][0] += predictions.eq(data[1].view_as(predictions)).sum().item()
+        self.epoch_data["total"][0] += data[0].shape[0] #accumulate total number of samples in this batch
+        self.epoch_data["predictions"][0] += logits.cpu().detach().tolist()
+        self.epoch_data["targets"][0] += data[-1].cpu().detach().tolist()
 
         loss["loss"].backward()
         self.optimizer.step()
-
-        return logits, data[1]
 
     @torch.no_grad()
     def test(self, data, batch_idx):
@@ -106,10 +108,11 @@ class ClassicalTrainer(AbstractTrainer):
         loss = self.loss(logits, data[1])
         predictions = torch.argmax(logits, dim=1)
 
-        self.epoch_data["total"][1] += data[0].shape[0] #accumulate total number of samples in this batch
-        self.epoch_data["correct"][1] += predictions.eq(data[1].view_as(predictions)).sum().item()
         self.epoch_data["loss"][1] += loss["loss"].item()
-        return logits, data[1]
+        self.epoch_data["correct"][1] += predictions.eq(data[1].view_as(predictions)).sum().item()
+        self.epoch_data["total"][1] += data[0].shape[0] #accumulate total number of samples in this batch
+        self.epoch_data["predictions"][1] += logits.cpu().detach().tolist()
+        self.epoch_data["targets"][1] += data[-1].cpu().detach().tolist()
 
     def loss(self, predictions, targets) -> Dict:
         """
@@ -129,7 +132,7 @@ class ClassicalTrainer(AbstractTrainer):
         Returns:
             A score dictionary.
         """
-        return scores(self.config, self.dataset, self.epoch_data["total"], self.epoch_data["correct"], self.device)
+        return scores(self.config, self.dataset, self.epoch_data, self.device)
 
     def write(self, epoch: int, scores: Dict):
         """
@@ -144,8 +147,8 @@ class ClassicalTrainer(AbstractTrainer):
         train_loss = self.epoch_data["loss"][0] / self.train_epoch_length
         self.tb_logger.scalar_summary('loss (train)', train_loss, epoch)
         self.tb_logger.scalar_summary('scores (train)', scores["acc"][0], epoch)
-        if self.wandb_logger is not None:
-            self.wandb_logger.log({
+        if self.wandb_logger.logger is not None:
+            self.wandb_logger.logger.log({
                     'train/loss': train_loss,
                     'train/scores': scores["acc"][0]
                 }, step=epoch, commit=False)
@@ -154,8 +157,8 @@ class ClassicalTrainer(AbstractTrainer):
         test_loss = self.epoch_data["loss"][1] / self.test_epoch_length
         self.tb_logger.scalar_summary('loss (test)', test_loss, epoch)
         self.tb_logger.scalar_summary('scores (test)', scores["acc"][1], epoch)
-        if self.wandb_logger is not None:
-            self.wandb_logger.log({
+        if self.wandb_logger.logger is not None:
+            self.wandb_logger.logger.log({
                     'test/loss': test_loss,
                     'test/scores': scores["acc"][1]
                 }, step=epoch, commit=True)
@@ -181,8 +184,8 @@ class ClassicalTrainer(AbstractTrainer):
         if all(isinstance(dataloader, DataLoader) for dataloader in self.dataset.values()):
             for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
                 logger.info(f"Epoch: {epoch}")
-                if self.wandb_logger is not None:
-                    self.wandb_logger.log({
+                if self.wandb_logger.logger is not None:
+                    self.wandb_logger.logger.log({
                             'epoch': epoch
                         }, commit=False)
 
@@ -190,12 +193,12 @@ class ClassicalTrainer(AbstractTrainer):
                 self.train_epoch_length = len(self.dataset[list(self.dataset)[0]])
                 for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]]):
                     logger.info(f"Running train batch: #{batch_idx}")
-                    logits, targets = self.train(data, batch_idx)
+                    self.train(data, batch_idx)
 
                 self.test_epoch_length = len(self.dataset[list(self.dataset)[1]])
                 for batch_idx, data in enumerate(self.dataset[list(self.dataset)[1]]):
                     logger.info(f"Running test batch: #{batch_idx}")
-                    logits, targets = self.test(data, batch_idx)
+                    self.test(data, batch_idx)
 
                 self.checkpoint.checkpoint(self.config,
                                            epoch,
