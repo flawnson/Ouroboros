@@ -12,6 +12,7 @@ from utils.reduction import Reduction
 from utils.utilities import timed
 from models.standard.linear_model import LinearModel
 from models.standard.transformer_model import TransformerModel
+from models.standard.graph_model import GNNModel
 
 
 class Quine(ABC):
@@ -276,11 +277,10 @@ class SequentialVanilla(Quine):
 
 
 class SequentialAuxiliary(SequentialVanilla, torch.nn.Module):
-    def __init__(self, config, model, dataset, device):
+    def __init__(self, config: Dict, model: torch.nn.Module, device: torch.device):
         super(SequentialAuxiliary, self).__init__(config, model, device)
         self.config = config
         self.model = model
-        self.dataset = dataset
         self.device = device
 
     def forward(self, x, src_mask=None):
@@ -308,8 +308,35 @@ class SequentialAuxiliary(SequentialVanilla, torch.nn.Module):
         logger.info(f"Successfully regenerated weights")
 
 
+class GraphVanilla(Quine):
+    def __init__(self, config: Dict, model: torch.nn.Module, device: torch.device):
+        super(GraphVanilla, self).__init__(config, model, device)
+        self.model_aug_config = config["model_aug_config"]
+        self.model = model
+        self.device = device
+
+
+class GraphAuxiliary(GraphVanilla, torch.nn.Module):
+    def __init__(self, config, model, dataset, device):
+        super(GraphAuxiliary, self).__init__(config, model, device)
+        self.config = config
+        self.model = model
+        self.dataset = dataset
+        self.device = device
+
+    def forward(self, x):
+        x = self.model(x)
+
+        return x
+
+    def regenerate(self, param_idx_map):
+        pass
+
+
 def get_auxiliary(config, model, datasets, device):
-    if isinstance(model, TransformerModel):
+    if isinstance(model, GNNModel):
+        return GraphAuxiliary(config, model, datasets, device)
+    elif isinstance(model, TransformerModel):
         return SequentialAuxiliary(config, model, datasets, device)
     elif isinstance(model, LinearModel):
         return Auxiliary(config, model, datasets, device)
