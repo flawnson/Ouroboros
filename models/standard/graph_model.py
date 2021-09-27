@@ -52,10 +52,13 @@ class GNNModel(AbstractGNNModel, ABC):
     # be provided in the forward function of the model)
     # TODO: implement and test pooling
     def __init__(self, config: dict, data: torch.tensor, device: torch.device, pooling: str = None, **kwargs):
-        self.data = data
-        self.layer_sizes = [data.ndata["x"].size(1)] + config["layer_sizes"] + [len(np.unique(data.ndata["y"].numpy()))]
+        self.data = data.data[0]
+        self.config = config["model_config"]
+        self.layer_sizes = [self.data.ndata["feat"].size(1)] +\
+                           self.config["layer_sizes"] +\
+                           [len(np.unique(self.data.ndata["label"].numpy()))]
         super(GNNModel, self).__init__(
-            config=config,
+            config=self.config,
             layer_dict=[dict(name=GenericGNNLayer.__name__,
                              in_channels=in_size,
                              out_channels=out_size)

@@ -1,6 +1,7 @@
 {
-  "run_name": "Graph_cifar10_auxiliary",
+  "run_name": "Graph_cora_auxiliary",
   "seed": 42,
+  "schema": null,
   "run_type": "demo",
   "logging": true,
   "log_level": "logging.INFO",
@@ -9,7 +10,7 @@
   "device": "cuda",
   "wandb_logging":
   {
-    "run_name": null,
+    "run_name": "graph_demo_small",
     "project": "ouroboros",
     "entity": "ouroboros_ai"
   },

@@ -116,9 +116,10 @@ def get_graph_data(config: Dict) -> ConcatDataset:
     if len(all_datasets) > 1:
         # Combine datasets
         pass
+    else:
+        dataset = all_datasets[0]
 
-    return None
-
+    return dataset
 
 
 def get_text_data(config: Dict) -> ChainDataset:
