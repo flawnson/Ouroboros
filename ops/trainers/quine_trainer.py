@@ -681,3 +681,35 @@ class SequentialAuxiliaryTrainer(AbstractTrainer):
 
             self.write(epoch, epoch_scores)
             self.reset()
+
+
+class GraphAuxiliaryTrainer(AbstractTrainer):
+    def __init__(self, config, model, dataset, device):
+        super(GraphAuxiliaryTrainer, self).__init__(config, model, dataset, device)
+        self.config = config
+        self.model = model
+        self.dataset = dataset
+        self.device = device
+
+    def reset(self):
+        pass
+
+    def write(self):
+        pass
+
+    def score(self):
+        pass
+
+    def train(self):
+        pass
+
+    def test(self):
+        pass
+
+    def run_train(self):
+        for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
+            logger.info(f"Epoch: {epoch}")
+            if self.wandb_logger is not None:
+                self.wandb_logger.logger.log({
+                    'epoch': epoch
+                }, commit=False)
