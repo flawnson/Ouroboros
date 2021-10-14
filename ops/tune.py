@@ -5,7 +5,7 @@ import multiprocessing
 from typing import *
 from logzero import logger
 from torch.utils.data import DataLoader
-
+from optim.parameters import ModelParameters
 from ops.trainers.trainer import AbstractTrainer
 from torch.nn import Module
 
@@ -18,10 +18,11 @@ except ModuleNotFoundError:
 
 class Tuner(AbstractTrainer):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
-    def __init__(self, config: Dict, model: Module, dataset: Union[DataLoader], device: torch.device):
-        super(Tuner, self).__init__(config, model, dataset, device)
+    def __init__(self, config: Dict, model: Module, param_data: ModelParameters, dataset: Dict[str, list], device: torch.device):
+        super(Tuner, self).__init__(config, model, param_data, dataset, device)
         self.tuning_config = config["tuning_config"]
         self.model = model
+        self.param_data = param_data
         self.dataset = dataset
         self.device = device
 

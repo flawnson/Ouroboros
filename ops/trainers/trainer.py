@@ -10,13 +10,14 @@ from models.augmented.quine import Vanilla, Auxiliary, SequentialAuxiliary, Grap
 from models.augmented.ouroboros import Godel
 from models.augmented.classical import Classical
 from models.augmented.hypernetwork import ResNetPrimaryNetwork
+from optim.parameters import ModelParameters
 from .abstract_trainer import AbstractTrainer
 from .classical_trainer import ClassicalTrainer
 from .hypernetwork_trainer import HyperNetworkTrainer, DualHyperNetworkTrainer
 from .quine_trainer import AuxiliaryTrainer, SequentialAuxiliaryTrainer, GraphAuxiliaryTrainer, VanillaTrainer
 
 
-def trainer(config: Dict, model: torch.nn.Module, param_data: torch.nn.Module, dataloaders: List[torch.utils.data.DataLoader], device: torch.device):
+def get_trainer(config: Dict, model: torch.nn.Module, param_data: ModelParameters, dataloaders: Dict[str, torch.utils.data.DataLoader], device: torch.device):
     """
     Initializes and returns a Trainer object based on model type.
 
@@ -31,7 +32,7 @@ def trainer(config: Dict, model: torch.nn.Module, param_data: torch.nn.Module, d
         return AuxiliaryTrainer(config, param_data, dataloaders, device).run_train()
     elif isinstance(model, SequentialAuxiliary):
         return SequentialAuxiliaryTrainer(config, model, dataloaders, device).run_train()
-    elif isintance(model, GraphAuxiliary):
+    elif isinstance(model, GraphAuxiliary):
         return GraphAuxiliaryTrainer(config, model, dataloaders, device).run_train()
     elif isinstance(model, ResNetPrimaryNetwork):
         return HyperNetworkTrainer(config, model, dataloaders, device).run_train()

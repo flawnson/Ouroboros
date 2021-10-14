@@ -22,11 +22,11 @@ from models.augmented.ouroboros import Ouroboros
 from data.graph_preprocessing import PrimaryLabelset
 from data.linear_preprocessing import HousingDataset
 from data.data_preprocessing import get_image_data, get_graph_data, get_text_data
-from utils.splitting import get_image_data_split, get_text_data_split
+from utils.splitting import get_image_data_split, get_text_data_split, get_graph_data_split
 from utils.utilities import get_json_schema
 from utils.checkpoint import load
 from optim.parameters import ModelParameters
-from ops.trainers.trainer import trainer
+from ops.trainers.trainer import get_trainer
 from ops.tune import Tuner
 from ops.benchmark import Benchmarker
 
@@ -61,7 +61,7 @@ def main():
         datasets = PrimaryLabelset(config).dataset.to(device)
     elif config["data_config"]["dataset"].casefold() == "house":
         datasets = HousingDataset(config).dataset.to(device)
-    elif config["data_config"]["dataset"].casefold() == "cora":
+    elif config["data_config"]["dataset"].casefold() in ("cora", "ppi", "reddit"):
         datasets = get_graph_data(config)  # Cora only has one graph (index must be 0)
     elif config["data_config"]["dataset"].casefold() in ("mnist", "cifar10", "imagenet"):
         datasets = get_image_data(config)
@@ -123,13 +123,13 @@ def main():
     logger.info(f"Successfully generated parameter data")
 
     ### Splitting dataset and parameters ###
-    dataloaders: Dict[str, DataLoader] = None
+    dataloaders: Dict[str, list] = None
     if config["data_config"]["dataset"] == "primary_labelset":
         pass
     elif config["data_config"]["dataset"].casefold() == "house":
         pass
-    elif config["data_config"]["dataset"].casefold() in ("cora", "reddit"):
-        pass
+    elif config["data_config"]["dataset"].casefold() in ("cora", "ppi", "reddit"):
+        dataloaders = get_graph_data_split(config, datasets, param_data, device)
     elif config["data_config"]["dataset"].casefold() in ("mnist", "cifar10"):
         dataloaders = get_image_data_split(config, datasets, param_data, device)
     elif config["data_config"]["dataset"].casefold() in ("wikitext2", "amazonreviewfull"):
@@ -141,7 +141,7 @@ def main():
 
     ### Pipeline ###
     if config["run_type"].casefold() == "demo":
-        trainer(config, aug_model, param_data, dataloaders, device)
+        get_trainer(config, aug_model, param_data, dataloaders, device)
     if config["run_type"].casefold() == "tune":
         Tuner(config, aug_model, param_data, dataloaders, device)
     if config["run_type"].casefold() == "benchmark":

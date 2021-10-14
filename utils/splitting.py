@@ -267,7 +267,7 @@ class TextDataSplit(AbstractSplit):
         # assert isinstance(subject, Quine) & isinstance(subject, Module), f"Subject: {type(subject)} is not a splittable type"
 
 
-def get_image_data_split(config, datasets, param_data, device):
+def get_image_data_split(config, datasets, param_data, device) -> Dict[str, List]:
     # Function works for both MNIST and CIFAR10 (untested for other datasets)
     larger_dataset = "param_data" if (param_data is not None) and len(datasets) < len(param_data) else "aux_data"
     dataloaders = ImageDataSplit(config, datasets, param_data, larger_dataset, device).partition()  # MNIST split appears to work fine with CIFAR
@@ -292,6 +292,17 @@ def get_text_data_split(config, datasets, param_data, device) -> Dict[str, List]
 
     return dataloaders
 
+def get_graph_data_split(config, datasets, param_data, device) -> Dict[str, List]:
+    # Function works for both MNIST and CIFAR10 (untested for other datasets)
+    larger_dataset = "param_data" if (param_data is not None) and len(datasets) < len(param_data) else "aux_data"
+    dataloaders = GraphDataSplit(config, datasets, param_data, larger_dataset, device).partition()  # MNIST split appears to work fine with CIFAR
+
+    # Special case if Vanilla
+    if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":
+        logger.info("Using QuineSplit for Vanilla")
+        dataloaders = QuineDataSplit(config, datasets, param_data, device).partition()
+
+    return dataloaders
 
 
 
