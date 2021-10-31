@@ -147,7 +147,7 @@ class ImageDataSplit(AbstractSplit):
 
 class GraphDataSplit(AbstractSplit):
     def __init__(self, config, dataset, model, device):
-        super(GraphDataSplit, self).__init__(config, dataset, device)
+        super(GraphDataSplit, self).__init__(config, dataset, model, device)
         self.data_config = config["data_config"]
         self.dataset = dataset
         self.model = model
@@ -163,14 +163,16 @@ class GraphDataSplit(AbstractSplit):
                                  random_state=self.config["seed"])
         # split = StratifiedShuffleSplit(n_splits=len(self.data_config["splits"]))
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split
-        y = [self.dataset[y][1] for y, d in enumerate(self.dataset)]
+        y = self.dataset[0].ndata['label']
         masks = list(splits._iter_test_masks(self.dataset, y))
+        boolean_tensor_masks = [torch.from_numpy(mask) for mask in masks]
 
-        return dict(zip(self.data_config["splits"].keys(), masks))
+        return dict(zip([f"split_{x + 1}" for x in range(len(boolean_tensor_masks))], boolean_tensor_masks))
 
     @staticmethod
     def type_check(subject):
-        assert isinstance(subject, torch.utils.data.Dataset), f"Subject: {type(subject)} is not a splittable type"
+        pass
+        # assert isinstance(subject, torch.utils.data.Dataset), f"Subject: {type(subject)} is not a splittable type"
 
 
 class QuineDataSplit(AbstractSplit):
@@ -295,7 +297,7 @@ def get_text_data_split(config, datasets, param_data, device) -> Dict[str, List]
 def get_graph_data_split(config, datasets, param_data, device) -> Dict[str, List]:
     # Function works for both MNIST and CIFAR10 (untested for other datasets)
     larger_dataset = "param_data" if (param_data is not None) and len(datasets) < len(param_data) else "aux_data"
-    dataloaders = GraphDataSplit(config, datasets, param_data, larger_dataset, device).partition()  # MNIST split appears to work fine with CIFAR
+    dataloaders = GraphDataSplit(config, datasets, param_data, device).partition()  # MNIST split appears to work fine with CIFAR
 
     # Special case if Vanilla
     if config["model_aug_config"]["model_augmentation"].casefold() == "vanilla":

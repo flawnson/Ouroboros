@@ -713,3 +713,6 @@ class GraphAuxiliaryTrainer(AbstractTrainer):
                 self.wandb_logger.logger.log({
                     'epoch': epoch
                 }, commit=False)
+
+            for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]][0]):
+                self.train()
