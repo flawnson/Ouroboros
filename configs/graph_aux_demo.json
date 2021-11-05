@@ -3,6 +3,7 @@
   "seed": 42,
   "schema": null,
   "run_type": "demo",
+  "task_type": "node",
   "logging": true,
   "log_level": "logging.INFO",
   "clean_log_dir": true,

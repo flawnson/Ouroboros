@@ -16,7 +16,7 @@ from utils.logging import PTTBLogger
 from utils.utilities import timed
 
 
-class GraphAuxiliaryTrainer(AbstractTrainer):
+class PseudoGraphAuxiliaryTrainer(AbstractTrainer):
     # TODO: Consider designing Tuning and Benchmarking as subclasses of Trainer
     def __init__(self, config: Dict, model_wrapper: ModelParameters, dataset: Dict[str, DataLoader], device: torch.device):
         super(GraphAuxiliaryTrainer, self).__init__(config, model_wrapper.model, dataset, device)
@@ -232,7 +232,7 @@ class GraphAuxiliaryTrainer(AbstractTrainer):
         pass
 
     def train(self):
-        pass
+        logits = self.model(self.dataset, node_features)['user']
 
     def test(self):
         pass
@@ -245,5 +245,5 @@ class GraphAuxiliaryTrainer(AbstractTrainer):
                     'epoch': epoch
                 }, commit=False)
 
-            for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]][0]):
+            for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]]):
                 self.train()

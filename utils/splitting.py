@@ -2,6 +2,7 @@ import math
 import torch
 import random
 import logzero
+import dgl
 
 import numpy as np
 
@@ -9,6 +10,7 @@ from typing import *
 from abc import ABC, abstractmethod
 from logzero import logger
 from torch.nn import Module
+from dgl.dataloading import NodeDataLoader, EdgeDataLoader, GraphDataLoader, MultiLayerFullNeighborSampler
 from sklearn.model_selection import StratifiedKFold, train_test_split, ShuffleSplit, LeavePOut
 from torch.utils.data import Dataset, DataLoader, Subset
 
@@ -156,6 +158,26 @@ class GraphDataSplit(AbstractSplit):
     def shuffle(self):
         pass
 
+    def split_graphset(self):
+        torch.utils.data.SubsetRandomSampler
+        dataloaders = GraphDataLoader(self.dataset)
+
+    def split_nodeset(self, masks):
+        # Need to handle this better (doesn't comply with other pipelines)
+        boolean_tensor_masks = [torch.from_numpy(mask) for mask in masks]
+        sampler = MultiLayerFullNeighborSampler(len(self.config["model_config"]["layer_sizes"]) - 1)
+        boolean_tensor_masks = dict(zip([f"split_{x + 1}" for x in range(len(boolean_tensor_masks))], boolean_tensor_masks))
+        self.dataset.data[0].edata.update(boolean_tensor_masks)
+        dataloaders = EdgeDataLoader(self.dataset)
+
+    def split_edgeset(self, masks):
+        # Need to handle this better (doesn't comply with other pipelines)
+        boolean_tensor_masks = [torch.from_numpy(mask) for mask in masks]
+        sampler = MultiLayerFullNeighborSampler(len(self.config["model_config"]["layer_sizes"]) - 1)
+        boolean_tensor_masks = dict(zip([f"split_{x + 1}" for x in range(len(boolean_tensor_masks))], boolean_tensor_masks))
+        self.dataset.data[0].ndata.update(boolean_tensor_masks)
+        dataloaders = NodeDataLoader(self.dataset)
+
     def kfold(self):
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
         # https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.StratifiedKFold.html#sklearn.model_selection.StratifiedKFold
@@ -165,9 +187,15 @@ class GraphDataSplit(AbstractSplit):
         # The target labels (stratified k fold needs the labels to preserve label distributions in each split
         y = self.dataset[0].ndata['label']
         masks = list(splits._iter_test_masks(self.dataset, y))
-        boolean_tensor_masks = [torch.from_numpy(mask) for mask in masks]
-
-        return dict(zip([f"split_{x + 1}" for x in range(len(boolean_tensor_masks))], boolean_tensor_masks))
+        # Handling node task vs graph task cases (need to consider edge tasks)
+        if self.config["task_type"] == "node":
+            return self.split_nodeset(masks)
+        elif self.config["task_type"] == "edge":
+            return self.split_edgeset(masks)
+        elif self.config["task_type"] == "graph":
+            return self.split_graphset(masks)
+        else:
+            raise NotImplementedError(f"Requested task type {self.config['task_type']} cannot be split")
 
     @staticmethod
     def type_check(subject):

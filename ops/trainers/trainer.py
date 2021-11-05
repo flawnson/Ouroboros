@@ -14,7 +14,10 @@ from optim.parameters import ModelParameters
 from .abstract_trainer import AbstractTrainer
 from .classical_trainer import ClassicalTrainer
 from .hypernetwork_trainer import HyperNetworkTrainer, DualHyperNetworkTrainer
-from .aux_trainer import AuxiliaryTrainer, SequentialAuxiliaryTrainer, GraphAuxiliaryTrainer, VanillaTrainer
+from .aux_trainer import AuxiliaryTrainer
+from .sequential_aux_trainer import SequentialAuxiliaryTrainer
+from .graph_aux_trainer import GraphAuxiliaryTrainer
+from .vanilla_trainer import VanillaTrainer
 
 
 def get_trainer(config: Dict, model: torch.nn.Module, param_data: ModelParameters, dataloaders: Dict[str, torch.utils.data.DataLoader], device: torch.device):
