@@ -277,7 +277,7 @@ class SequentialVanilla(Quine):
 
 
 class SequentialAuxiliary(SequentialVanilla, torch.nn.Module):
-    def __init__(self, config: Dict, model: torch.nn.Module, device: torch.device):
+    def __init__(self, config: Dict, model: torch.nn.Module, dataset: Dataset, device: torch.device):
         super(SequentialAuxiliary, self).__init__(config, model, device)
         self.config = config
         self.model = model

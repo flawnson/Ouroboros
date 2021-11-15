@@ -158,7 +158,7 @@ class GraphDataSplit(AbstractSplit):
     def shuffle(self):
         pass
 
-    def split_graphset(self):
+    def split_graphset(self, masks):
         torch.utils.data.SubsetRandomSampler
         dataloaders = GraphDataLoader(self.dataset)
 
@@ -166,17 +166,21 @@ class GraphDataSplit(AbstractSplit):
         # Need to handle this better (doesn't comply with other pipelines)
         boolean_tensor_masks = [torch.from_numpy(mask) for mask in masks]
         sampler = MultiLayerFullNeighborSampler(len(self.config["model_config"]["layer_sizes"]) - 1)
-        boolean_tensor_masks = dict(zip([f"split_{x + 1}" for x in range(len(boolean_tensor_masks))], boolean_tensor_masks))
-        self.dataset.data[0].edata.update(boolean_tensor_masks)
-        dataloaders = EdgeDataLoader(self.dataset)
+        # masked_features = [self.dataset.data[0].ndata["feat"][mask] for mask in boolean_tensor_masks]
+        # masked_labels = [self.dataset.data[0].ndata["label"][mask] for mask in boolean_tensor_masks]
+        datasets = [dgl.node_subgraph(self.dataset.data[0], boolean_tensor_mask) for boolean_tensor_mask in boolean_tensor_masks]
+        dataloaders = [NodeDataLoader(dataset, self.dataset.data[0].nodes(), sampler) for dataset in datasets]
+        dataloaders = dict(zip([f"split_{x + 1}" for x in range(len(boolean_tensor_masks))], dataloaders))
+
+        return dataloaders
 
     def split_edgeset(self, masks):
         # Need to handle this better (doesn't comply with other pipelines)
         boolean_tensor_masks = [torch.from_numpy(mask) for mask in masks]
         sampler = MultiLayerFullNeighborSampler(len(self.config["model_config"]["layer_sizes"]) - 1)
         boolean_tensor_masks = dict(zip([f"split_{x + 1}" for x in range(len(boolean_tensor_masks))], boolean_tensor_masks))
-        self.dataset.data[0].ndata.update(boolean_tensor_masks)
-        dataloaders = NodeDataLoader(self.dataset)
+        self.dataset.data[0].edata.update(boolean_tensor_masks)
+        dataloaders = EdgeDataLoader(self.dataset)
 
     def kfold(self):
         # See SciKitLearn's documentation for implementation details (note that this method enforces same size splits):
