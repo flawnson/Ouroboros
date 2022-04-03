@@ -214,6 +214,7 @@ class PseudoGraphAuxiliaryTrainer(AbstractTrainer):
                 self.write(epoch, epoch_scores)
                 self.reset()
 
+
 class GraphAuxiliaryTrainer(AbstractTrainer):
     def __init__(self, config, model, dataset, device):
         super(GraphAuxiliaryTrainer, self).__init__(config, model, dataset, device)
@@ -231,19 +232,21 @@ class GraphAuxiliaryTrainer(AbstractTrainer):
     def score(self):
         pass
 
-    def train(self):
-        logits = self.model(self.dataset, node_features)['user']
+    def train(self, data):
+        logits = self.model(self.dataset[list(self.dataset)[0]], data)
+        print('HI')
 
     def test(self):
         pass
 
     def run_train(self):
-        for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
-            logger.info(f"Epoch: {epoch}")
-            if self.wandb_logger is not None:
-                self.wandb_logger.logger.log({
-                    'epoch': epoch
-                }, commit=False)
+        if all(isinstance(dataloader.dataloader, DataLoader) for dataloader in self.dataset.values()):
+            for epoch in trange(0, self.run_config["num_epochs"], desc="Epochs"):
+                logger.info(f"Epoch: {epoch}")
+                if self.wandb_logger is not None:
+                    self.wandb_logger.logger.log({
+                        'epoch': epoch
+                    }, commit=False)
 
             for batch_idx, data in enumerate(self.dataset[list(self.dataset)[0]]):
-                self.train()
+                    self.train(data)

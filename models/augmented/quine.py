@@ -324,8 +324,8 @@ class GraphAuxiliary(GraphVanilla, torch.nn.Module):
         self.dataset = dataset
         self.device = device
 
-    def forward(self, x):
-        x = self.model(x)
+    def forward(self, graph_obj, x):
+        x = self.model(graph_obj, x)
 
         return x
 
