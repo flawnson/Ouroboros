@@ -216,7 +216,7 @@ class PseudoGraphAuxiliaryTrainer(AbstractTrainer):
 
 
 class GraphAuxiliaryTrainer(AbstractTrainer):
-    def __init__(self, config, model, dataset, device):
+    def __init__(self, config: Dict, model, dataset, device: torch.device):
         super(GraphAuxiliaryTrainer, self).__init__(config, model, dataset, device)
         self.config = config
         self.model = model
@@ -234,7 +234,6 @@ class GraphAuxiliaryTrainer(AbstractTrainer):
 
     def train(self, data):
         logits = self.model(self.dataset[list(self.dataset)[0]], data)
-        print('HI')
 
     def test(self):
         pass

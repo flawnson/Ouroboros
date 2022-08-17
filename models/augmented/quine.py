@@ -317,7 +317,7 @@ class GraphVanilla(Quine):
 
 
 class GraphAuxiliary(GraphVanilla, torch.nn.Module):
-    def __init__(self, config, model, dataset, device):
+    def __init__(self, config: Dict, model, dataset, device: torch.device):
         super(GraphAuxiliary, self).__init__(config, model, device)
         self.config = config
         self.model = model
